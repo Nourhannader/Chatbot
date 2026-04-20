@@ -21,7 +21,7 @@
     <Folder Include="Repositories\" />
   </ItemGroup>
 
-   <ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\chatbot.Core\chatbot.Core.csproj" />
   </ItemGroup>
 </Project>

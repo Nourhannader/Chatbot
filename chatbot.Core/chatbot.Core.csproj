@@ -12,8 +12,4 @@
     <Folder Include="Services\" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\chatbot.Ef\chatbot.Ef.csproj" />
-  </ItemGroup>
-
 </Project>
