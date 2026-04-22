@@ -1,18 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using chatbot.Core.Models;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
 
 
-namespace chatbot.Ef.Data
+namespace chatbot.Core.Models
 {
-    public class ApplicationUser : IdentityUser
+    public class ApplicationUser : Microsoft.AspNetCore.Identity.IdentityUser
     {
+
         [MaxLength(50)]
         public string? FirstName { get; set; }
         [MaxLength(50)]
@@ -24,7 +22,7 @@ namespace chatbot.Ef.Data
         public DateTime? LastSeen { get; set; }
         public List<RefreshToken>? RefreshTokens { get; set; }
 
-        public ICollection<ChatMembers> ChatMembers { get; set; } 
+        public ICollection<ChatMembers> ChatMembers { get; set; }
         public ICollection<Message> MessagesSent { get; set; }
         public ICollection<UserDevice> Devices { get; set; }
     }

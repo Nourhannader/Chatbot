@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using chatbot.Ef.Data;
+
 
 namespace chatbot.Core.Models
 {
@@ -21,7 +21,7 @@ namespace chatbot.Core.Models
         public long Id { get; set; }
         [ForeignKey("Chat")]
         public int ChatId { get; set; }
-        public chat chat { get; set; }
+        public chat Chat { get; set; }
         [ForeignKey("Sender")]
         public string SenderId { get; set; }
         public ApplicationUser Sender { get; set; }
