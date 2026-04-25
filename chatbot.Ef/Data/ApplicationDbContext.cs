@@ -30,6 +30,8 @@ namespace chatbot.Ef.Data
         {
             base.OnModelCreating(builder);
 
+           
+
             builder.Entity<ChatMembers>()
            .HasOne(cm => cm.user)
            .WithMany(u => u.ChatMembers)
