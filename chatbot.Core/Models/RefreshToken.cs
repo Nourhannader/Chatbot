@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace chatbot.Core.Models
 {
-    
+   
     public class RefreshToken
     {
         public int Id { get; set; }

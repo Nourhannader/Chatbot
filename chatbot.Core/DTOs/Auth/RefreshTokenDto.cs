@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 namespace chatbot.Core.DTOs.Auth
 {
-    internal class RefreshTokenDto
+    public class RefreshTokenDto
     {
+        public string Token { get; set; }
     }
 }
