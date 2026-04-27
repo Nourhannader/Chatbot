@@ -4,6 +4,7 @@ using System.Diagnostics.SymbolStore;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using chatbot.Core.Helper;
@@ -27,7 +28,17 @@ namespace chatbot.Ef.Services
         }
         public RefreshToken GenerateRefreshToken()
         {
-            throw new NotImplementedException();
+            var randomNumber = new byte[32];
+            using var generator = new RNGCryptoServiceProvider();
+            generator.GetBytes(randomNumber);
+
+            return new RefreshToken
+            {
+                Token = Convert.ToBase64String(randomNumber),
+                ExpiresOn = DateTime.UtcNow.AddDays(10),
+                CreatedOn = DateTime.UtcNow
+
+            };
         }
 
         public async Task<JwtSecurityToken> GenerateToken(ApplicationUser user)

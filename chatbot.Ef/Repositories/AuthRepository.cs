@@ -7,6 +7,7 @@ using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Models;
 using chatbot.Ef.Data;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace chatbot.Ef.Repositories
 {
@@ -32,16 +33,24 @@ namespace chatbot.Ef.Repositories
 
         public Task<ApplicationUser> GetByNameAsync(string username) =>
             _userManager.FindByNameAsync(username);
-        
 
-        public Task<RefreshToken> GetRefreshTokenAsync(string token)
+        public async Task<ApplicationUser?> GetByToken(string token)
         {
-            throw new NotImplementedException();
+            
+            var user = await _userManager.Users
+                .SingleOrDefaultAsync(u => u.RefreshTokens != null && u.RefreshTokens.Any(t => t.Token == token));
+            return user; 
         }
 
-        public Task SaveRefreshTokenAsync(RefreshToken token)
+        public async Task<RefreshToken> GetRefreshTokenAsync(string token)
         {
-            throw new NotImplementedException();
+            return await _context.RefreshTokens
+             .FirstOrDefaultAsync(x => x.Token == token && !x.IsActive);
+        }
+
+        public async Task SaveRefreshTokenAsync(ApplicationUser user)
+        {
+          await _userManager.UpdateAsync(user);
         }
     }
 }

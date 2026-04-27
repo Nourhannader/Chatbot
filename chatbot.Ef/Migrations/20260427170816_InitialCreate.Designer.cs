@@ -12,8 +12,8 @@ using chatbot.Ef.Data;
 namespace chatbot.Ef.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260422085638_Init")]
-    partial class Init
+    [Migration("20260427170816_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -439,7 +439,7 @@ namespace chatbot.Ef.Migrations
 
                     b.HasIndex("ApplicationUserId");
 
-                    b.ToTable("RefreshToken");
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("chatbot.Core.Models.UserDevice", b =>

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace chatbot.Ef.Migrations
 {
     /// <inheritdoc />
-    public partial class Init : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -220,7 +220,7 @@ namespace chatbot.Ef.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "RefreshToken",
+                name: "RefreshTokens",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -233,9 +233,9 @@ namespace chatbot.Ef.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_RefreshToken", x => x.Id);
+                    table.PrimaryKey("PK_RefreshTokens", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_RefreshToken_AspNetUsers_ApplicationUserId",
+                        name: "FK_RefreshTokens_AspNetUsers_ApplicationUserId",
                         column: x => x.ApplicationUserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
@@ -447,8 +447,8 @@ namespace chatbot.Ef.Migrations
                 column: "SenderId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_RefreshToken_ApplicationUserId",
-                table: "RefreshToken",
+                name: "IX_RefreshTokens_ApplicationUserId",
+                table: "RefreshTokens",
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
@@ -488,7 +488,7 @@ namespace chatbot.Ef.Migrations
                 name: "MessageReactions");
 
             migrationBuilder.DropTable(
-                name: "RefreshToken");
+                name: "RefreshTokens");
 
             migrationBuilder.DropTable(
                 name: "UserDevices");

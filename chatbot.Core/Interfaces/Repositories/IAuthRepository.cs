@@ -12,10 +12,11 @@ namespace chatbot.Core.Interfaces.Repositories
     {
         Task<ApplicationUser> GetByEmailAsync(string email);
         Task<ApplicationUser> GetByNameAsync(string username);
+        Task<ApplicationUser?> GetByToken(string token);
         Task<IdentityResult> CreateUserAsync(ApplicationUser user, string password);
         Task<bool> CheckPasswordAsync(ApplicationUser user, string password);
 
-        Task SaveRefreshTokenAsync(RefreshToken token);
+        Task SaveRefreshTokenAsync(ApplicationUser user);
         Task<RefreshToken> GetRefreshTokenAsync(string token);
     }
 }

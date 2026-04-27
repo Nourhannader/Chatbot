@@ -21,6 +21,8 @@ namespace chatbot.Ef.Data
         public DbSet<UserDevice> UserDevices { get; set; }
         public DbSet<BlockList> BlockLists { get; set; }
         public DbSet<ChatbotResponse> ChatbotResponses { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+        
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
         }

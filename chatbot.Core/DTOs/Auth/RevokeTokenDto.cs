@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace chatbot.Core.Models
+namespace chatbot.Core.DTOs.Auth
 {
-    public class RevokeToken
+    public class RevokeTokenDto
     {
         public string? Token { get; set; }
     }

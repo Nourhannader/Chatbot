@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using chatbot.Core.DTOs.Auth;
@@ -10,6 +11,7 @@ using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Options;
 
 namespace chatbot.Ef.Services
@@ -44,13 +46,57 @@ namespace chatbot.Ef.Services
             authResponse.ImageProfileUrl = user.ImageProfileUrl;
             authResponse.PhoneNumber = user.PhoneNumber;
 
+            if(user.RefreshTokens.Any(t => t.IsActive))
+            {
+                var activeRefreshToken=user.RefreshTokens.FirstOrDefault(t => t.IsActive);
+                authResponse.RefreshToken = activeRefreshToken.Token;
+                authResponse.RefreshTokenExpiration = activeRefreshToken.ExpiresOn;
+            }
+            else
+            {
+                var refreshToken = _jwtService.GenerateRefreshToken();
+                authResponse.RefreshToken = refreshToken.Token;
+                authResponse.RefreshTokenExpiration = refreshToken.ExpiresOn;
+                user.RefreshTokens.Add(refreshToken);
+                await _authRepository.SaveRefreshTokenAsync(user);
+
+            }
+
 
             return authResponse;
         }
 
-        public Task<AuthResponseDto> RefreshTokenAsync(string token)
+        public async Task<AuthResponseDto> RefreshTokenAsync(string token)
         {
-            throw new NotImplementedException();
+            var authModelDto = new AuthResponseDto();
+            var user=await _authRepository.GetByToken(token);
+            if (user is null)
+            {
+                authModelDto.Message = "Invalid token!";
+                return authModelDto;
+            }
+            var refreshToken = user.RefreshTokens.Single(t => t.Token == token);
+            if (!refreshToken.IsActive)
+            {
+                authModelDto.Message = "Inactive token!";
+                return authModelDto;
+            }
+            refreshToken.RevokedOn = DateTime.UtcNow;
+            var newRefreshToken = _jwtService.GenerateRefreshToken();
+            user.RefreshTokens.Add(newRefreshToken);
+            await _authRepository.SaveRefreshTokenAsync(user);
+            var jwtToken = await _jwtService.GenerateToken(user);
+            authModelDto.IsAuthenticated = true;
+            authModelDto.Token = new JwtSecurityTokenHandler().WriteToken(jwtToken);
+            authModelDto.ExpiresOn = jwtToken.ValidTo;
+            authModelDto.Username = user.UserName;
+            authModelDto.Email = user.Email;
+            authModelDto.ImageProfileUrl = user.ImageProfileUrl;
+            authModelDto.PhoneNumber = user.PhoneNumber;
+            authModelDto.RefreshToken = newRefreshToken.Token;
+            authModelDto.RefreshTokenExpiration = newRefreshToken.ExpiresOn;
+
+            return authModelDto;
         }
 
         public async Task<AuthResponseDto> RegisterAsync(RegisterDto model)
@@ -118,9 +164,19 @@ namespace chatbot.Ef.Services
 
         }
 
-        public Task<bool> RevokeTokenAsync(string token)
+
+        public async Task<bool> RevokeTokenAsync(string token)
         {
-            throw new NotImplementedException();
+            var user=await _authRepository.GetByToken(token);
+            if (user is null)
+                return false;
+            var refreshToken = user.RefreshTokens.Single(t => t.Token == token);
+            if (!refreshToken.IsActive)
+                return false;
+            refreshToken.RevokedOn = DateTime.UtcNow;
+            await _authRepository.SaveRefreshTokenAsync(user);
+            return true;
         }
+        
     }
 }

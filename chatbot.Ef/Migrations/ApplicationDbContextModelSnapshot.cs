@@ -436,7 +436,7 @@ namespace chatbot.Ef.Migrations
 
                     b.HasIndex("ApplicationUserId");
 
-                    b.ToTable("RefreshToken");
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("chatbot.Core.Models.UserDevice", b =>
