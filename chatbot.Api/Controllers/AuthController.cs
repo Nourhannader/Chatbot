@@ -11,9 +11,11 @@ namespace chatbot.Api.Controllers
     public class AuthController : ControllerBase
     {
         readonly IAuthService _authService;
-        public AuthController(IAuthService authService)
+        readonly IMailService _mailService;
+        public AuthController(IAuthService authService, IMailService mailService)
         {
             this._authService = authService;
+            _mailService = mailService;
         }
 
         [HttpPost("register")]
@@ -26,8 +28,43 @@ namespace chatbot.Api.Controllers
             if (!result.IsAuthenticated)
                 return BadRequest(result);
 
+            var user = new EmailDto
+            {
+                FullName = $"{model.FirstName} {model.LastName}",
+                Email = model.Email
+            };
+            await SendWelcomeEmailAsync(user);
+
             setRefreshTokenInCookie(result.RefreshToken, result.RefreshTokenExpiration);
             return Ok(result);
+        }
+
+        private async Task SendWelcomeEmailAsync(EmailDto user)
+        {
+            var filePath = $"{Directory.GetCurrentDirectory()}\\templates\\welcomeEmail.html";
+            var str = new StreamReader(filePath);
+            var mailText = str.ReadToEnd();
+            str.Close();
+
+            mailText = mailText.Replace("[fullName]", $"{user.FullName}")
+                .Replace("[email]", user.Email);
+            await _mailService.SendEmailAsync(user.Email, "Welcome to NexTalk", mailText);
+        }
+
+        
+        [HttpPost("welcome")]
+        public async Task<IActionResult> SendWelcomeEmail( EmailDto dto)
+        {
+            var filePath=$"{Directory.GetCurrentDirectory()}\\templates\\welcomeEmail.html";
+            var str = new StreamReader(filePath);
+            var mailText = str.ReadToEnd();
+            str.Close();
+
+            mailText = mailText.Replace("[fullName]", $"{dto.FullName}")
+                .Replace("[email]", dto.Email);
+            await _mailService.SendEmailAsync(dto.Email, "Welcome to NexTalk", mailText);
+
+            return Ok();
         }
 
         [HttpPost("login")]

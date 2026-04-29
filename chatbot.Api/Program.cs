@@ -1,5 +1,6 @@
 
 using System.Text;
+using chatbot.Api.Hubs;
 using chatbot.Core.Helper;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
@@ -24,11 +25,18 @@ namespace chatbot.Api
 
             // Add services to the container.
             builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JWT"));
+            builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
             builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
                 .AddEntityFrameworkStores<ApplicationDbContext>();
+
             builder.Services.AddScoped<IAuthRepository, AuthRepository>();
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IJwtService, JwtService>();
+            builder.Services.AddScoped<IMailService, MailService>();
+            builder.Services.AddScoped<IChatService, ChatService>();
+
+            builder.Services.AddSignalR();
+
 
             builder.Services.AddDbContext<ApplicationDbContext>(options => 
               options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
@@ -55,6 +63,22 @@ namespace chatbot.Api
                         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"])),
                         ClockSkew = TimeSpan.Zero
                     };
+                    o.Events = new JwtBearerEvents
+                    {
+                        OnMessageReceived = context =>
+                        {
+                            var accessToken = context.Request.Query["access_token"];
+                            var path = context.HttpContext.Request.Path;
+                            if (!string.IsNullOrEmpty(accessToken)
+                            && path.StartsWithSegments("/chathub"))
+                            {
+                                context.Token = accessToken;
+                            }
+                            return Task.CompletedTask;
+
+                        }
+                    };
+
                 });
               
 
@@ -79,7 +103,7 @@ namespace chatbot.Api
             app.UseAuthentication();
 
             app.UseAuthorization();
-
+            app.MapHub<ChatHub>("/chathub");
 
             app.MapControllers();
 

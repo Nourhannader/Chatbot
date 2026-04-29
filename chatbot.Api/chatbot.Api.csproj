@@ -22,4 +22,8 @@
     <ProjectReference Include="..\chatbot.Ef\chatbot.Ef.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Templates\" />
+  </ItemGroup>
+
 </Project>

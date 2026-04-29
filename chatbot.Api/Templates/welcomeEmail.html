@@ -1,0 +1,171 @@
+<<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Celebration Confirm Page</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:linear-gradient(135deg,#76bdf7,#a0d0f8);
+    font-family:Arial, sans-serif;
+    overflow:hidden;
+    padding:20px;
+}
+
+.email--background{
+    width:100%;
+    display:flex;
+    justify-content:center;
+}
+
+.email--container{
+    max-width:600px;
+    width:100%;
+    background:#ffffff;
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:0 10px 30px rgba(0,0,0,0.12);
+    text-align:center;
+}
+
+img{
+    width:100%;
+    max-height:300px;
+    object-fit:cover;
+    display:block;
+}
+
+.email--inner-container{
+    padding:35px 25px;
+}
+
+.email--inner-container h2{
+    color:#1f3c88;
+    margin-bottom:10px;
+    font-size:30px;
+}
+
+.email--inner-container p{
+    font-size:18px;
+    color:#555;
+    margin-bottom:2px;
+    line-height:1.6;
+}
+
+.user-email{
+    color:#40a2ff;
+    font-weight:bold;
+}
+
+button{
+    margin-top:10px;
+    padding:15px 35px;
+    font-size:22px;
+    border:none;
+    border-radius:12px;
+    background:#40a2ff;
+    color:white;
+    cursor:pointer;
+    box-shadow:0 5px 15px rgba(0,0,0,0.15);
+    transition:0.3s;
+}
+
+button:hover{
+    transform:scale(1.08);
+    background:#1e8fff;
+}
+
+.emoji{
+    position:fixed;
+    top:-50px;
+    font-size:30px;
+    animation:fall 4s linear forwards;
+    pointer-events:none;
+    z-index:999;
+}
+
+.success-message{
+    margin-top:10px;
+    color:green;
+    font-size:22px;
+    font-weight:bold;
+    display:none;
+}
+
+@keyframes fall{
+    0%{
+        transform:translateY(-50px) rotate(0deg);
+        opacity:1;
+    }
+    100%{
+        transform:translateY(110vh) rotate(720deg);
+        opacity:0;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="email--background">
+    <div class="email--container">
+
+        <img src="./NexTalk.png" alt="NexTalk Logo">
+
+        <div class="email--inner-container">
+            <h2>Welcome 🎉</h2>
+
+            <p>Hello <strong>[fullName]</strong></p>
+            <p>You are currently registered using:</p>
+            <p class="user-email">[email]</p>
+
+            <button onclick="celebrate()">Confirm</button>
+
+            <div class="success-message" id="msg">
+                ✅ Confirmed Successfully
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+function celebrate(){
+
+    const symbols = ["🎉","🎊","✨","🥳","💖","💃","🕺","😍","🔥"];
+
+    for(let i=0;i<40;i++){
+
+        let span = document.createElement("span");
+        span.classList.add("emoji");
+
+        span.innerText = symbols[Math.floor(Math.random()*symbols.length)];
+
+        span.style.left = Math.random()*100 + "vw";
+        span.style.fontSize = (20 + Math.random()*30) + "px";
+        span.style.animationDuration = (2 + Math.random()*3) + "s";
+
+        document.body.appendChild(span);
+
+        setTimeout(()=>{
+            span.remove();
+        },5000);
+    }
+
+    document.getElementById("msg").style.display = "block";
+}
+</script>
+
+</body>
+</html>
