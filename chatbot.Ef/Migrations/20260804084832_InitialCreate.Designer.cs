@@ -12,7 +12,7 @@ using chatbot.Ef.Data;
 namespace chatbot.Ef.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260427170816_InitialCreate")]
+    [Migration("20260804084832_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -190,12 +190,18 @@ namespace chatbot.Ef.Migrations
                     b.Property<bool>("IsOnline")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsTypingVisible")
+                        .HasColumnType("bit");
+
                     b.Property<string>("LastName")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("LastSeen")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("LastSeenVisible")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
@@ -218,6 +224,9 @@ namespace chatbot.Ef.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("PhoneNumberConfirmed")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("ReadReceiptsEnabled")
                         .HasColumnType("bit");
 
                     b.Property<string>("SecurityStamp")
@@ -245,11 +254,8 @@ namespace chatbot.Ef.Migrations
 
             modelBuilder.Entity("chatbot.Core.Models.BlockList", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("BlockedAt")
                         .HasColumnType("datetime2");
@@ -272,95 +278,137 @@ namespace chatbot.Ef.Migrations
                     b.ToTable("BlockLists");
                 });
 
-            modelBuilder.Entity("chatbot.Core.Models.ChatMembers", b =>
+            modelBuilder.Entity("chatbot.Core.Models.Conversation", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedById")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("GroupPictureUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Type")
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.HasKey("Id");
 
-                    b.Property<int>("ChatId")
-                        .HasColumnType("int");
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("Type", "CreatedAt");
+
+                    b.ToTable("Conversations");
+                });
+
+            modelBuilder.Entity("chatbot.Core.Models.ConversationMember", b =>
+                {
+                    b.Property<string>("ConversationId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("ArchivedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("IsAdmin")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPinned")
                         .HasColumnType("bit");
 
                     b.Property<DateTime>("JoinedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
+                    b.Property<DateTime?>("LastReadAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("MutedUntil")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("PinnedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ConversationId", "UserId");
+
+                    b.HasIndex("ConversationId", "UserId");
+
+                    b.HasIndex("UserId", "ConversationId");
+
+                    b.ToTable("ConversationMembers");
+                });
+
+            modelBuilder.Entity("chatbot.Core.Models.DeletedMessageForUser", b =>
+                {
+                    b.Property<string>("MessageId")
                         .HasColumnType("nvarchar(450)");
 
-                    b.HasKey("Id");
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("MessageId", "UserId");
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("ChatId", "UserId")
-                        .IsUnique();
-
-                    b.ToTable("ChatMembers");
-                });
-
-            modelBuilder.Entity("chatbot.Core.Models.ChatbotResponse", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Pattern")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ResponseText")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ChatbotResponses");
+                    b.ToTable("DeletedMessagesForUsers");
                 });
 
             modelBuilder.Entity("chatbot.Core.Models.Message", b =>
                 {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("ChatId")
-                        .HasColumnType("int");
+                    b.Property<string>("ConversationId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
-                    b.Property<DateTime?>("DeliveredAt")
+                    b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsDeletedBySender")
-                        .HasColumnType("bit");
+                    b.Property<DateTime?>("EditedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("FileDurationSeconds")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FileName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long?>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("FileUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsDeletedForEveryone")
                         .HasColumnType("bit");
 
-                    b.Property<string>("MediaUrl")
+                    b.Property<bool>("IsForwarded")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("OriginalMessageId")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("MessageText")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("MessageType")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("ReadAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long?>("ReplyToMessageId")
-                        .HasColumnType("bigint");
+                    b.Property<string>("ReplyToMessageId")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("SenderId")
                         .IsRequired()
@@ -369,13 +417,18 @@ namespace chatbot.Ef.Migrations
                     b.Property<DateTime>("SentAt")
                         .HasColumnType("datetime2");
 
-                    b.HasKey("Id");
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
 
-                    b.HasIndex("ChatId");
+                    b.HasKey("Id");
 
                     b.HasIndex("ReplyToMessageId");
 
                     b.HasIndex("SenderId");
+
+                    b.HasIndex("SentAt");
+
+                    b.HasIndex("ConversationId", "SentAt");
 
                     b.ToTable("Messages");
                 });
@@ -391,12 +444,12 @@ namespace chatbot.Ef.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<long>("MessageId")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("ReactionType")
+                    b.Property<string>("MessageId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("ReactionType")
+                        .HasColumnType("int");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -404,11 +457,39 @@ namespace chatbot.Ef.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("MessageId");
-
                     b.HasIndex("UserId");
 
+                    b.HasIndex("MessageId", "UserId")
+                        .IsUnique();
+
                     b.ToTable("MessageReactions");
+                });
+
+            modelBuilder.Entity("chatbot.Core.Models.MessageRecipientStatus", b =>
+                {
+                    b.Property<string>("MessageId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("RecipientId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("MessageId", "RecipientId");
+
+                    b.HasIndex("MessageId", "RecipientId")
+                        .IsUnique();
+
+                    b.HasIndex("RecipientId", "ReadAt");
+
+                    b.ToTable("MessageRecipientStatuses");
                 });
 
             modelBuilder.Entity("chatbot.Core.Models.RefreshToken", b =>
@@ -418,9 +499,6 @@ namespace chatbot.Ef.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ApplicationUserId")
-                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("datetime2");
@@ -435,31 +513,6 @@ namespace chatbot.Ef.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("Id");
-
-                    b.HasIndex("ApplicationUserId");
-
-                    b.ToTable("RefreshTokens");
-                });
-
-            modelBuilder.Entity("chatbot.Core.Models.UserDevice", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ConnectionId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsConnected")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("LastSeen")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -468,31 +521,58 @@ namespace chatbot.Ef.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserDevices");
+                    b.ToTable("RefreshTokens");
                 });
 
-            modelBuilder.Entity("chatbot.Core.Models.chat", b =>
+            modelBuilder.Entity("chatbot.Core.Models.UserDevice", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("ConnectedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsGroup")
+                    b.Property<string>("ConnectionId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DeviceName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DeviceToken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("DeviceType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DisconnectedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Name")
+                    b.Property<bool>("IsOnline")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("LastLogin")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Chats");
+                    b.HasIndex("DeviceToken")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserDevices");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -551,13 +631,13 @@ namespace chatbot.Ef.Migrations
                     b.HasOne("chatbot.Core.Models.ApplicationUser", "Blocked")
                         .WithMany()
                         .HasForeignKey("BlockedId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("chatbot.Core.Models.ApplicationUser", "Blocker")
                         .WithMany()
                         .HasForeignKey("BlockerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Blocked");
@@ -565,37 +645,64 @@ namespace chatbot.Ef.Migrations
                     b.Navigation("Blocker");
                 });
 
-            modelBuilder.Entity("chatbot.Core.Models.ChatMembers", b =>
+            modelBuilder.Entity("chatbot.Core.Models.Conversation", b =>
                 {
-                    b.HasOne("chatbot.Core.Models.chat", "Chat")
+                    b.HasOne("chatbot.Core.Models.ApplicationUser", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById");
+
+                    b.Navigation("CreatedBy");
+                });
+
+            modelBuilder.Entity("chatbot.Core.Models.ConversationMember", b =>
+                {
+                    b.HasOne("chatbot.Core.Models.Conversation", "Conversation")
                         .WithMany("Members")
-                        .HasForeignKey("ChatId")
+                        .HasForeignKey("ConversationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("chatbot.Core.Models.ApplicationUser", "user")
-                        .WithMany("ChatMembers")
+                    b.HasOne("chatbot.Core.Models.ApplicationUser", "User")
+                        .WithMany("ConversationMembers")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Chat");
+                    b.Navigation("Conversation");
 
-                    b.Navigation("user");
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("chatbot.Core.Models.DeletedMessageForUser", b =>
+                {
+                    b.HasOne("chatbot.Core.Models.Message", "Message")
+                        .WithMany("DeletedForUsers")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("chatbot.Core.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Message");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("chatbot.Core.Models.Message", b =>
                 {
-                    b.HasOne("chatbot.Core.Models.chat", "Chat")
+                    b.HasOne("chatbot.Core.Models.Conversation", "Conversation")
                         .WithMany("Messages")
-                        .HasForeignKey("ChatId")
+                        .HasForeignKey("ConversationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("chatbot.Core.Models.Message", "ReplyTo")
-                        .WithMany()
-                        .HasForeignKey("ReplyToMessageId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                    b.HasOne("chatbot.Core.Models.Message", "ReplyToMessage")
+                        .WithMany("Replies")
+                        .HasForeignKey("ReplyToMessageId");
 
                     b.HasOne("chatbot.Core.Models.ApplicationUser", "Sender")
                         .WithMany("MessagesSent")
@@ -603,9 +710,9 @@ namespace chatbot.Ef.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Chat");
+                    b.Navigation("Conversation");
 
-                    b.Navigation("ReplyTo");
+                    b.Navigation("ReplyToMessage");
 
                     b.Navigation("Sender");
                 });
@@ -618,22 +725,45 @@ namespace chatbot.Ef.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("chatbot.Core.Models.ApplicationUser", "user")
+                    b.HasOne("chatbot.Core.Models.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Message");
 
-                    b.Navigation("user");
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("chatbot.Core.Models.MessageRecipientStatus", b =>
+                {
+                    b.HasOne("chatbot.Core.Models.Message", "Message")
+                        .WithMany("RecipientStatuses")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("chatbot.Core.Models.ApplicationUser", "Recipient")
+                        .WithMany()
+                        .HasForeignKey("RecipientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Message");
+
+                    b.Navigation("Recipient");
                 });
 
             modelBuilder.Entity("chatbot.Core.Models.RefreshToken", b =>
                 {
-                    b.HasOne("chatbot.Core.Models.ApplicationUser", null)
+                    b.HasOne("chatbot.Core.Models.ApplicationUser", "User")
                         .WithMany("RefreshTokens")
-                        .HasForeignKey("ApplicationUserId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("chatbot.Core.Models.UserDevice", b =>
@@ -649,7 +779,7 @@ namespace chatbot.Ef.Migrations
 
             modelBuilder.Entity("chatbot.Core.Models.ApplicationUser", b =>
                 {
-                    b.Navigation("ChatMembers");
+                    b.Navigation("ConversationMembers");
 
                     b.Navigation("Devices");
 
@@ -658,16 +788,22 @@ namespace chatbot.Ef.Migrations
                     b.Navigation("RefreshTokens");
                 });
 
-            modelBuilder.Entity("chatbot.Core.Models.Message", b =>
-                {
-                    b.Navigation("Reactions");
-                });
-
-            modelBuilder.Entity("chatbot.Core.Models.chat", b =>
+            modelBuilder.Entity("chatbot.Core.Models.Conversation", b =>
                 {
                     b.Navigation("Members");
 
                     b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("chatbot.Core.Models.Message", b =>
+                {
+                    b.Navigation("DeletedForUsers");
+
+                    b.Navigation("Reactions");
+
+                    b.Navigation("RecipientStatuses");
+
+                    b.Navigation("Replies");
                 });
 #pragma warning restore 612, 618
         }

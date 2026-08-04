@@ -1,26 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-
 namespace chatbot.Core.Models
 {
-    public class MessageReaction
+    public class DeletedMessageForUser
     {
-        public int Id { get; set; }
-        [ForeignKey("Message")]
         public string MessageId { get; set; } = string.Empty;
         public Message Message { get; set; } = null!;
 
-        [ForeignKey(nameof(User))]
-        public string UserId { get; set; }
-
+        public string UserId { get; set; } = string.Empty;
         public ApplicationUser User { get; set; } = null!;
 
-        public  ReactionType ReactionType{ get; set; } 
-        public DateTime CreatedAt { get; set; }
+        public DateTime DeletedAt { get; set; } = DateTime.UtcNow;
     }
 }

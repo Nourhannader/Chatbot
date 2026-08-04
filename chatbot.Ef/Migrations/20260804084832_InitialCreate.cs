@@ -36,6 +36,9 @@ namespace chatbot.Ef.Migrations
                     Bio = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsOnline = table.Column<bool>(type: "bit", nullable: false),
                     LastSeen = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ReadReceiptsEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    LastSeenVisible = table.Column<bool>(type: "bit", nullable: false),
+                    IsTypingVisible = table.Column<bool>(type: "bit", nullable: false),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -54,36 +57,6 @@ namespace chatbot.Ef.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ChatbotResponses",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Pattern = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ResponseText = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ChatbotResponses", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Chats",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    IsGroup = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Chats", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -196,8 +169,7 @@ namespace chatbot.Ef.Migrations
                 name: "BlockLists",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     BlockerId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     BlockedId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     BlockedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
@@ -210,13 +182,34 @@ namespace chatbot.Ef.Migrations
                         column: x => x.BlockedId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.NoAction);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_BlockLists_AspNetUsers_BlockerId",
                         column: x => x.BlockerId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.NoAction);
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Conversations",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Type = table.Column<int>(type: "int", nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    GroupPictureUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedById = table.Column<string>(type: "nvarchar(450)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Conversations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Conversations_AspNetUsers_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -229,28 +222,35 @@ namespace chatbot.Ef.Migrations
                     ExpiresOn = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
                     RevokedOn = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: true)
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_RefreshTokens", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_RefreshTokens_AspNetUsers_ApplicationUserId",
-                        column: x => x.ApplicationUserId,
+                        name: "FK_RefreshTokens_AspNetUsers_UserId",
+                        column: x => x.UserId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.NoAction);
                 });
 
             migrationBuilder.CreateTable(
                 name: "UserDevices",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ConnectionId = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    IsConnected = table.Column<bool>(type: "bit", nullable: false),
-                    LastSeen = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    DeviceToken = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    DeviceType = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DeviceName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    LastLogin = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ConnectionId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsOnline = table.Column<bool>(type: "bit", nullable: false),
+                    ConnectedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DisconnectedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -264,29 +264,33 @@ namespace chatbot.Ef.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ChatMembers",
+                name: "ConversationMembers",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ChatId = table.Column<int>(type: "int", nullable: false),
+                    ConversationId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     IsAdmin = table.Column<bool>(type: "bit", nullable: false),
-                    JoinedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    JoinedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    LastReadAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    MutedUntil = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsPinned = table.Column<bool>(type: "bit", nullable: false),
+                    PinnedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsArchived = table.Column<bool>(type: "bit", nullable: false),
+                    ArchivedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ChatMembers", x => x.Id);
+                    table.PrimaryKey("PK_ConversationMembers", x => new { x.ConversationId, x.UserId });
                     table.ForeignKey(
-                        name: "FK_ChatMembers_AspNetUsers_UserId",
+                        name: "FK_ConversationMembers_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.NoAction);
                     table.ForeignKey(
-                        name: "FK_ChatMembers_Chats_ChatId",
-                        column: x => x.ChatId,
-                        principalTable: "Chats",
+                        name: "FK_ConversationMembers_Conversations_ConversationId",
+                        column: x => x.ConversationId,
+                        principalTable: "Conversations",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.NoAction);
                 });
@@ -295,19 +299,22 @@ namespace chatbot.Ef.Migrations
                 name: "Messages",
                 columns: table => new
                 {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ChatId = table.Column<int>(type: "int", nullable: false),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ConversationId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     SenderId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    MessageText = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    MessageType = table.Column<int>(type: "int", nullable: false),
-                    MediaUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ReplyToMessageId = table.Column<long>(type: "bigint", nullable: true),
+                    Content = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     SentAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    DeliveredAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ReadAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsDeletedBySender = table.Column<bool>(type: "bit", nullable: false),
-                    IsDeletedForEveryone = table.Column<bool>(type: "bit", nullable: false)
+                    Type = table.Column<int>(type: "int", nullable: false),
+                    FileName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    FileSizeBytes = table.Column<long>(type: "bigint", nullable: true),
+                    FileDurationSeconds = table.Column<int>(type: "int", nullable: true),
+                    FileUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    EditedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsDeletedForEveryone = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ReplyToMessageId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    IsForwarded = table.Column<bool>(type: "bit", nullable: false),
+                    OriginalMessageId = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -319,17 +326,41 @@ namespace chatbot.Ef.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Messages_Chats_ChatId",
-                        column: x => x.ChatId,
-                        principalTable: "Chats",
+                        name: "FK_Messages_Conversations_ConversationId",
+                        column: x => x.ConversationId,
+                        principalTable: "Conversations",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.NoAction);
                     table.ForeignKey(
                         name: "FK_Messages_Messages_ReplyToMessageId",
                         column: x => x.ReplyToMessageId,
                         principalTable: "Messages",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "DeletedMessagesForUsers",
+                columns: table => new
+                {
+                    MessageId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DeletedMessagesForUsers", x => new { x.MessageId, x.UserId });
+                    table.ForeignKey(
+                        name: "FK_DeletedMessagesForUsers_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_DeletedMessagesForUsers_Messages_MessageId",
+                        column: x => x.MessageId,
+                        principalTable: "Messages",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.NoAction);
                 });
 
             migrationBuilder.CreateTable(
@@ -338,9 +369,9 @@ namespace chatbot.Ef.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    MessageId = table.Column<long>(type: "bigint", nullable: false),
+                    MessageId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ReactionType = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ReactionType = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
@@ -351,9 +382,36 @@ namespace chatbot.Ef.Migrations
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.NoAction);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_MessageReactions_Messages_MessageId",
+                        column: x => x.MessageId,
+                        principalTable: "Messages",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.NoAction);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MessageRecipientStatuses",
+                columns: table => new
+                {
+                    MessageId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    RecipientId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    IsRead = table.Column<bool>(type: "bit", nullable: false),
+                    ReadAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeliveredAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MessageRecipientStatuses", x => new { x.MessageId, x.RecipientId });
+                    table.ForeignKey(
+                        name: "FK_MessageRecipientStatuses_AspNetUsers_RecipientId",
+                        column: x => x.RecipientId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_MessageRecipientStatuses_Messages_MessageId",
                         column: x => x.MessageId,
                         principalTable: "Messages",
                         principalColumn: "Id",
@@ -411,20 +469,35 @@ namespace chatbot.Ef.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_ChatMembers_ChatId_UserId",
-                table: "ChatMembers",
-                columns: new[] { "ChatId", "UserId" },
-                unique: true);
+                name: "IX_ConversationMembers_ConversationId_UserId",
+                table: "ConversationMembers",
+                columns: new[] { "ConversationId", "UserId" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_ChatMembers_UserId",
-                table: "ChatMembers",
+                name: "IX_ConversationMembers_UserId_ConversationId",
+                table: "ConversationMembers",
+                columns: new[] { "UserId", "ConversationId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Conversations_CreatedById",
+                table: "Conversations",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Conversations_Type_CreatedAt",
+                table: "Conversations",
+                columns: new[] { "Type", "CreatedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DeletedMessagesForUsers_UserId",
+                table: "DeletedMessagesForUsers",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MessageReactions_MessageId",
+                name: "IX_MessageReactions_MessageId_UserId",
                 table: "MessageReactions",
-                column: "MessageId");
+                columns: new[] { "MessageId", "UserId" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_MessageReactions_UserId",
@@ -432,9 +505,20 @@ namespace chatbot.Ef.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Messages_ChatId",
+                name: "IX_MessageRecipientStatuses_MessageId_RecipientId",
+                table: "MessageRecipientStatuses",
+                columns: new[] { "MessageId", "RecipientId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MessageRecipientStatuses_RecipientId_ReadAt",
+                table: "MessageRecipientStatuses",
+                columns: new[] { "RecipientId", "ReadAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Messages_ConversationId_SentAt",
                 table: "Messages",
-                column: "ChatId");
+                columns: new[] { "ConversationId", "SentAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Messages_ReplyToMessageId",
@@ -447,9 +531,20 @@ namespace chatbot.Ef.Migrations
                 column: "SenderId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_RefreshTokens_ApplicationUserId",
+                name: "IX_Messages_SentAt",
+                table: "Messages",
+                column: "SentAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_UserId",
                 table: "RefreshTokens",
-                column: "ApplicationUserId");
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserDevices_DeviceToken",
+                table: "UserDevices",
+                column: "DeviceToken",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserDevices_UserId",
@@ -479,13 +574,16 @@ namespace chatbot.Ef.Migrations
                 name: "BlockLists");
 
             migrationBuilder.DropTable(
-                name: "ChatbotResponses");
+                name: "ConversationMembers");
 
             migrationBuilder.DropTable(
-                name: "ChatMembers");
+                name: "DeletedMessagesForUsers");
 
             migrationBuilder.DropTable(
                 name: "MessageReactions");
+
+            migrationBuilder.DropTable(
+                name: "MessageRecipientStatuses");
 
             migrationBuilder.DropTable(
                 name: "RefreshTokens");
@@ -500,10 +598,10 @@ namespace chatbot.Ef.Migrations
                 name: "Messages");
 
             migrationBuilder.DropTable(
-                name: "AspNetUsers");
+                name: "Conversations");
 
             migrationBuilder.DropTable(
-                name: "Chats");
+                name: "AspNetUsers");
         }
     }
 }

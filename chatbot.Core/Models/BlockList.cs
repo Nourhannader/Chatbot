@@ -9,7 +9,7 @@ namespace chatbot.Core.Models
 {
     public class BlockList
     {
-        public int Id { get; set; }
+        public string Id { get; set; } = Guid.NewGuid().ToString();
         [ForeignKey("Blocker")]
         public string BlockerId { get; set; }
         public ApplicationUser Blocker { get; set; }

@@ -9,14 +9,29 @@ namespace chatbot.Core.Models
 {
     public class UserDevice
     {
-        public int Id { get; set; }
-        [ForeignKey("User")]
-        public string UserId { get; set; }
-        public ApplicationUser User { get; set; }
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        
+        public string UserId { get; set; }=string.Empty;
+        public ApplicationUser User { get; set; } = null!;
 
-        public string ConnectionId { get; set; }
-        public bool IsConnected { get; set; }
+        //Firebase 
+        public string DeviceToken { get; set; }=string.Empty;
+        //Andriod, iOS, Web
+        public string DeviceType { get; set; } = string.Empty;
 
-        public DateTime LastSeen { get; set; }
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public string? DeviceName { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public DateTime LastLogin { get; set; }
+        //signalR connection id for real-time communication
+        public string? ConnectionId { get; set; }
+
+        public bool IsOnline { get; set; }
+
+        public DateTime ConnectedAt { get; set; }
+
+        public DateTime? DisconnectedAt { get; set; }
     }
 }

@@ -20,9 +20,15 @@ namespace chatbot.Core.Models
 
         public bool IsOnline { get; set; }
         public DateTime? LastSeen { get; set; }
-        public List<RefreshToken>? RefreshTokens { get; set; }
+        //privacy settings
+        public bool ReadReceiptsEnabled { get; set; } = true;
 
-        public ICollection<ChatMembers> ChatMembers { get; set; }
+        public bool LastSeenVisible { get; set; } = true;
+
+        public bool IsTypingVisible { get; set; } = true;
+        public ICollection<RefreshToken>? RefreshTokens { get; set; } 
+
+        public ICollection<ConversationMember> ConversationMembers { get; set; }
         public ICollection<Message> MessagesSent { get; set; }
         public ICollection<UserDevice> Devices { get; set; }
     }

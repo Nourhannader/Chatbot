@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
@@ -8,39 +9,57 @@ using System.Threading.Tasks;
 
 namespace chatbot.Core.Models
 {
-    public enum MessageType
-    {
-        Text = 0,
-        Image = 1,
-        Video = 2,
-        File = 3,
-        Voice = 4
-    }
+    
     public class Message
     {
-        public long Id { get; set; }
-        [ForeignKey("Chat")]
-        public int ChatId { get; set; }
-        public chat Chat { get; set; }
-        [ForeignKey("Sender")]
-        public string SenderId { get; set; }
-        public ApplicationUser Sender { get; set; }
+        [Key]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
 
-        public string? MessageText { get; set; }
+        [Required]
+        public string ConversationId { get; set; } = string.Empty;
+        public Conversation Conversation { get; set; } = null!;
 
-        public MessageType MessageType { get; set; } 
-        public string? MediaUrl { get; set; }
-        [ForeignKey("ReplyTo")]
-        public long? ReplyToMessageId { get; set; }
-        public Message ReplyTo { get; set; }
+        [Required]
+        public string SenderId { get; set; } = string.Empty;
+        public ApplicationUser Sender { get; set; } = null!;
 
-        public DateTime SentAt { get; set; }
-        public DateTime? DeliveredAt { get; set; }
-        public DateTime? ReadAt { get; set; }
+        [Required]
+        public string Content { get; set; } = string.Empty;
 
-        public bool IsDeletedBySender { get; set; }
-        public bool IsDeletedForEveryone { get; set; }
+        public DateTime SentAt { get; set; } = DateTime.UtcNow;
 
-        public ICollection<MessageReaction> Reactions { get; set; }
+        public MessageType Type { get; set; } = MessageType.Text;
+
+        public string? FileName { get; set; }
+        public long? FileSizeBytes { get; set; }
+        public int? FileDurationSeconds { get; set; }
+        public string? FileUrl { get; set; }
+        //edited Message Feature
+        public DateTime? EditedAt { get; set; }
+
+        public bool IsEdited => EditedAt != null;
+
+        // Delete For Everyone Feature
+        public bool IsDeletedForEveryone { get; set; } = false;
+        public DateTime? DeletedAt { get; set; }
+        //Message Reply Feature
+        public string? ReplyToMessageId { get; set; }
+
+        public Message? ReplyToMessage { get; set; }
+        //forwarded Message Feature
+        public bool IsForwarded { get; set; }
+
+        public string? OriginalMessageId { get; set; }
+
+        //navigation property for message replies
+        public ICollection<Message> Replies { get; set; } = new List<Message>();
+
+        // Navigation Property for Delete For Me Feature
+        public ICollection<DeletedMessageForUser> DeletedForUsers { get; set; } = new List<DeletedMessageForUser>();
+
+        // Navigation Property for Recipient Statuses
+        public ICollection<MessageRecipientStatus> RecipientStatuses { get; set; } = new List<MessageRecipientStatus>();
+        public ICollection<MessageReaction> Reactions { get; set; } = new List<MessageReaction>();
     }
 }
+
