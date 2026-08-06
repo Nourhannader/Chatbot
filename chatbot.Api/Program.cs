@@ -4,10 +4,12 @@ using chatbot.Api.Hubs;
 using chatbot.Core.Helper;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
+using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Models;
 using chatbot.Ef.Data;
 using chatbot.Ef.Repositories;
 using chatbot.Ef.Services;
+using chatbot.Ef.UnitOfWork;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
 using Microsoft.AspNetCore.Identity;
@@ -29,14 +31,28 @@ namespace chatbot.Api
             builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
                 .AddEntityFrameworkStores<ApplicationDbContext>();
 
+            builder.Services.AddTransient<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped<IAuthRepository, AuthRepository>();
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IJwtService, JwtService>();
             builder.Services.AddScoped<IMailService, MailService>();
             builder.Services.AddScoped<IChatService, ChatService>();
+            builder.Services.AddScoped<IMessageService,MessageService>();
+            builder.Services.AddScoped<IConversationService, ConversationService>();
+            builder.Services.AddScoped<IReactionService,ReactionService>();
 
             builder.Services.AddSignalR();
 
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", policy =>
+                {
+                    policy.SetIsOriginAllowed(origin => true)
+                          .AllowAnyMethod()
+                          .AllowAnyHeader()
+                          .AllowCredentials();
+                });
+            });
 
             builder.Services.AddDbContext<ApplicationDbContext>(options => 
               options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
@@ -103,6 +119,13 @@ namespace chatbot.Api
             app.UseAuthentication();
 
             app.UseAuthorization();
+
+            app.UseCors("AllowAll");
+            
+            app.UseDefaultFiles();
+
+            app.UseStaticFiles();
+
             app.MapHub<ChatHub>("/chathub");
 
             app.MapControllers();
