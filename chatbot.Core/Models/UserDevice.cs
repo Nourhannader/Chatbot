@@ -18,8 +18,6 @@ namespace chatbot.Core.Models
         public string DeviceToken { get; set; }=string.Empty;
         //Andriod, iOS, Web
         public string DeviceType { get; set; } = string.Empty;
-
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         public string? DeviceName { get; set; }
 
         public bool IsActive { get; set; }

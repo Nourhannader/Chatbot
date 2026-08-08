@@ -1,5 +1,6 @@
 
 using System.Text;
+using chatbot.Api.Extensions;
 using chatbot.Api.Hubs;
 using chatbot.Core.Helper;
 using chatbot.Core.Interfaces.Repositories;
@@ -15,6 +16,7 @@ using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 
 namespace chatbot.Api
@@ -26,20 +28,8 @@ namespace chatbot.Api
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-            builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JWT"));
-            builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
-            builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-                .AddEntityFrameworkStores<ApplicationDbContext>();
+            builder.Services.AddApplicationServices(builder.Configuration);
 
-            builder.Services.AddTransient<IUnitOfWork, UnitOfWork>();
-            builder.Services.AddScoped<IAuthRepository, AuthRepository>();
-            builder.Services.AddScoped<IAuthService, AuthService>();
-            builder.Services.AddScoped<IJwtService, JwtService>();
-            builder.Services.AddScoped<IMailService, MailService>();
-            builder.Services.AddScoped<IChatService, ChatService>();
-            builder.Services.AddScoped<IMessageService,MessageService>();
-            builder.Services.AddScoped<IConversationService, ConversationService>();
-            builder.Services.AddScoped<IReactionService,ReactionService>();
 
             builder.Services.AddSignalR();
 

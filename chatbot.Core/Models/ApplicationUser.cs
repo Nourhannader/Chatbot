@@ -31,5 +31,7 @@ namespace chatbot.Core.Models
         public ICollection<ConversationMember> ConversationMembers { get; set; }
         public ICollection<Message> MessagesSent { get; set; }
         public ICollection<UserDevice> Devices { get; set; }
+        public ICollection<Notification> Notifications { get; set; }
+        public ICollection<UserConnection> Connections { get; set; }
     }
 }
