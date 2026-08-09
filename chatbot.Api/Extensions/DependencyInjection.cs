@@ -32,6 +32,9 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IReactionService, ReactionService>();
             Services.AddScoped<IUserDeviceService, UserDeviceService>();
             Services.AddScoped<INotificationsService, NotificationsService>();
+            Services.AddScoped<IPresenceService, PresenceService>();
+            Services.AddScoped<IMessageStatusService, MessageStatusService>();
+            Services.AddScoped<ITypingService, TypingService>();
 
             return Services;
         }

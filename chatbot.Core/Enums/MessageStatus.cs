@@ -4,11 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace chatbot.Core.Models
+namespace chatbot.Core.Enums
 {
-    public enum ConversationType
+    public enum MessageStatus
     {
-        OneToOne = 1,
-        Group = 2
+        Sent=1,
+
+        Delivered=2,
+
+        Read=3
     }
 }

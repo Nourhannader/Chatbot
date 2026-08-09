@@ -31,7 +31,7 @@ namespace chatbot.Ef.Services
 
         }
 
-        public async Task<List<Message>> GetMessagesAsyns(string conversationId, int page, int pageSize)
+        public async Task<PagedResultDto<Message>> GetMessagesAsyns(string conversationId, int page, int pageSize)
         {
             return await unitOfWork.Messages
                 .GetConversationMessagesAsync(conversationId, page, pageSize);

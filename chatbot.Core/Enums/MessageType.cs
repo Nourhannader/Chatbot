@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace chatbot.Core.Models
+namespace chatbot.Core.Enums
 {
     public enum MessageType
     {
@@ -14,4 +14,5 @@ namespace chatbot.Core.Models
         Video = 4,
         File = 5
     }
+}
 }

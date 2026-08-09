@@ -11,7 +11,7 @@ namespace chatbot.Core.Interfaces.Services
     public interface IMessageService
     {
         Task<Message> SendMessageAsync(string senderId, SendMessageDto messageDto);
-        Task<List<Message>> GetMessagesAsyns(string conversationId, int page, int pageSize);
+        Task<PagedResultDto<Message>> GetMessagesAsyns(string conversationId, int page, int pageSize);
         Task DeleteForEveryoneAsync(string messageId,string userId);
         Task MarkDeliveredAsync( string messageId,string userId);
         Task MarkReadAsync(string conversationId, string userId);

@@ -18,6 +18,8 @@ namespace chatbot.Core.Interfaces.UnitOFWork
         IUserDeviceRepository UserDevices { get; }
         INotificationRepository Notifications { get; }
         IUserConnectionRepository UserConnections { get; }
+        IMessageStatusRepository MessageStatuses { get; }
+       
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();
         Task CommitAsync();

@@ -22,6 +22,7 @@ namespace chatbot.Ef.UnitOfWork
         public IUserDeviceRepository UserDevices { get; private set; }
         public INotificationRepository Notifications { get; private set; }
         public IUserConnectionRepository UserConnections { get; private set; }
+        public IMessageStatusRepository MessageStatuses { get; private set; }}
         public UnitOfWork(ApplicationDbContext _context)
         {
             this.context = _context;
@@ -32,6 +33,7 @@ namespace chatbot.Ef.UnitOfWork
             this.UserDevices = new UserDeviceRepository(context);
             this.Notifications = new NotificationRepository(context);
             this.UserConnections = new UserConnectionRepository(context);
+            this.MessageStatuses = new MessageStatusRepository(context);
         }
 
         public void Dispose()

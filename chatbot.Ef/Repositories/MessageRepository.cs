@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.DTOs;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Models;
 using chatbot.Ef.Data;
@@ -26,9 +27,9 @@ namespace chatbot.Ef.Repositories
                 ;
         }
 
-        public async Task<List<Message>> GetConversationMessagesAsync(string conversationId, int page, int pageSize)
+        public async Task<PagedResultDto<Message>> GetConversationMessagesAsync(string conversationId, int page, int pageSize)
         {
-           return await context.Messages
+            var items = await context.Messages
                 .Where(m => m.ConversationId == conversationId)
                 .OrderByDescending(m => m.SentAt)
                 .Skip((page - 1) * pageSize)
@@ -36,6 +37,22 @@ namespace chatbot.Ef.Repositories
                 .Include(m => m.Reactions)
                 .Include(m => m.RecipientStatuses)
                 .ToListAsync();
+            var PagedResult = new PagedResultDto<Message>
+            {
+                Items = items,
+                PageNumber = page,
+                PageSize = pageSize,
+                TotalCount = await context.Messages.CountAsync(m => m.ConversationId == conversationId)
+            };
+            return PagedResult;
+        }
+
+        public async Task<List<Message>> SearchMessagesAsync(string conversationId, string keyword)
+        {
+            return await context.Messages
+                .Where(x =>x.ConversationId == conversationId &&x.Content.Contains(keyword))
+              .OrderByDescending(x => x.SentAt)
+               .ToListAsync();
         }
 
         public void Update(Message entity)
