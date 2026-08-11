@@ -21,6 +21,7 @@ namespace chatbot.Ef.Repositories
         public async Task<Message> GetByIdAsync(string id)
         {
             return await context.Messages
+                .Include(m=> m.Sender)
                 .Include(m=>m.Reactions)
                 .Include(m=> m.RecipientStatuses)
                 .FirstOrDefaultAsync(m => m.Id == id)

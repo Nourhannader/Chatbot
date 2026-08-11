@@ -22,7 +22,9 @@ namespace chatbot.Ef.UnitOfWork
         public IUserDeviceRepository UserDevices { get; private set; }
         public INotificationRepository Notifications { get; private set; }
         public IUserConnectionRepository UserConnections { get; private set; }
-        public IMessageStatusRepository MessageStatuses { get; private set; }}
+        public IMessageStatusRepository MessageStatuses { get; private set; }
+        public IForwardRepository ForwardMessages {  get; private set; }
+        public ISearchRepository Searches { get; private set; }
         public UnitOfWork(ApplicationDbContext _context)
         {
             this.context = _context;
@@ -34,6 +36,8 @@ namespace chatbot.Ef.UnitOfWork
             this.Notifications = new NotificationRepository(context);
             this.UserConnections = new UserConnectionRepository(context);
             this.MessageStatuses = new MessageStatusRepository(context);
+            this.ForwardMessages = new ForwardRepository(context);
+            this.Searches = new SearchRepository(context);
         }
 
         public void Dispose()

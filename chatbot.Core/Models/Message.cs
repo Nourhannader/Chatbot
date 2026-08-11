@@ -51,6 +51,10 @@ namespace chatbot.Core.Models
         public bool IsForwarded { get; set; }
 
         public string? OriginalMessageId { get; set; }
+        public Message? OriginalMessage { get; set; }
+
+        //navigation property for message forwardies
+        public ICollection<Message> ForwardMessages { get; set; } = new List<Message>();
 
         //navigation property for message replies
         public ICollection<Message> Replies { get; set; } = new List<Message>();

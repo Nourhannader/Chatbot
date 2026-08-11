@@ -35,6 +35,8 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IPresenceService, PresenceService>();
             Services.AddScoped<IMessageStatusService, MessageStatusService>();
             Services.AddScoped<ITypingService, TypingService>();
+            Services.AddScoped<IForwardService, ForwardService>();
+            Services.AddScoped<ISearchService, SearchService>();
 
             return Services;
         }

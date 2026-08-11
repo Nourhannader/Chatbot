@@ -15,5 +15,6 @@ namespace chatbot.Core.Interfaces.Services
         Task DeleteForEveryoneAsync(string messageId,string userId);
         Task MarkDeliveredAsync( string messageId,string userId);
         Task MarkReadAsync(string conversationId, string userId);
+        Task<Message> ReplyAsync(string senderId, ReplyMessageDto dto);
     }
 }

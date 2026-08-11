@@ -4,13 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using chatbot.Core.Enums;
-using chatbot.Core.Models;
 
 namespace chatbot.Core.DTOs
 {
-    public class SendMessageDto
+    public class ReplyMessageDto
     {
         public string ConversationId { get; set; } = string.Empty;
+
+        public string ReplyToMessageId { get; set; } = string.Empty;
 
         public string Content { get; set; } = string.Empty;
 
@@ -19,9 +20,5 @@ namespace chatbot.Core.DTOs
         public string? FileUrl { get; set; }
 
         public string? FileName { get; set; }
-
-        public long? FileSizeBytes { get; set; }
-
-        public int? FileDurationSeconds { get; set; }
     }
 }

@@ -15,5 +15,6 @@ namespace chatbot.Core.Interfaces.Repositories
         int page,
         int pageSize);
         Task<List<Message>> SearchMessagesAsync(string conversationId, string keyword);
+       
     }
 }

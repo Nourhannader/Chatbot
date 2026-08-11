@@ -47,6 +47,31 @@ namespace chatbot.Ef.Services
             throw new NotImplementedException();
         }
 
+        public async Task<Message> ReplyAsync(string senderId, ReplyMessageDto dto)
+        {
+            var repliedMessage = await unitOfWork.Messages.GetByIdAsync(dto.ReplyToMessageId);
+            if (repliedMessage == null)
+                throw new Exception("Message not found.");
+            if (repliedMessage.ConversationId != dto.ConversationId)
+                throw new Exception("Invalid conversation.");
+
+            var message = new Message
+            {
+                SenderId = senderId,
+                ConversationId = dto.ConversationId,
+                Content = dto.Content,
+                FileUrl = dto.FileUrl,
+                FileName = dto.FileName,
+                Type = dto.Type,
+                SentAt = DateTime.UtcNow,
+                ReplyToMessageId = dto.ReplyToMessageId
+
+            };
+           await unitOfWork.Messages.AddAsync(message);
+            await unitOfWork.SaveChangesAsync();
+            return message;
+        }
+
         public async Task<Message> SendMessageAsync(string senderId, SendMessageDto messageDto)
         {
             var Message = new Message
@@ -68,5 +93,6 @@ namespace chatbot.Ef.Services
             await unitOfWork.SaveChangesAsync();
             return Message;
         }
+       
     }
 }
