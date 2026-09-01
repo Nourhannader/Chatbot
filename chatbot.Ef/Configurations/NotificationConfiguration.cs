@@ -14,8 +14,6 @@ namespace chatbot.Ef.Configurations
         public void Configure(EntityTypeBuilder<Notification> builder)
         {
             
-            builder.HasKey(x => x.Id);
-
             builder.Property(x => x.Title)
                 .HasMaxLength(100);
 
@@ -25,9 +23,13 @@ namespace chatbot.Ef.Configurations
             builder.Property(x => x.IsRead)
                 .HasDefaultValue(false);
 
+            builder.Property(x => x.Type)
+                .HasConversion<int>()
+                .IsRequired();
+
             // Relationships
             builder.HasOne(x => x.User)
-                .WithMany()
+                .WithMany(x => x.Notifications)
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.NoAction);
             // Indexes

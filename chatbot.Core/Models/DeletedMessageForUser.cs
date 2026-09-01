@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace chatbot.Core.Models
 {
-    public class DeletedMessageForUser
+    public class DeletedMessageForUser: BaseEntity
     {
         public string MessageId { get; set; } = string.Empty;
         public Message Message { get; set; } = null!;

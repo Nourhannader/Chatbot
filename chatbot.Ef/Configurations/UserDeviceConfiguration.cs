@@ -16,10 +16,19 @@ namespace chatbot.Ef.Configurations
             builder.HasKey(x => x.Id);
 
             builder.Property(x => x.DeviceType)
-                .HasMaxLength(20);
+                .HasMaxLength(100);
+
+            //relationships
+            builder.HasOne(x => x.User)
+            .WithMany(x => x.Devices)
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
             //indexes
-            builder.HasIndex(x => x.DeviceToken)
-               .IsUnique();
+            builder.HasIndex(x => new
+            {
+                x.UserId,
+                x.DeviceToken
+            }).IsUnique();
         }
     }
 }

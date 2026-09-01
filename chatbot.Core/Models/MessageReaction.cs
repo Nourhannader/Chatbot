@@ -9,15 +9,14 @@ using chatbot.Core.Enums;
 
 namespace chatbot.Core.Models
 {
-    public class MessageReaction
+    public class MessageReaction:BaseEntity
     {
-        public int Id { get; set; }
         [ForeignKey("Message")]
         public string MessageId { get; set; } = string.Empty;
         public Message Message { get; set; } = null!;
 
         [ForeignKey(nameof(User))]
-        public string UserId { get; set; }
+        public Guid UserId { get; set; }
 
         public ApplicationUser User { get; set; } = null!;
 

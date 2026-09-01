@@ -2,11 +2,13 @@
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
+using chatbot.Core.Interfaces.Validators;
 using chatbot.Core.Models;
 using chatbot.Ef.Data;
 using chatbot.Ef.Repositories;
 using chatbot.Ef.Services;
 using chatbot.Ef.UnitOfWork;
+using chatbot.Ef.ValidatorService;
 using Microsoft.AspNetCore.Identity;
 
 
@@ -37,6 +39,8 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<ITypingService, TypingService>();
             Services.AddScoped<IForwardService, ForwardService>();
             Services.AddScoped<ISearchService, SearchService>();
+            Services.AddScoped<IStorageService, LocalStorageService>();
+            Services.AddScoped<IFileValidationService, FileValidationService>();
 
             return Services;
         }

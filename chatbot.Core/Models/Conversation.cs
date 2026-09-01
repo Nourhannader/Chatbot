@@ -8,10 +8,8 @@ using chatbot.Core.Enums;
 
 namespace chatbot.Core.Models
 {
-    public class Conversation
+    public class Conversation:BaseEntity
     {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
         public ConversationType Type { get; set; } = ConversationType.OneToOne;
 
         [MaxLength(100)]

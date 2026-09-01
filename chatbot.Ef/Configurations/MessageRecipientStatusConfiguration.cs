@@ -13,19 +13,22 @@ namespace chatbot.Ef.Configurations
     {
         public void Configure(EntityTypeBuilder<MessageRecipientStatus> builder)
         {
-            builder.HasKey(x =>
-            new
-            {
-                x.MessageId,
-                x.RecipientId
-            });
+            builder.Property(x => x.Status)
+                .IsRequired();
 
             // Relationships
 
             builder.HasOne(x => x.Recipient)
-                .WithMany()
+                .WithMany(x => x.MessageRecipientStatuses)
                 .HasForeignKey(x => x.RecipientId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Indexes
+            builder.HasIndex(x => new
+            {
+                x.MessageId,
+                x.RecipientId
+            }).IsUnique();
         }
     }
 }

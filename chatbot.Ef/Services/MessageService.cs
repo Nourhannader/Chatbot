@@ -6,11 +6,12 @@ using System.Threading.Tasks;
 using chatbot.Core.DTOs;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
+using chatbot.Core.Interfaces.Validators;
 using chatbot.Core.Models;
 
 namespace chatbot.Ef.Services
 {
-    public class MessageService(IUnitOfWork unitOfWork) : IMessageService
+    public class MessageService(IUnitOfWork unitOfWork,IStorageService storage,IFileValidationService validator) : IMessageService
     {
         public async Task DeleteForEveryoneAsync(string messageId, string userId)
         {
@@ -60,7 +61,7 @@ namespace chatbot.Ef.Services
                 SenderId = senderId,
                 ConversationId = dto.ConversationId,
                 Content = dto.Content,
-                FileUrl = dto.FileUrl,
+                //FileUrl = dto.FileUrl,
                 FileName = dto.FileName,
                 Type = dto.Type,
                 SentAt = DateTime.UtcNow,
@@ -70,6 +71,11 @@ namespace chatbot.Ef.Services
            await unitOfWork.Messages.AddAsync(message);
             await unitOfWork.SaveChangesAsync();
             return message;
+        }
+
+        public Task<MessageDto> SendFileAsync(SendFileDto filedto)
+        {
+            validator.ValidateFile(filedto.FileUrl)
         }
 
         public async Task<Message> SendMessageAsync(string senderId, SendMessageDto messageDto)

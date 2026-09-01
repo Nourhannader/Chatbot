@@ -13,13 +13,22 @@ namespace chatbot.Ef.Configurations
     {
         public void Configure(EntityTypeBuilder<Message> builder)
         {
-            builder.HasKey(x => x.Id);
+           
 
             builder.Property(x => x.Content)
                 .HasMaxLength(4000);
 
             builder.Property(x => x.Type)
-                .HasConversion<int>();
+                .HasConversion<int>()
+                .IsRequired();
+
+            builder.Property(x => x.IsDeletedForEveryone)
+            .HasDefaultValue(false);
+
+            builder.HasOne(x => x.Sender)
+            .WithMany(x => x.MessagesSent)
+            .HasForeignKey(x => x.SenderId)
+            .OnDelete(DeleteBehavior.Restrict);
 
             // Relationships
             builder.HasMany(x => x.Reactions)
@@ -43,7 +52,6 @@ namespace chatbot.Ef.Configurations
 
             builder.HasIndex(x => x.Content);
 
-            builder.HasIndex(x => x.FileName);
 
             builder.HasIndex(x =>
                 new

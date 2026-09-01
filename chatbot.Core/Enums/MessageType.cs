@@ -15,4 +15,4 @@ namespace chatbot.Core.Enums
         File = 5
     }
 }
-}
+

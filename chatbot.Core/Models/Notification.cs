@@ -3,17 +3,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.Enums;
 
 namespace chatbot.Core.Models
 {
-    public class Notification
+    public class Notification:BaseEntity
     {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
         public string UserId { get; set; } = string.Empty;
         public ApplicationUser User { get; set; } = null!;
         public string Title { get; set; } = string.Empty;
         public string Body { get; set; } = string.Empty;
-        public bool IsRead { get; set; }
+        public NotificationType Type { get; set; } 
+        public bool IsRead { get; set; } = false;
+        public DateTime? ReadAt { get; set; }   
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

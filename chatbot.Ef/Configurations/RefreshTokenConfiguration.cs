@@ -9,23 +9,29 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace chatbot.Ef.Configurations
 {
-    public class DeletedMessageForUserConfiguration : IEntityTypeConfiguration<DeletedMessageForUser>
+    public class RefreshTokenConfiguration :IEntityTypeConfiguration<RefreshToken>
     {
-        public void Configure(EntityTypeBuilder<DeletedMessageForUser> builder)
+        public void Configure(EntityTypeBuilder<RefreshToken> builder)
         {
+            builder.Property(x => x.Token)
+                .IsRequired();
             
-
             // Relationships
             builder.HasOne(x => x.User)
-                .WithMany(x=> x.DeletedMessages)
+                .WithMany(x => x.RefreshTokens)
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            //indexes
-            builder.HasIndex(x =>
-            new
+            //properties
+            builder.Ignore(x => x.IsExpired);
+            builder.Ignore(x => x.IsActive);
+            // Indexes
+            builder.HasIndex(x => x.Token)
+                   .IsUnique();
+
+            builder.HasIndex(x => new
             {
-                x.MessageId,
+                x.Token,
                 x.UserId
             }).IsUnique();
         }

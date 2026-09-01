@@ -7,7 +7,7 @@ using ServiceStack.DataAnnotations;
 
 namespace chatbot.Core.Models
 {
-    public class ConversationMember
+    public class ConversationMember:BaseEntity
     {
        
         public string ConversationId { get; set; } = string.Empty;
@@ -18,6 +18,7 @@ namespace chatbot.Core.Models
 
         public bool IsAdmin { get; set; } = false;
         public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? LeftAt { get; set; }
 
         // Real-Time Unread Count Tracking
         public DateTime? LastReadAt { get; set; }

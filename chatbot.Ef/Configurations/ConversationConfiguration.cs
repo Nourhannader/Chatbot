@@ -13,13 +13,15 @@ namespace chatbot.Ef.Configurations
     {
         public void Configure(EntityTypeBuilder<Conversation> builder)
         {
-            builder.HasKey(c => c.Id);
+           
 
             builder.Property(c => c.Title)
                 .HasMaxLength(100);
 
             builder.Property(c=> c.Type)
-                .HasConversion<int>();
+                .HasConversion<int>()
+                .IsRequired();
+
 
             // Relationships
             builder.HasMany(c => c.Members)
@@ -32,6 +34,7 @@ namespace chatbot.Ef.Configurations
 
             //index
             builder.HasIndex(c => c.CreatedAt);
+            builder.HasIndex(c => c.Type);
         }
     }
 }

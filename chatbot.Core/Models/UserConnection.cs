@@ -6,10 +6,8 @@ using System.Threading.Tasks;
 
 namespace chatbot.Core.Models
 {
-    public class UserConnection
+    public class UserConnection : BaseEntity
     {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
         public string UserId { get; set; } = string.Empty;
         public ApplicationUser User { get; set; } = null!;
 

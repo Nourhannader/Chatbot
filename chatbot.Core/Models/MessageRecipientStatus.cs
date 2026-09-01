@@ -7,7 +7,7 @@ using chatbot.Core.Enums;
 
 namespace chatbot.Core.Models
 {
-    public class MessageRecipientStatus
+    public class MessageRecipientStatus : BaseEntity
     {
         public string MessageId { get; set; } = string.Empty;
         public Message Message { get; set; } = null!;

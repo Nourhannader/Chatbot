@@ -7,29 +7,54 @@ using chatbot.Core.DTOs;
 using chatbot.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 
 namespace chatbot.Ef.Services
 {
-    public class LocalStorageService(IWebHostEnvironment environment) : IStorageService 
+    public class LocalStorageService(IWebHostEnvironment environment) : IStorageService
     {
-        public Task DeleteAsync(string fileUrl)
+       
+        public async Task DeleteAsync(string fileUrl)
         {
-            throw new NotImplementedException();
+
+            var path = Path.Combine(environment.WebRootPath, fileUrl.TrimStart('/'));
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+            await Task.CompletedTask;
         }
 
-        public Task<Stream> DownloadAsync(string fileUrl)
+        public async Task<Stream> DownloadAsync(string fileUrl)
         {
-            throw new NotImplementedException();
+            var path = Path.Combine(environment.WebRootPath, fileUrl.TrimStart('/'));
+            return await Task.FromResult(new FileStream(path, FileMode.Open, FileAccess.Read));
         }
 
         public bool Exists(string fileUrl)
         {
-            throw new NotImplementedException();
+            var path = Path.Combine(environment.WebRootPath, fileUrl.TrimStart('/'));
+            return File.Exists(path);
         }
 
-        public Task<UploadResultDto> UploadAsync(IFormFile file, string folder)
+        public async Task<UploadResultDto> UploadAsync(IFormFile file, string folder)
         {
-            throw new NotImplementedException();
+            var uploadsFolder = Path.Combine(environment.WebRootPath, "uploads", folder); 
+            if (!Directory.Exists(uploadsFolder)) 
+                Directory.CreateDirectory(uploadsFolder); 
+            
+            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+            var path = Path.Combine(uploadsFolder, fileName); 
+            
+            using var stream = new FileStream(path, FileMode.Create); 
+            await file.CopyToAsync(stream); 
+            return new UploadResultDto 
+            { 
+                Success = true,
+                FileName = fileName, 
+                FileSize = file.Length, 
+                ContentType = file.ContentType, 
+                FileUrl = $"/uploads/{folder}/{fileName}" };
         }
     }
 }

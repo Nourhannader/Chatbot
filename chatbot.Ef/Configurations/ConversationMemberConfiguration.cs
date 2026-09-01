@@ -13,19 +13,18 @@ namespace chatbot.Ef.Configurations
     {
         public void Configure(EntityTypeBuilder<ConversationMember> builder)
         {
-            builder.HasKey(x =>
-            new
-            {
-                x.ConversationId,
-                x.UserId
-            });
+            builder.HasOne(x=> x.User)
+                .WithMany(c=> c.ConversationMembers)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
 
             builder.HasIndex(x =>
                 new
                 {
                     x.UserId,
                     x.ConversationId
-                });
+                }).IsUnique();
         }
     }
 }

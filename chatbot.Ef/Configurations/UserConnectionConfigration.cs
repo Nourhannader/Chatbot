@@ -13,7 +13,12 @@ namespace chatbot.Ef.Configurations
     {
         public void Configure(EntityTypeBuilder<UserConnection> builder)
         {
-             builder.HasKey(x => x.Id);
+            builder.Property(x => x.ConnectionId)
+           .IsRequired()
+           .HasMaxLength(200);
+
+            builder.Property(x => x.DeviceType)
+                .HasMaxLength(100);
             // Relationships
             builder.HasOne(x => x.User) 
                 .WithMany() 

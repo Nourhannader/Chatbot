@@ -8,9 +8,8 @@ using System.Threading.Tasks;
 namespace chatbot.Core.Models
 {
    
-    public class RefreshToken
+    public class RefreshToken : BaseEntity
     {
-        public int Id { get; set; }
 
         public string Token { get; set; } = string.Empty;
 

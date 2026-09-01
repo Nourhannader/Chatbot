@@ -13,17 +13,17 @@ namespace chatbot.Ef.Configurations
     {
         public void Configure(EntityTypeBuilder<BlockList> builder)
         {
-            builder.HasKey(x => x.Id);
+            
 
             // Relationships
 
             builder.HasOne(x => x.Blocker)
-                .WithMany()
+                .WithMany(x=> x.BlockedUsers)
                 .HasForeignKey(x => x.BlockerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasOne(x => x.Blocked)
-                .WithMany()
+                .WithMany(x => x.BlockedByUsers)
                 .HasForeignKey(x => x.BlockedId)
                 .OnDelete(DeleteBehavior.Restrict);
 

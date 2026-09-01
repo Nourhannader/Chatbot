@@ -6,12 +6,14 @@ using System.Threading.Tasks;
 
 namespace chatbot.Core.Enums
 {
-    public enum MessageStatus
+    public enum NotificationType
     {
-        Sent=1,
+        NewMessage = 1,
+        MessageReaction = 2,
+        MessageReply = 3,
+        AddedToGroup = 4,
+        RemovedFromGroup = 5
 
-        Delivered=2,
 
-        Seen=3
     }
 }

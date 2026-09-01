@@ -16,5 +16,6 @@ namespace chatbot.Core.Interfaces.Services
         Task MarkDeliveredAsync( string messageId,string userId);
         Task MarkReadAsync(string conversationId, string userId);
         Task<Message> ReplyAsync(string senderId, ReplyMessageDto dto);
+        Task<MessageDto> SendFileAsync(SendFileDto filedto);
     }
 }

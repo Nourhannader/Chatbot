@@ -11,10 +11,8 @@ using chatbot.Core.Enums;
 namespace chatbot.Core.Models
 {
     
-    public class Message
+    public class Message:BaseEntity
     {
-        [Key]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
 
         [Required]
         public string ConversationId { get; set; } = string.Empty;
@@ -30,11 +28,7 @@ namespace chatbot.Core.Models
         public DateTime SentAt { get; set; } = DateTime.UtcNow;
 
         public MessageType Type { get; set; } = MessageType.Text;
-
-        public string? FileName { get; set; }
-        public long? FileSizeBytes { get; set; }
-        public int? FileDurationSeconds { get; set; }
-        public string? FileUrl { get; set; }
+        
         //edited Message Feature
         public DateTime? EditedAt { get; set; }
 
@@ -65,6 +59,7 @@ namespace chatbot.Core.Models
         // Navigation Property for Recipient Statuses
         public ICollection<MessageRecipientStatus> RecipientStatuses { get; set; } = new List<MessageRecipientStatus>();
         public ICollection<MessageReaction> Reactions { get; set; } = new List<MessageReaction>();
+        public ICollection<StoredFile> StoredFiles { get; set; } = new List<StoredFile>();
     }
 }
 
