@@ -11,10 +11,10 @@ namespace chatbot.Core.Interfaces.Services
     {
         Task<List<UserDto>> SearchUsersAsync(string keyword);
 
-        Task<List<MessageDto>> SearchMessagesAsync( string conversationId,string keyword);
+        Task<List<MessageDto>> SearchMessagesAsync( Guid conversationId,string keyword);
 
-        Task<List<ConversationDto>> SearchConversationsAsync(string userId,string keyword);
+        Task<List<ConversationDto>> SearchConversationsAsync(Guid userId,string keyword);
 
-        Task<List<MessageDto>> SearchFilesAsync(string conversationId,string keyword);
+        Task<List<MessageDto>> SearchFilesAsync(Guid conversationId,string keyword);
     }
 }

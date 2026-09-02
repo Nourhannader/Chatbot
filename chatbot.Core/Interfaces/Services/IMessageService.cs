@@ -10,12 +10,12 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IMessageService
     {
-        Task<Message> SendMessageAsync(string senderId, SendMessageDto messageDto);
-        Task<PagedResultDto<Message>> GetMessagesAsyns(string conversationId, int page, int pageSize);
-        Task DeleteForEveryoneAsync(string messageId,string userId);
-        Task MarkDeliveredAsync( string messageId,string userId);
-        Task MarkReadAsync(string conversationId, string userId);
-        Task<Message> ReplyAsync(string senderId, ReplyMessageDto dto);
+        Task<Message> SendMessageAsync(Guid senderId, SendMessageDto messageDto);
+        Task<PagedResultDto<Message>> GetMessagesAsyns(Guid conversationId, int page, int pageSize);
+        Task DeleteForEveryoneAsync(Guid messageId,Guid userId);
+        Task MarkDeliveredAsync(Guid messageId, Guid userId);
+        Task MarkReadAsync(Guid conversationId, Guid userId);
+        Task<Message> ReplyAsync(Guid senderId, ReplyMessageDto dto);
         Task<MessageDto> SendFileAsync(SendFileDto filedto);
     }
 }

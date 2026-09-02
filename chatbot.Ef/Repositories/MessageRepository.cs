@@ -18,7 +18,7 @@ namespace chatbot.Ef.Repositories
             await context.Messages.AddAsync(entity);
         }
 
-        public async Task<Message> GetByIdAsync(string id)
+        public async Task<Message> GetByIdAsync(Guid id)
         {
             return await context.Messages
                 .Include(m=> m.Sender)
@@ -28,7 +28,7 @@ namespace chatbot.Ef.Repositories
                 ;
         }
 
-        public async Task<PagedResultDto<Message>> GetConversationMessagesAsync(string conversationId, int page, int pageSize)
+        public async Task<PagedResultDto<Message>> GetConversationMessagesAsync(Guid conversationId, int page, int pageSize)
         {
             var items = await context.Messages
                 .Where(m => m.ConversationId == conversationId)
@@ -48,7 +48,7 @@ namespace chatbot.Ef.Repositories
             return PagedResult;
         }
 
-        public async Task<List<Message>> SearchMessagesAsync(string conversationId, string keyword)
+        public async Task<List<Message>> SearchMessagesAsync(Guid conversationId, string keyword)
         {
             return await context.Messages
                 .Where(x =>x.ConversationId == conversationId &&x.Content.Contains(keyword))

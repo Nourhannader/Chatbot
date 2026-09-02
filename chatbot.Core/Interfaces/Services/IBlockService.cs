@@ -9,12 +9,12 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IBlockService
     {
-        Task BlockAsync(string blockerId, string blockedId);
+        Task BlockAsync(Guid blockerId, Guid blockedId);
 
-        Task UnblockAsync(string blockerId, string blockedId);
+        Task UnblockAsync(Guid blockerId, Guid blockedId);
 
-        Task<bool> IsBlockedAsync(string firstUserId, string secondUserId);
+        Task<bool> IsBlockedAsync(Guid firstUserId, Guid secondUserId);
 
-        Task<List<BlockList>> GetBlockedUsersAsync(string blockerId);
+        Task<List<BlockList>> GetBlockedUsersAsync(Guid blockerId);
     }
 }

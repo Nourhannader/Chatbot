@@ -9,10 +9,10 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IUserDeviceService
     {
-        Task RegisterDeviceAsync(string userId, string deviceToken, string devicaType);
-        Task SetOnlineAsync(string userId, string deviceToken, string connectionId);
+        Task RegisterDeviceAsync(Guid userId, string deviceToken, string devicaType);
+        Task SetOnlineAsync(Guid userId, string deviceToken, string connectionId);
         Task SetOfflineAsync(string connectionId);
-        Task<List<UserDevice>> GetDeviceAsync(string userId);
+        Task<List<UserDevice>> GetDeviceAsync(Guid userId);
 
     }
 }

@@ -11,12 +11,12 @@ namespace chatbot.Ef.Services
 {
     public class UserDeviceService(IUnitOfWork unitOfWork) : IUserDeviceService
     {
-        public Task<List<UserDevice>> GetDeviceAsync(string userId)
+        public Task<List<UserDevice>> GetDeviceAsync(Guid userId)
         {
             return unitOfWork.UserDevices.GetUserDevicesAsync(userId);
         }
 
-        public async Task RegisterDeviceAsync(string userId, string deviceToken, string devicaType)
+        public async Task RegisterDeviceAsync(Guid userId, string deviceToken, string devicaType)
         {
             var device=await unitOfWork.UserDevices.GetByUserAsync(userId, deviceToken);
             if (device==null)
@@ -34,7 +34,7 @@ namespace chatbot.Ef.Services
 
         public async Task SetOfflineAsync(string connectionId)
         {
-            var devices = await unitOfWork.UserDevices.GetUserDevicesAsync(string.Empty);
+            var devices = await unitOfWork.UserDevices.GetUserDevicesAsync(Guid.Empty); 
             var device = devices.FirstOrDefault(d => d.ConnectionId == connectionId);
             if (device == null)
             {
@@ -47,7 +47,8 @@ namespace chatbot.Ef.Services
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task SetOnlineAsync(string userId, string deviceToken, string connectionId)
+
+        public async Task SetOnlineAsync(Guid userId, string deviceToken, string connectionId)
         {
             var device=await unitOfWork.UserDevices.GetByUserAsync(userId, deviceToken);
             if(device== null)
@@ -60,5 +61,7 @@ namespace chatbot.Ef.Services
             unitOfWork.UserDevices.Update(device);
             await unitOfWork.SaveChangesAsync();
         }
+
+        
     }
 }

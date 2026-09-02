@@ -12,19 +12,19 @@ namespace chatbot.Ef.Services
 {
     public class MessageStatusService(IUnitOfWork unitOfWork) : IMessageStatusService
     {
-        public async Task<MessageStatus> GetStatusAsync(string messageId, string recipientId)
+        public async Task<MessageStatus> GetStatusAsync(Guid messageId, Guid recipientId)
         {
             var status= await unitOfWork.MessageStatuses.GetAsync(messageId, recipientId);
             return status?.Status ?? MessageStatus.Sent;
 
         }
 
-        public  async Task<List<MessageRecipientStatus>> GetStatusesAsync(string messageId)
+        public  async Task<List<MessageRecipientStatus>> GetStatusesAsync(Guid messageId)
         {
             return await unitOfWork.MessageStatuses.GetByMessageAsync(messageId);
         }
 
-        public async Task MarkDeliveredAsync(string messageId, string recipientId)
+        public async Task MarkDeliveredAsync(Guid messageId, Guid recipientId)
         {
             var status = await unitOfWork.MessageStatuses.GetAsync(messageId, recipientId);
             if (status == null)
@@ -39,16 +39,16 @@ namespace chatbot.Ef.Services
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task MarkReadAsync(string messageId, string recipientId)
+        public async Task MarkReadAsync(Guid messageId, Guid recipientId)
         {
             var status = await unitOfWork.MessageStatuses.GetAsync(messageId, recipientId);
             if (status == null)
             {
                 return;
             }
-            if (status.Status == MessageStatus.Read)
+            if (status.Status == MessageStatus.Seen)
                 return;
-            status.Status = MessageStatus.Read;
+            status.Status = MessageStatus.Seen;
             status.ReadAt = DateTime.UtcNow;
             unitOfWork.MessageStatuses.Update(status);
             await unitOfWork.SaveChangesAsync();

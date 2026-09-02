@@ -9,19 +9,19 @@ namespace chatbot.Ef.Repositories
 {
     public class TypingRepository
     {
-        private readonly ConcurrentDictionary<string,
-        ConcurrentDictionary<string, DateTime>> typing
+        private readonly ConcurrentDictionary<Guid,
+        ConcurrentDictionary<Guid, DateTime>> typing
         = new();
 
-        public void StartTyping(string conversationId,string userId)
+        public void StartTyping(Guid conversationId,Guid userId)
         {
             var users=typing.GetOrAdd(conversationId,
-                _ => new ConcurrentDictionary<string, DateTime>());
+                _ => new ConcurrentDictionary<Guid, DateTime>());
             users[userId] = DateTime.UtcNow;
 
         }
 
-        public void StopTyping(string conversationId,string userId)
+        public void StopTyping(Guid conversationId,Guid userId)
         {
             if(typing.TryGetValue(conversationId,out var users))
             {
@@ -33,7 +33,7 @@ namespace chatbot.Ef.Repositories
             }
         }
 
-        public List<string> GetTypingUsers(string conversationId)
+        public List<Guid> GetTypingUsers(Guid conversationId)
         {
             if (!typing.TryGetValue(conversationId, out var users))
                 return [];
@@ -41,7 +41,7 @@ namespace chatbot.Ef.Repositories
             return users.Keys.ToList();
         }
 
-        public bool IsTyping(string conversationId,string userId)
+        public bool IsTyping(Guid conversationId, Guid userId)
         {
             if (!typing.TryGetValue(conversationId, out var users))
                 return false;

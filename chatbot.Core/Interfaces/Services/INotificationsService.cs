@@ -9,8 +9,8 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface INotificationsService
     {
-        Task CreateAsync(string userId, string title, string body);
-        Task<List<Notification>> GetNotificationsAsync(string userId);
-        Task MarkAsReadAsync(string notificationId);
+        Task CreateAsync(Guid userId, string title, string body);
+        Task<List<Notification>> GetNotificationsAsync(Guid userId);
+        Task MarkAsReadAsync(Guid notificationId);
     }
 }

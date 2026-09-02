@@ -7,12 +7,12 @@ using chatbot.Core.Models;
 
 namespace chatbot.Core.Interfaces.Repositories
 {
-    public interface IUserConnectionRepository:IBaseRepository<UserConnection,string>
+    public interface IUserConnectionRepository:IBaseRepository<UserConnection,Guid>
     {
-        Task RemoveAsync(string connectionId);
+        Task RemoveAsync(Guid connectionId);
 
-        Task<List<UserConnection>> GetUserConnectionsAsync(string userId);
+        Task<List<UserConnection>> GetUserConnectionsAsync(Guid userId);
 
-        Task<bool> HasConnectionsAsync(string userId);
+        Task<bool> HasConnectionsAsync(Guid userId);
     }
 }

@@ -18,19 +18,19 @@ namespace chatbot.Ef.Repositories
 
         }
 
-        public async Task<UserDevice?> GetByIdAsync(string id)
+        public async Task<UserDevice?> GetByIdAsync(Guid id)
         {
             return await context.UserDevices
                 .FirstOrDefaultAsync(ud => ud.Id == id);
         }
 
-        public async Task<UserDevice?> GetByUserAsync(string userId, string deviceToken)
+        public async Task<UserDevice?> GetByUserAsync(Guid userId, string deviceToken)
         {
             return await context.UserDevices
                 .FirstOrDefaultAsync(ud => ud.UserId == userId && ud.DeviceToken == deviceToken);
         }
 
-        public async Task<List<UserDevice>> GetUserDevicesAsync(string userId)
+        public async Task<List<UserDevice>> GetUserDevicesAsync(Guid userId)
         {
             return await context.UserDevices
                 .Where(ud => ud.UserId == userId)

@@ -10,10 +10,10 @@ namespace chatbot.Core.Models
     public class BlockList : BaseEntity
     {
         [ForeignKey("Blocker")]
-        public string BlockerId { get; set; }
+        public Guid BlockerId { get; set; }
         public ApplicationUser Blocker { get; set; }
         [ForeignKey("Blocked")]
-        public string BlockedId { get; set; }
+        public Guid BlockedId { get; set; }
         public ApplicationUser Blocked { get; set; }
         public DateTime BlockedAt { get; set; }
     }

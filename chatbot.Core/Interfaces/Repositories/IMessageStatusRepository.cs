@@ -7,10 +7,10 @@ using chatbot.Core.Models;
 
 namespace chatbot.Core.Interfaces.Repositories
 {
-    public interface IMessageStatusRepository:IBaseRepository<MessageRecipientStatus,string>
+    public interface IMessageStatusRepository:IBaseRepository<MessageRecipientStatus,Guid>
     {
-        Task<MessageRecipientStatus?> GetAsync(string messageId, string recipientId);
-        Task<List<MessageRecipientStatus>> GetByMessageAsync(string messageId);
+        Task<MessageRecipientStatus?> GetAsync(Guid messageId, Guid recipientId);
+        Task<List<MessageRecipientStatus>> GetByMessageAsync(Guid messageId);
 
     }
 }

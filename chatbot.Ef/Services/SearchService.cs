@@ -12,13 +12,13 @@ namespace chatbot.Ef.Services
 {
     public class SearchService(IUnitOfWork unitOfWork) : ISearchService
     {
-        public async Task<List<ConversationDto>> SearchConversationsAsync(string userId, string keyword)
+        public async Task<List<ConversationDto>> SearchConversationsAsync(Guid userId, string keyword)
         {
             var conversations=await unitOfWork.Searches.SearchConversationsAsync(userId, keyword);
             return conversations.Select(
                 c => new ConversationDto
                 {
-                    Id=c.Id,
+                    Id=c.Id.ToString(),
                     Title=c.Title,
                     Type=c.Type,
                     GroupPictureUrl=c.GroupPictureUrl,
@@ -27,13 +27,13 @@ namespace chatbot.Ef.Services
                 ).ToList();
         }
 
-        public async Task<List<MessageDto>> SearchFilesAsync(string conversationId, string keyword)
+        public async Task<List<MessageDto>> SearchFilesAsync(Guid conversationId, string keyword)
         {
             var files = await unitOfWork.Searches.SearchFilesAsync(conversationId, keyword);
             return files.Select(
                 f => new MessageDto
                 {
-                    Id = f.Id,
+                    Id = f.Id.ToString(),
                     FileUrl = f.FileUrl,
                     SenderId = f.SenderId,
                     Type = f.Type,
@@ -43,15 +43,15 @@ namespace chatbot.Ef.Services
 
         }
 
-        public async Task<List<MessageDto>> SearchMessagesAsync(string conversationId, string keyword)
+        public async Task<List<MessageDto>> SearchMessagesAsync(Guid conversationId, string keyword)
         {
             var messages = await unitOfWork.Searches.SearchMessagesAsync(conversationId, keyword);
             return messages.Select(
                m => new MessageDto
                {
-                   Id = m.Id,
+                   Id = m.Id.ToString(),
                    FileUrl = m.FileUrl,
-                   SenderId = m.SenderId,
+                   SenderId = m.SenderId.ToString(),
                    Type = m.Type,
                    Content = m.Content
                }
@@ -64,7 +64,7 @@ namespace chatbot.Ef.Services
             return users.Select(
                u => new UserDto
                {
-                   Id = u.Id
+                   Id = u.Id.ToString()
                }
                ).ToList();
         }

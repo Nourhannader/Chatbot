@@ -10,8 +10,8 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IReactionService
     {
-        Task<MessageReaction?> AddReactionAsync(string messageId, string userId, ReactionType reactionType);
-        Task RemoveReactionAsync(string messageId, string userId);
-        Task<List<MessageReaction>> GetMessageReactionsAsync(string messageId);
+        Task<MessageReaction?> AddReactionAsync(Guid messageId, Guid userId, ReactionType reactionType);
+        Task RemoveReactionAsync(Guid messageId, Guid userId);
+        Task<List<MessageReaction>> GetMessageReactionsAsync(Guid messageId);
     }
 }

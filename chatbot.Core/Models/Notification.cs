@@ -9,7 +9,7 @@ namespace chatbot.Core.Models
 {
     public class Notification:BaseEntity
     {
-        public string UserId { get; set; } = string.Empty;
+        public Guid UserId { get; set; } 
         public ApplicationUser User { get; set; } = null!;
         public string Title { get; set; } = string.Empty;
         public string Body { get; set; } = string.Empty;

@@ -10,20 +10,65 @@ namespace chatbot.Ef.ValidatorService
 {
     public class FileValidationService : IFileValidationService
     {
-        private readonly List<string> allowed = [".jpg", ".jpeg", ".png", ".gif", ".pdf", ".docx", ".mp4", ".mp3", ".wav"];
-        private const long MaxSize = 20 * 1024 * 1024;
-        public void ValidateFile(IFormFile file)
+        private readonly Dictionary<string, string[]> AllowedExtensions = new()
+        {
+            ["image"] = [".jpg", ".jpeg", ".png", ".gif"],
+            ["document"] = [".pdf", ".docx"],
+            ["video"] = [".mp4"],
+            ["audio"] = [".mp3", ".wav", ".mpeg"]
+        };
+        private readonly Dictionary<string, string[]> AllowedMimeTypes = new()
+        {
+            ["image"] =
+        [
+            "image/jpeg",
+            "image/png",
+            "image/gif"
+        ],
+
+            ["document"] =
+        [
+            "application/pdf",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ],
+
+            ["video"] =
+        [
+            "video/mp4"
+        ],
+
+            ["audio"] =
+        [
+            "audio/mpeg",
+            "audio/wav",
+            "audio/x-wav"
+        ]
+        };
+
+        private const long MaxSize = 50 * 1024 * 1024;
+        public async Task ValidateFile(IFormFile file)
         {
             if (file == null || file.Length == 0)
-                throw new Exception("Invalid file");
+                throw new Exception("Invalid or empty file");
             if (file.Length > MaxSize)
-                throw new Exception("File is too Large");
+                throw new Exception("Maximum file size is 50 MB");
 
-            var extension=Path.GetExtension(file.FileName).ToLower();
-            if (!allowed.Contains(extension))
+            var extension=Path.GetExtension(file.FileName).ToLowerInvariant();
+            var mimeType = file.ContentType.ToLowerInvariant();
+            //valid Extension
+            var validExtension=AllowedExtensions.SelectMany(x=> x.Value).Contains(extension,StringComparer.OrdinalIgnoreCase);
+            if(!validExtension)
             {
-                throw new Exception("Unsupported file.");
+                throw new Exception($"file extenion '{extension}' is not allowed");
             }
+            //valid MimeType
+            var validMimeType = AllowedMimeTypes.SelectMany(x => x.Value).Contains(mimeType, StringComparer.OrdinalIgnoreCase);
+            if (!validMimeType)
+            {
+                throw new Exception($"MiMe Type '{mimeType}' is not allowed");
+            }
+
+            await Task.CompletedTask;
 
         }
     }

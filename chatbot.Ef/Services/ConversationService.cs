@@ -12,7 +12,7 @@ namespace chatbot.Ef.Services
 {
     public class ConversationService(IUnitOfWork unitOfWork) : IConversationService
     {
-        public async Task AddMemberAsync(string conversationId, string userId)
+        public async Task AddMemberAsync(Guid conversationId, Guid userId)
         {
             var conversation = await unitOfWork.Conversations.GetByIdAsync(conversationId);
             if(conversation == null)
@@ -30,7 +30,7 @@ namespace chatbot.Ef.Services
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task<Conversation> CreateConversationAsync(string creatorId, string secondUserId)
+        public async Task<Conversation> CreateConversationAsync(Guid creatorId, Guid secondUserId)
         {
             bool exists = await unitOfWork.Conversations.ConversationExistsAsync(creatorId, secondUserId);
             if (exists)
@@ -39,7 +39,7 @@ namespace chatbot.Ef.Services
             }
             var conversation = new Conversation
             {
-                Id = Guid.NewGuid().ToString(),
+                Id = Guid.NewGuid(),
                 Type = ConversationType.OneToOne
             };
             conversation.Members.Add(new ConversationMember
@@ -58,11 +58,11 @@ namespace chatbot.Ef.Services
 
         }
 
-        public async Task<Conversation> CreateGroupAsync(string creatorId, string title, List<string> members)
+        public async Task<Conversation> CreateGroupAsync(Guid creatorId, string title, List<string> members)
         {
             var group = new Conversation
             {
-                Id = Guid.NewGuid().ToString(),
+                Id = Guid.NewGuid(),
                 Type = ConversationType.Group,
                 Title = title
             };
@@ -73,12 +73,12 @@ namespace chatbot.Ef.Services
                 IsAdmin = true
             });
 
-            foreach(var member in members.Distinct())
+            foreach (var member in members.Distinct())
             {
-                if (member == creatorId) continue;
+                if (Guid.TryParse(member, out Guid memberGuid) && memberGuid == creatorId) continue;
                 group.Members.Add(new ConversationMember
                 {
-                    UserId = member,
+                    UserId = memberGuid, 
                     ConversationId = group.Id
                 });
             }
@@ -89,12 +89,12 @@ namespace chatbot.Ef.Services
             return group;
         }
 
-        public async Task<List<Conversation>> GetUserConversationsAsync(string userId)
+        public async Task<List<Conversation>> GetUserConversationsAsync(Guid userId)
         {
             return await unitOfWork.Conversations.GetUserConversationsAsync(userId);
         }
 
-        public async Task RemoveMemberAsync(string conversationId, string userId)
+        public async Task RemoveMemberAsync(Guid conversationId, Guid userId)
         {
             var conversation = await unitOfWork.Conversations.GetByIdAsync(conversationId);
             if(conversation == null)

@@ -7,6 +7,7 @@ using chatbot.Core.Models;
 using chatbot.Ef.Data;
 using chatbot.Ef.Repositories;
 using chatbot.Ef.Services;
+using chatbot.Ef.Services.Providers;
 using chatbot.Ef.UnitOfWork;
 using chatbot.Ef.ValidatorService;
 using Microsoft.AspNetCore.Identity;
@@ -39,8 +40,12 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<ITypingService, TypingService>();
             Services.AddScoped<IForwardService, ForwardService>();
             Services.AddScoped<ISearchService, SearchService>();
-            Services.AddScoped<IStorageService, LocalStorageService>();
+            Services.AddScoped<IStorageService, StorageService>();
             Services.AddScoped<IFileValidationService, FileValidationService>();
+            Services.AddScoped<IFileProcessorService, ImageProcessorService>();
+            Services.AddScoped<IStorageProvider, LocalStorageProvider>();
+            Services.AddScoped<IStorageProvider, AzureBlobStorageProvider>();
+            Services.AddScoped<IStorageService, StorageService>();
 
             return Services;
         }

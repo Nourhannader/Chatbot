@@ -8,10 +8,10 @@ namespace chatbot.Core.Models
 {
     public class DeletedMessageForUser: BaseEntity
     {
-        public string MessageId { get; set; } = string.Empty;
+        public Guid MessageId { get; set; } 
         public Message Message { get; set; } = null!;
 
-        public string UserId { get; set; } = string.Empty;
+        public Guid UserId { get; set; } 
         public ApplicationUser User { get; set; } = null!;
 
         public DateTime DeletedAt { get; set; } = DateTime.UtcNow;

@@ -7,10 +7,10 @@ using chatbot.Core.Models;
 
 namespace chatbot.Core.Interfaces.Repositories
 {
-    public interface IConversationRepository :IBaseRepository<Conversation,string>
+    public interface IConversationRepository :IBaseRepository<Conversation,Guid>
     {
-        Task<List<Conversation>> GetUserConversationsAsync(string userId);
-        Task<bool> ConversationExistsAsync(string firstUserId, string secondUserId);
+        Task<List<Conversation>> GetUserConversationsAsync(Guid userId);
+        Task<bool> ConversationExistsAsync(Guid firstUserId, Guid secondUserId);
 
     }
 }

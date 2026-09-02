@@ -7,10 +7,10 @@ using chatbot.Core.Models;
 
 namespace chatbot.Core.Interfaces.Repositories
 {
-    public interface IReactionRepository :IBaseRepository<MessageReaction,int>
+    public interface IReactionRepository :IBaseRepository<MessageReaction,Guid>
     {
-        Task<MessageReaction?> GetReactionByMessageIdAndUserIdAsync(string messageId, string userId);
-        Task<List<MessageReaction>> GetMessageReactionsAsync(string messageId);
+        Task<MessageReaction?> GetReactionByMessageIdAndUserIdAsync(Guid messageId, Guid userId);
+        Task<List<MessageReaction>> GetMessageReactionsAsync(Guid messageId);
         Task RemoveMessageReaction(MessageReaction reaction);
     }
 }

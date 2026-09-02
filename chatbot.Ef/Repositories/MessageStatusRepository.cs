@@ -17,19 +17,18 @@ namespace chatbot.Ef.Repositories
             await context.MessageRecipientStatuses.AddAsync(entity);
         }
 
-        public async Task<MessageRecipientStatus?> GetAsync(string messageId, string recipientId)
+        public async Task<MessageRecipientStatus?> GetAsync(Guid messageId, Guid recipientId)
         {
             return await context.MessageRecipientStatuses
                 .FirstOrDefaultAsync(mrs => mrs.MessageId == messageId && mrs.RecipientId == recipientId);
         }
 
-        public async Task<MessageRecipientStatus?> GetByIdAsync(string id)
+        public async Task<MessageRecipientStatus?> GetByIdAsync(Guid id)
         {
             return await context.MessageRecipientStatuses
                 .FirstOrDefaultAsync(mrs => mrs.MessageId == id);
         }
-
-        public async Task<List<MessageRecipientStatus>> GetByMessageAsync(string messageId)
+        public async Task<List<MessageRecipientStatus>> GetByMessageAsync(Guid messageId)
         {
             return await context.MessageRecipientStatuses
                 .Where(mrs => mrs.MessageId==messageId)

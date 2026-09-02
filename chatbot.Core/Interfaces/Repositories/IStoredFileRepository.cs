@@ -7,8 +7,8 @@ using chatbot.Core.Models;
 
 namespace chatbot.Core.Interfaces.Repositories
 {
-    public interface INotificationRepository:IBaseRepository<Notification,Guid>
+    public interface IStoredFileRepository : IBaseRepository< StoredFile,Guid>
     {
-        Task<List<Notification>> GetUserNotificationsAsync(Guid userId);
+        Task<IEnumerable<StoredFile>> GetDeletedFilesAsync(DateTime olderThan);
     }
 }

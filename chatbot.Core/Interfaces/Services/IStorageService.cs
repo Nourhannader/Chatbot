@@ -4,18 +4,19 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using chatbot.Core.DTOs;
+using chatbot.Core.Enums;
 using Microsoft.AspNetCore.Http;
 
 namespace chatbot.Core.Interfaces.Services
 {
     public interface IStorageService
     {
-        Task<UploadResultDto> UploadAsync(IFormFile file,string folder);
+        Task<UploadResultDto> UploadAsync(IFormFile file,string folder,string uploadedBy,StorageProviderType providerType=StorageProviderType.Local);
 
-        Task DeleteAsync(string fileUrl);
+        Task DeleteAsync(Guid fileId);
 
         Task<Stream> DownloadAsync(string fileUrl);
 
-        bool Exists(string fileUrl);
+        Task<string?> GetFileUrlAsync(Guid fileId);
     }
 }

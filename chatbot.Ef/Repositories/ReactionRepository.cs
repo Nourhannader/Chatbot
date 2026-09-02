@@ -17,12 +17,12 @@ namespace chatbot.Ef.Repositories
             await context.MessageReactions.AddAsync(entity);
         }
 
-        public async Task<MessageReaction?> GetByIdAsync(int id)
+        public async Task<MessageReaction?> GetByIdAsync(Guid id)
         {
             return await context.MessageReactions.FirstOrDefaultAsync(mr => mr.Id == id);
         }
 
-        public async Task<List<MessageReaction>> GetMessageReactionsAsync(string messageId)
+        public async Task<List<MessageReaction>> GetMessageReactionsAsync(Guid messageId)
         {
             return await context.MessageReactions
                 .Where(mr => mr.MessageId == messageId)
@@ -30,7 +30,7 @@ namespace chatbot.Ef.Repositories
                 .ToListAsync();
         }
 
-        public async Task<MessageReaction?> GetReactionByMessageIdAndUserIdAsync(string messageId, string userId)
+        public async Task<MessageReaction?> GetReactionByMessageIdAndUserIdAsync(Guid messageId, Guid userId)
         {
             return await context.MessageReactions
                 .FirstOrDefaultAsync(mr => mr.MessageId == messageId && mr.UserId == userId);

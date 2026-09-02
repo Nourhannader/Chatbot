@@ -12,7 +12,7 @@ namespace chatbot.Ef.Services
 {
     public class ReactionService(IUnitOfWork unitOfWork) : IReactionService
     {
-        public async Task<MessageReaction?> AddReactionAsync(string messageId, string userId, ReactionType reactionType)
+        public async Task<MessageReaction?> AddReactionAsync(Guid messageId, Guid userId, ReactionType reactionType)
         {
             var message=await unitOfWork.Messages.GetByIdAsync(messageId);
             if (message == null)
@@ -41,12 +41,12 @@ namespace chatbot.Ef.Services
             return reaction;
         }
 
-        public async Task<List<MessageReaction>> GetMessageReactionsAsync(string messageId)
+        public async Task<List<MessageReaction>> GetMessageReactionsAsync(Guid messageId)
         {
             return await unitOfWork.Reactions.GetMessageReactionsAsync(messageId);
         }
 
-        public async Task RemoveReactionAsync(string messageId, string userId)
+        public async Task RemoveReactionAsync(Guid messageId, Guid userId)
         {
             var reaction = await unitOfWork.Reactions.GetReactionByMessageIdAndUserIdAsync(messageId, userId);
             if (reaction == null)

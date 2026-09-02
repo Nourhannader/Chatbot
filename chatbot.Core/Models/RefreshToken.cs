@@ -23,7 +23,7 @@ namespace chatbot.Core.Models
 
         public bool IsActive => RevokedOn == null && !IsExpired;
 
-        public string UserId { get; set; } = string.Empty;
+        public Guid UserId { get; set; } 
 
         public ApplicationUser User { get; set; } = null!;
     }

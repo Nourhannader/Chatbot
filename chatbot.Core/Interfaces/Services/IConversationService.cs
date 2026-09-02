@@ -9,10 +9,10 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IConversationService
     {
-        Task<Conversation> CreateConversationAsync(string creatorId, string secondUserId);
-        Task<Conversation> CreateGroupAsync(string creatorId, string title, List<string> members);
-        Task<List<Conversation>> GetUserConversationsAsync(string userId);
-        Task AddMemberAsync(string conversationId, string userId);
-        Task RemoveMemberAsync(string conversationId, string userId);
+        Task<Conversation> CreateConversationAsync(Guid creatorId, Guid secondUserId);
+        Task<Conversation> CreateGroupAsync(Guid creatorId, string title, List<string> members);
+        Task<List<Conversation>> GetUserConversationsAsync(Guid userId);
+        Task AddMemberAsync(Guid conversationId, Guid userId);
+        Task RemoveMemberAsync(Guid conversationId, Guid userId);
     }
 }

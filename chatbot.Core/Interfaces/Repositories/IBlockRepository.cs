@@ -7,11 +7,11 @@ using chatbot.Core.Models;
 
 namespace chatbot.Core.Interfaces.Repositories
 {
-    public interface IBlockRepository:IBaseRepository<BlockList,string>
+    public interface IBlockRepository:IBaseRepository<BlockList,Guid>
     {
-        Task<BlockList?> GetAsync(string blockerId, string blockedId);
-        Task<bool> IsBlockedAsync(string firstUserId, string secondUserId);
-        Task<List<BlockList>> GetBlockedUsersAsync(string blockerId);
+        Task<BlockList?> GetAsync(Guid blockerId, Guid blockedId);
+        Task<bool> IsBlockedAsync(Guid firstUserId, Guid secondUserId);
+        Task<List<BlockList>> GetBlockedUsersAsync(Guid blockerId);
         Task RemoveAsync(BlockList block);
     }
 }

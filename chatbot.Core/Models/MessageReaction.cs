@@ -12,7 +12,7 @@ namespace chatbot.Core.Models
     public class MessageReaction:BaseEntity
     {
         [ForeignKey("Message")]
-        public string MessageId { get; set; } = string.Empty;
+        public Guid MessageId { get; set; } 
         public Message Message { get; set; } = null!;
 
         [ForeignKey(nameof(User))]

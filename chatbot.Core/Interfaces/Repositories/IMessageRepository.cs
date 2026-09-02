@@ -8,13 +8,13 @@ using chatbot.Core.Models;
 
 namespace chatbot.Core.Interfaces.Repositories
 {
-    public interface IMessageRepository : IBaseRepository<Message,string>
+    public interface IMessageRepository : IBaseRepository<Message,Guid>
     {
         Task<PagedResultDto<Message>> GetConversationMessagesAsync(
-        string conversationId,
+        Guid conversationId,
         int page,
         int pageSize);
-        Task<List<Message>> SearchMessagesAsync(string conversationId, string keyword);
+        Task<List<Message>> SearchMessagesAsync(Guid conversationId, string keyword);
        
     }
 }

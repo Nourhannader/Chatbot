@@ -14,26 +14,26 @@ namespace chatbot.Ef.Services
     public class PresenceService
         (IUnitOfWork unitOfWork,UserManager<ApplicationUser> userManager) : IPresenceService
     {
-        public async Task<List<string>> GetConnectionIdsAsync(string userId)
+        public async Task<List<string>> GetConnectionIdsAsync(Guid userId)
         {
             var connections=await  unitOfWork.UserConnections.GetUserConnectionsAsync(userId);
 
             return connections.Select(c => c.ConnectionId).ToList();
         }
 
-        public async Task<DateTime?> GetLastSeenAsync(string userId)
+        public async Task<DateTime?> GetLastSeenAsync(Guid userId)
         {
             var user=await userManager.FindByIdAsync(userId);
             return user?.LastSeen;
         }
 
-        public async Task<bool> IsOnlineAsync(string userId)
+        public async Task<bool> IsOnlineAsync(Guid userId)
         {
             return await unitOfWork.UserConnections.HasConnectionsAsync(userId);
         }
 
 
-        public async Task UserConnectedAsync(string userId, string connectionId, string deviceType)
+        public async Task UserConnectedAsync(Guid userId, string connectionId, string deviceType)
         {
             await unitOfWork.UserConnections.AddAsync(new UserConnection
             {
@@ -53,7 +53,7 @@ namespace chatbot.Ef.Services
 
         }
 
-        public async Task UserDisconnectedAsync(string connectionId)
+        public async Task UserDisconnectedAsync(Guid connectionId)
         {
             var connection= await unitOfWork.UserConnections.GetByIdAsync(connectionId);
             if(connection == null)

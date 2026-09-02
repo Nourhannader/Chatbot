@@ -15,14 +15,14 @@ namespace chatbot.Ef.Services
     {
         
 
-        public Task<List<string>> GetTypingUsersAsync(string conversationId)
+        public Task<List<string>> GetTypingUsersAsync(Guid conversationId)
         {
             return Task.FromResult(
            typing.GetTypingUsers(
                conversationId));
         }
 
-        public async Task<bool> IsTypingAsync(string conversationId, string userId)
+        public async Task<bool> IsTypingAsync(Guid conversationId, Guid userId)
         {
             return await Task.FromResult(
                 typing.IsTyping(
@@ -30,13 +30,13 @@ namespace chatbot.Ef.Services
                     userId));
         }
 
-        public Task StartTypingAsync(string conversationId, string userId)
+        public Task StartTypingAsync(Guid conversationId, Guid userId)
         {
             typing.StartTyping(conversationId, userId);
             return Task.CompletedTask;
         }
 
-        public Task StopTypingAsync(string conversationId, string userId)
+        public Task StopTypingAsync(Guid conversationId, Guid userId)
         {
             typing.StopTyping(conversationId, userId);
             return Task.CompletedTask;

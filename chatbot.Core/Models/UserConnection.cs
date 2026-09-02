@@ -8,10 +8,10 @@ namespace chatbot.Core.Models
 {
     public class UserConnection : BaseEntity
     {
-        public string UserId { get; set; } = string.Empty;
+        public Guid UserId { get; set; } 
         public ApplicationUser User { get; set; } = null!;
 
-        public string ConnectionId { get; set; } = string.Empty;
+        public Guid ConnectionId { get; set; } 
 
         public string DeviceType { get; set; } = string.Empty;
 

@@ -25,6 +25,7 @@ namespace chatbot.Ef.UnitOfWork
         public IMessageStatusRepository MessageStatuses { get; private set; }
         public IForwardRepository ForwardMessages {  get; private set; }
         public ISearchRepository Searches { get; private set; }
+        public IStoredFileRepository StoredFiles { get; private set; }
         public UnitOfWork(ApplicationDbContext _context)
         {
             this.context = _context;
@@ -38,6 +39,7 @@ namespace chatbot.Ef.UnitOfWork
             this.MessageStatuses = new MessageStatusRepository(context);
             this.ForwardMessages = new ForwardRepository(context);
             this.Searches = new SearchRepository(context);
+            this.StoredFiles = new StoredFileRepository(context);
         }
 
         public void Dispose()

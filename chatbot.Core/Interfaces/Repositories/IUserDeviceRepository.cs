@@ -7,10 +7,10 @@ using chatbot.Core.Models;
 
 namespace chatbot.Core.Interfaces.Repositories
 {
-    public interface IUserDeviceRepository:IBaseRepository<UserDevice,string>
+    public interface IUserDeviceRepository:IBaseRepository<UserDevice,Guid>
     {
-        Task<UserDevice?> GetByUserAsync(string userId,string deviceToken);
-        Task<List<UserDevice>> GetUserDevicesAsync(string userId);
+        Task<UserDevice?> GetByUserAsync(Guid userId,string deviceToken);
+        Task<List<UserDevice>> GetUserDevicesAsync(Guid userId);
 
     }
 }

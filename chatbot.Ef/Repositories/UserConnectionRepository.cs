@@ -17,26 +17,26 @@ namespace chatbot.Ef.Repositories
            await context.UserConnections.AddAsync(entity);
         }
 
-        public async Task<UserConnection?> GetByIdAsync(string id)
+        public async Task<UserConnection?> GetByIdAsync(Guid id)
         {
             return await context.UserConnections
                 .FirstOrDefaultAsync(uc => uc.ConnectionId == id);
         }
 
-        public async Task<List<UserConnection>> GetUserConnectionsAsync(string userId)
+        public async Task<List<UserConnection>> GetUserConnectionsAsync(Guid userId)
         {
             return await context.UserConnections
                 .Where(uc => uc.UserId == userId)
                 .ToListAsync();
         }
 
-        public async Task<bool> HasConnectionsAsync(string userId)
+        public async Task<bool> HasConnectionsAsync(Guid userId)
         {
             return await context.UserConnections
                 .AnyAsync(us => us.UserId == userId);
         }
 
-        public async Task RemoveAsync(string connectionId)
+        public async Task RemoveAsync(Guid connectionId)
         {
             var connection =await context.UserConnections
                 .FirstOrDefaultAsync(uc => uc.ConnectionId == connectionId);

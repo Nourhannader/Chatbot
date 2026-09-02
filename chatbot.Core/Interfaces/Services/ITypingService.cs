@@ -8,9 +8,9 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface ITypingService
     {
-        Task StartTypingAsync(string conversationId, string userId);
-        Task StopTypingAsync(string conversationId,string userId);
-        Task<bool> IsTypingAsync(string conversationId, string userId);
-        Task<List<string>> GetTypingUsersAsync(string conversationId);
+        Task StartTypingAsync(Guid conversationId, Guid userId);
+        Task StopTypingAsync(Guid conversationId,Guid userId);
+        Task<bool> IsTypingAsync(Guid conversationId, Guid userId);
+        Task<List<string>> GetTypingUsersAsync(Guid conversationId);
     }
 }

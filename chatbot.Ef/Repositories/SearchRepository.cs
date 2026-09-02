@@ -12,7 +12,7 @@ namespace chatbot.Ef.Repositories
 {
     public class SearchRepository(ApplicationDbContext context) : ISearchRepository
     {
-        public async Task<List<Conversation>> SearchConversationsAsync(string userId, string keyword)
+        public async Task<List<Conversation>> SearchConversationsAsync(Guid userId, string keyword)
         {
             return await context.Conversations
                 .Include(x => x.Members)
@@ -24,18 +24,17 @@ namespace chatbot.Ef.Repositories
                 .ToListAsync();
         }
 
-        public async Task<List<Message>> SearchFilesAsync(string conversationId, string keyword)
+        public async Task<List<Message>> SearchFilesAsync(Guid conversationId, string keyword)
         {
             return await context.Messages
                 .Include(x => x.Sender)
-                .Where(x => x.ConversationId == conversationId &&
-                  x.FileName !=null &&
-                  x.FileName.Contains(keyword)
-                ).OrderByDescending(x => x.SentAt)
-                .ToListAsync();
+                .Where(x => x.ConversationId == conversationId
+                ).Include(x => x.StoredFiles.Where(f => f.StoredName.Contains(keyword)))
+                .OrderByDescending(x => x.SentAt).ToListAsync();
+
         }
 
-        public async Task<List<Message>> SearchMessagesAsync(string conversationId, string keyword)
+        public async Task<List<Message>> SearchMessagesAsync(Guid conversationId, string keyword)
         {
             return await context.Messages
                 .Include(x => x.Sender)

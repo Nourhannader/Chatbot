@@ -12,7 +12,7 @@ namespace chatbot.Ef.Services
 {
     public class ForwardService(IUnitOfWork unitOfWork) : IForwardService
     {
-        public async Task<List<Message>> ForwardAsync(string senderId, ForwardMessageDto dto)
+        public async Task<List<Message>> ForwardAsync(Guid senderId, ForwardMessageDto dto)
         {
             var original = await unitOfWork.Messages.GetByIdAsync(dto.MessageId);
             if(original ==null)

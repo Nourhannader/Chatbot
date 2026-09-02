@@ -9,9 +9,10 @@ namespace chatbot.Core.DTOs
     public class UploadResultDto
     {
         public bool Success { get; set; }
-        public string FileName { get; set; } = string.Empty;
+        public Guid FileId { get; set; } 
         public string FileUrl { get; set; }= string.Empty;
-        public long FileSize { get; set; }
+        public string ThumbnailUrl { get; set; } = string.Empty;
+        public long Size { get; set; }
         public string ContentType { get; set; } = string.Empty;
     }
 }

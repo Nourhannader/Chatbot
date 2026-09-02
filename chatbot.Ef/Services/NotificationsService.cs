@@ -11,7 +11,7 @@ namespace chatbot.Ef.Services
 {
     public class NotificationsService(IUnitOfWork unitOfWork) : INotificationsService
     {
-        public async Task CreateAsync(string userId, string title, string body)
+        public async Task CreateAsync(Guid userId, string title, string body)
         {
             await unitOfWork.Notifications.AddAsync(new Notification
             {
@@ -24,12 +24,12 @@ namespace chatbot.Ef.Services
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task<List<Notification>> GetNotificationsAsync(string userId)
+        public async Task<List<Notification>> GetNotificationsAsync(Guid userId)
         {
             return await unitOfWork.Notifications.GetUserNotificationsAsync(userId);
         }
 
-        public async Task MarkAsReadAsync(string notificationId)
+        public async Task MarkAsReadAsync(Guid notificationId)
         {
             var notification = await unitOfWork.Notifications.GetByIdAsync(notificationId);
             if(notification == null)

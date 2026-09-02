@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.Enums;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Models;
 using chatbot.Ef.Data;
@@ -17,7 +18,7 @@ namespace chatbot.Ef.Repositories
            await context.Conversations.AddAsync(entity);
         }
 
-        public async Task<bool> ConversationExistsAsync(string firstUserId, string secondUserId)
+        public async Task<bool> ConversationExistsAsync(Guid firstUserId, Guid secondUserId)
         {
             return await context.Conversations
                 .AnyAsync(
@@ -28,7 +29,7 @@ namespace chatbot.Ef.Repositories
                 );
         }
 
-        public Task<Conversation?> GetByIdAsync(string id)
+        public Task<Conversation?> GetByIdAsync(Guid id)
         {
             return context.Conversations
                 .Include(c => c.Messages)
@@ -36,7 +37,7 @@ namespace chatbot.Ef.Repositories
                 .FirstOrDefaultAsync(c => c.Id == id);
         }
 
-        public Task<List<Conversation>> GetUserConversationsAsync(string userId)
+        public Task<List<Conversation>> GetUserConversationsAsync(Guid userId)
         {
             return context.Conversations
                  .Include(c => c.Messages)

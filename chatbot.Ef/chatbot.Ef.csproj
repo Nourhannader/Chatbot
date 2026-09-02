@@ -25,10 +25,16 @@
     </PackageReference>
 
     <PackageReference Include="MimeKit" Version="4.16.0" />
+
+    <PackageReference Include="SixLabors.ImageSharp" Version="4.1.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\chatbot.Core\chatbot.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Background\" />
   </ItemGroup>
 
 </Project>

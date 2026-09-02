@@ -10,10 +10,10 @@ namespace chatbot.Core.Models
     public class ConversationMember:BaseEntity
     {
        
-        public string ConversationId { get; set; } = string.Empty;
+        public Guid ConversationId { get; set; }
         public Conversation Conversation { get; set; } = null!;
         
-        public string UserId { get; set; } = string.Empty;
+        public Guid UserId { get; set; } 
         public ApplicationUser User { get; set; } = null!;
 
         public bool IsAdmin { get; set; } = false;

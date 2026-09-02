@@ -9,9 +9,9 @@ namespace chatbot.Core.Models
 {
     public class MessageRecipientStatus : BaseEntity
     {
-        public string MessageId { get; set; } = string.Empty;
+        public Guid MessageId { get; set; } 
         public Message Message { get; set; } = null!;
-        public string RecipientId { get; set; } = string.Empty;
+        public Guid RecipientId { get; set; } 
         public ApplicationUser Recipient { get; set; } = null!;
 
         public MessageStatus Status { get; set; } = MessageStatus.Sent;

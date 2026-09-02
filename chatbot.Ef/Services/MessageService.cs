@@ -13,7 +13,7 @@ namespace chatbot.Ef.Services
 {
     public class MessageService(IUnitOfWork unitOfWork,IStorageService storage,IFileValidationService validator) : IMessageService
     {
-        public async Task DeleteForEveryoneAsync(string messageId, string userId)
+        public async Task DeleteForEveryoneAsync(Guid messageId, Guid userId)
         {
             var message = await unitOfWork.Messages.GetByIdAsync(messageId);
             if (message == null)
@@ -32,23 +32,23 @@ namespace chatbot.Ef.Services
 
         }
 
-        public async Task<PagedResultDto<Message>> GetMessagesAsyns(string conversationId, int page, int pageSize)
+        public async Task<PagedResultDto<Message>> GetMessagesAsyns(Guid conversationId, int page, int pageSize)
         {
             return await unitOfWork.Messages
                 .GetConversationMessagesAsync(conversationId, page, pageSize);
         }
 
-        public Task MarkDeliveredAsync(string messageId, string userId)
+        public Task MarkDeliveredAsync(Guid messageId, Guid userId)
         {
             throw new NotImplementedException();
         }
 
-        public Task MarkReadAsync(string conversationId, string userId)
+        public Task MarkReadAsync(Guid conversationId, Guid userId)
         {
             throw new NotImplementedException();
         }
 
-        public async Task<Message> ReplyAsync(string senderId, ReplyMessageDto dto)
+        public async Task<Message> ReplyAsync(Guid senderId, ReplyMessageDto dto)
         {
             var repliedMessage = await unitOfWork.Messages.GetByIdAsync(dto.ReplyToMessageId);
             if (repliedMessage == null)
@@ -82,7 +82,7 @@ namespace chatbot.Ef.Services
         {
             var Message = new Message
             {
-                Id = Guid.NewGuid().ToString(),
+                Id = Guid.NewGuid(),
                 ConversationId = messageDto.ConversationId,
                 Content = messageDto.Content,
                 SenderId = senderId,

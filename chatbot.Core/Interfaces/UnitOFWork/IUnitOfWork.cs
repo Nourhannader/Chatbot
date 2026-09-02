@@ -21,7 +21,8 @@ namespace chatbot.Core.Interfaces.UnitOFWork
         IMessageStatusRepository MessageStatuses { get; }
         IForwardRepository ForwardMessages { get; }
         ISearchRepository Searches { get; }
-       
+        IStoredFileRepository StoredFiles { get; }
+
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();
         Task CommitAsync();

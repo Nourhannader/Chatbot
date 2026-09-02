@@ -19,7 +19,7 @@ namespace chatbot.Core.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         //Created by user
-        public string? CreatedById { get; set; }
+        public Guid? CreatedById { get; set; }
 
         public ApplicationUser? CreatedBy { get; set; }
 

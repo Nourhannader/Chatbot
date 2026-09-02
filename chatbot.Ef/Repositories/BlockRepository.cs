@@ -17,7 +17,7 @@ namespace chatbot.Ef.Repositories
             await context.BlockLists.AddAsync(entity);
         }
 
-        public async Task<BlockList?> GetAsync(string blockerId, string blockedId)
+        public async Task<BlockList?> GetAsync(Guid blockerId, Guid blockedId)
         {
             return await context.BlockLists
                 .FirstOrDefaultAsync(b =>
@@ -25,7 +25,7 @@ namespace chatbot.Ef.Repositories
                 );
         }
 
-        public async Task<List<BlockList>> GetBlockedUsersAsync(string blockerId)
+        public async Task<List<BlockList>> GetBlockedUsersAsync(Guid blockerId)
         {
             return await context.BlockLists
                 .Where(b => b.BlockerId == blockerId)
@@ -33,12 +33,12 @@ namespace chatbot.Ef.Repositories
                 .ToListAsync();
         }
 
-        public async Task<BlockList?> GetByIdAsync(string id)
+        public async Task<BlockList?> GetByIdAsync(Guid id)
         {
            return await context.BlockLists.FirstOrDefaultAsync(b => b.Id == id);
         }
 
-        public async Task<bool> IsBlockedAsync(string firstUserId, string secondUserId)
+        public async Task<bool> IsBlockedAsync(Guid firstUserId, Guid secondUserId)
         {
            return await context.BlockLists.AnyAsync(b =>
                       (b.BlockerId==firstUserId && b.BlockedId == secondUserId)||

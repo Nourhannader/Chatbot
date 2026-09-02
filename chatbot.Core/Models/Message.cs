@@ -15,11 +15,11 @@ namespace chatbot.Core.Models
     {
 
         [Required]
-        public string ConversationId { get; set; } = string.Empty;
+        public Guid ConversationId { get; set; } 
         public Conversation Conversation { get; set; } = null!;
 
         [Required]
-        public string SenderId { get; set; } = string.Empty;
+        public Guid SenderId { get; set; }
         public ApplicationUser Sender { get; set; } = null!;
 
         [Required]
@@ -38,13 +38,13 @@ namespace chatbot.Core.Models
         public bool IsDeletedForEveryone { get; set; } = false;
         public DateTime? DeletedAt { get; set; }
         //Message Reply Feature
-        public string? ReplyToMessageId { get; set; }
+        public Guid? ReplyToMessageId { get; set; }
 
         public Message? ReplyToMessage { get; set; }
         //forwarded Message Feature
         public bool IsForwarded { get; set; }
 
-        public string? OriginalMessageId { get; set; }
+        public Guid? OriginalMessageId { get; set; }
         public Message? OriginalMessage { get; set; }
 
         //navigation property for message forwardies

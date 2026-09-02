@@ -11,7 +11,7 @@ namespace chatbot.Ef.Services
 {
     public class BlockService(IUnitOfWork unitOfWork) : IBlockService
     {
-        public async Task BlockAsync(string blockerId, string blockedId)
+        public async Task BlockAsync(Guid blockerId, Guid blockedId)
         {
             if (blockerId == blockedId)
                 throw new Exception("You cannot block yourself.");
@@ -29,17 +29,17 @@ namespace chatbot.Ef.Services
 
         }
 
-        public async Task<List<BlockList>> GetBlockedUsersAsync(string blockerId)
+        public async Task<List<BlockList>> GetBlockedUsersAsync(Guid blockerId)
         {
             return await unitOfWork.Blocks.GetBlockedUsersAsync(blockerId);
         }
 
-        public async Task<bool> IsBlockedAsync(string firstUserId, string secondUserId)
+        public async Task<bool> IsBlockedAsync(Guid firstUserId, Guid secondUserId)
         {
             return await unitOfWork.Blocks.IsBlockedAsync(firstUserId, secondUserId);
         }
 
-        public async Task UnblockAsync(string blockerId, string blockedId)
+        public async Task UnblockAsync(Guid blockerId, Guid blockedId)
         {
             var block =await unitOfWork.Blocks.GetAsync(blockerId, blockedId);
             if (block == null)

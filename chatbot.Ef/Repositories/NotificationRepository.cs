@@ -17,13 +17,13 @@ namespace chatbot.Ef.Repositories
             await context.Notifications.AddAsync(entity);
         }
 
-        public async Task<Notification?> GetByIdAsync(string id)
+        public async Task<Notification?> GetByIdAsync(Guid id)
         {
             return await context.Notifications
                 .FirstOrDefaultAsync(n => n.Id == id);
         }
 
-        public async Task<List<Notification>> GetUserNotificationsAsync(string userId)
+        public async Task<List<Notification>> GetUserNotificationsAsync(Guid userId)
         {
             return await context.Notifications
                 .Where(n=> n.UserId == userId)

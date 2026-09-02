@@ -43,7 +43,7 @@ namespace chatbot.Ef.Services
             authResponse.ExpiresOn = token.ValidTo;
             authResponse.Username = user.UserName;
             authResponse.Email = user.Email;
-            authResponse.ImageProfileUrl = user.ImageProfileUrl;
+            authResponse.ImageProfileUrl = user.ProfileImageUrl;
             authResponse.PhoneNumber = user.PhoneNumber;
 
             if(user.RefreshTokens.Any(t => t.IsActive))
@@ -91,7 +91,7 @@ namespace chatbot.Ef.Services
             authModelDto.ExpiresOn = jwtToken.ValidTo;
             authModelDto.Username = user.UserName;
             authModelDto.Email = user.Email;
-            authModelDto.ImageProfileUrl = user.ImageProfileUrl;
+            authModelDto.ImageProfileUrl = user.ProfileImageUrl;
             authModelDto.PhoneNumber = user.PhoneNumber;
             authModelDto.RefreshToken = newRefreshToken.Token;
             authModelDto.RefreshTokenExpiration = newRefreshToken.ExpiresOn;
@@ -117,7 +117,7 @@ namespace chatbot.Ef.Services
                 Email = model.Email,
                 PhoneNumber = model.Phone,
                 
-                ImageProfileUrl = imageUrl
+                ProfileImageUrl = imageUrl
 
             };
             var result = await _authRepository.CreateUserAsync(user, model.Password);
@@ -139,7 +139,7 @@ namespace chatbot.Ef.Services
                 ExpiresOn = token.ValidTo,
                 Username = user.UserName,
                 Email = user.Email,
-                ImageProfileUrl = user.ImageProfileUrl,
+                ImageProfileUrl = user.ProfileImageUrl,
                 PhoneNumber = user.PhoneNumber
 
             };
