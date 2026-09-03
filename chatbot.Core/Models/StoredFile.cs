@@ -7,22 +7,58 @@ using chatbot.Core.Enums;
 
 namespace chatbot.Core.Models
 {
-    public class StoredFile : BaseEntity
+    public class StoredFile: BaseEntity
     {
-        public string OriginalName { get; set; }= null!;
-        public string StoredName {  get; set; }= null!;
-        public string Path {  get; set; }= null!;
-        public string ContentType {  get; set; }= null!;
+
+        public Guid MessageId { get; set; }
+
+        public Message Message { get; set; }
+            = null!;
+
+        public string OriginalName { get; set; }
+            = string.Empty;
+
+
+        public string StoredName { get; set; }
+            = string.Empty;
+
+
+        public string Path { get; set; }
+            = string.Empty;
+
+
+        public string ContentType { get; set; }
+            = string.Empty;
+
+
         public long Size { get; set; }
+
+
+        public StorageProviderType Provider { get; set; }
+
+
         public string? ThumbnailPath { get; set; }
-        public string? Hash { get; set; }
-        public StorageProviderType StorageProvider { get; set; }
-        public bool IsDeleted {  get; set; } = false;
-        public DateTime CreatedAt {  get; set; }= DateTime.Now;
+
+
+        public int? Width { get; set; }
+
+        public int? Height { get; set; }
+
+        public int? DurationSeconds { get; set; }
+
+
+        // Soft Delete
+        public bool IsDeleted { get; set; }
+
         public DateTime? DeletedAt { get; set; }
-        public Guid UploadedByUserId { get; set;} 
-        public ApplicationUser UploadedByUser { get; set; } = null!;
-        public Guid? MessageId { get; set; }
-        public Message? Message { get; set; }
+
+        public bool IsPhysicallyDeleted { get; set; }
+
+
+        public DateTime CreatedAt { get; set; }
+            = DateTime.UtcNow;
+
+        public string UploadedByUser { get; set; }
+            = string.Empty;
     }
 }

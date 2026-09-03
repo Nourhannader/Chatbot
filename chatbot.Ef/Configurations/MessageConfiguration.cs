@@ -48,6 +48,12 @@ namespace chatbot.Ef.Configurations
               .HasForeignKey(x => x.OriginalMessageId)
               .OnDelete(DeleteBehavior.Restrict);
 
+            builder.HasMany(x=> x.StoredFiles)
+                .WithOne(x=> x.Message)
+                .HasForeignKey(x => x.MessageId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
             // Indexes
 
             builder.HasIndex(x => x.Content);

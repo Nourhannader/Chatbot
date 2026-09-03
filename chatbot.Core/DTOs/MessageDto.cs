@@ -12,20 +12,28 @@ namespace chatbot.Core.DTOs
     {
         public string Id { get; set; }
 
+        public string ConversationId { get; set; }
+
         public string SenderId { get; set; }
 
-        public string SenderName { get; set; }
+        public string? SenderName { get; set; }
 
         public string Content { get; set; }
+            = string.Empty;
 
-        public MessageType Type { get; set; }
+        public MessageType MessageType { get; set; }
 
-        public DateTime SentAt { get; set; }
+        public DateTime CreatedAt { get; set; }
 
-        public string? FileUrl { get; set; }
+        public List<FileMetadataDto> Files { get; set; }
+            = [];
 
-        public bool IsDeletedForEveryone { get; set; }
+        public VoiceNoteDto? VoiceNote { get; set; }
 
-        public List<MessageReactionDto> Reactions { get; set; } = [];
+        public bool IsEdited { get; set; }
+
+        public DateTime? EditedAt { get; set; }
+
+        public bool IsDeleted { get; set; }
     }
 }

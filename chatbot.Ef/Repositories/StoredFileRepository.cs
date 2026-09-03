@@ -12,9 +12,22 @@ namespace chatbot.Ef.Repositories
 {
     public class StoredFileRepository(ApplicationDbContext context) : IStoredFileRepository
     {
-        public async Task AddAsync(StoredFile entity)
+
+        public async Task AddAsync(StoredFile file)
         {
-            await context.StoredFiles.AddAsync(entity);
+            await context.StoredFiles.AddAsync(file);
+        }
+
+        public async Task AddRangeAsync(IEnumerable<StoredFile> files)
+        {
+           await context.StoredFiles.AddRangeAsync(files);
+        }
+
+        public  Task DeleteAsync(StoredFile file)
+        {
+           context.StoredFiles.Remove(file);
+            return Task.CompletedTask;
+
         }
 
         public Task<StoredFile?> GetByIdAsync(Guid id)
@@ -22,16 +35,27 @@ namespace chatbot.Ef.Repositories
             return context.StoredFiles.FirstOrDefaultAsync(x => x.Id == id);
         }
 
-        public async Task<IEnumerable<StoredFile>> GetDeletedFilesAsync(DateTime olderThan)
+        public Task<List<StoredFile>> GetByMessageIdAsync(Guid messageId)
         {
-            return await context.StoredFiles
-                .Where(f => f.IsDeleted && f.DeletedAt < olderThan)
+            return context.StoredFiles
+                .Where(x => x.MessageId ==messageId && !x.IsDeleted)
+                .OrderByDescending(x => x.CreatedAt)
                 .ToListAsync();
         }
 
-        public void Update(StoredFile entity)
+       
+        public async Task<List<StoredFile>> GetFilesForCleanupAsync(DateTime olderThan)
         {
-            context.StoredFiles.Update(entity);
+            return await context.StoredFiles
+                            .Where(f => f.IsDeleted && f.DeletedAt < olderThan
+                            && f.DeletedAt !=null && !f.IsPhysicallyDeleted)
+                            .ToListAsync();
+        }
+
+        public Task UpdateAsync(StoredFile file)
+        {
+            context.StoredFiles.Update(file);
+            return Task.CompletedTask;
         }
     }
 }

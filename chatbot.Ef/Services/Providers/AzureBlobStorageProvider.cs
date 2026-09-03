@@ -19,6 +19,11 @@ namespace chatbot.Ef.Services.Providers
             return Task.CompletedTask;
         }
 
+        public Task<Stream?> DownloadAsync(string path, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<bool> ExistsAsync(string path, CancellationToken cancellationToken = default)
         {
             // Check blob
@@ -37,6 +42,11 @@ namespace chatbot.Ef.Services.Providers
         {
             // Upload blob
             return Task.FromResult(path);
+        }
+
+        Task IStorageProvider.UploadAsync(Stream stream, string path, string contentType, CancellationToken cancellationToken)
+        {
+            return UploadAsync(stream, path, contentType, cancellationToken);
         }
     }
 }

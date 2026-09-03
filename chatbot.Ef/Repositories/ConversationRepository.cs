@@ -43,9 +43,17 @@ namespace chatbot.Ef.Repositories
                  .Include(c => c.Messages)
                  .Include(c => c.Members)
                  .Where(c => c.Members.Any(m => m.UserId == userId))
-                 .OrderByDescending(c => c.Messages.Max(m => (DateTime?)m.SentAt))
+                 .OrderByDescending(c => c.Messages.Max(m => (DateTime?)m.SendAt))
                  .AsNoTracking()
                  .ToListAsync();
+        }
+        public async Task<bool> IsMemberAsync(Guid conversationId,Guid userId,CancellationToken cancellationToken = default)
+        {
+            return await context.ConversationMembers
+                .AnyAsync(x =>
+                    x.ConversationId == conversationId &&
+                    x.UserId == userId,
+                    cancellationToken);
         }
 
         public void Update(Conversation entity)

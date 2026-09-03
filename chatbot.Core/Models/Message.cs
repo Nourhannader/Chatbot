@@ -14,33 +14,59 @@ namespace chatbot.Core.Models
     public class Message:BaseEntity
     {
 
-        [Required]
-        public Guid ConversationId { get; set; } 
-        public Conversation Conversation { get; set; } = null!;
-
-        [Required]
         public Guid SenderId { get; set; }
-        public ApplicationUser Sender { get; set; } = null!;
 
-        [Required]
-        public string Content { get; set; } = string.Empty;
+        public ApplicationUser Sender { get; set; }
+            = null!;
 
-        public DateTime SentAt { get; set; } = DateTime.UtcNow;
-
-        public MessageType Type { get; set; } = MessageType.Text;
         
-        //edited Message Feature
-        public DateTime? EditedAt { get; set; }
+        public Guid ConversationId { get; set; }
 
-        public bool IsEdited => EditedAt != null;
+        public Conversation Conversation { get; set; }
+            = null!;
 
-        // Delete For Everyone Feature
-        public bool IsDeletedForEveryone { get; set; } = false;
-        public DateTime? DeletedAt { get; set; }
-        //Message Reply Feature
+
+        // Message content
+        public string Content { get; set; }
+            = string.Empty;
+
+
+        public MessageType MessageType { get; set; }
+
+
+        // Multiple Files
+        public ICollection<StoredFile> Files { get; set; }
+            = new List<StoredFile>();
+
+
+        // Voice Note Metadata
+        public VoiceNote? VoiceNote { get; set; }
+
+
+        // Reply
         public Guid? ReplyToMessageId { get; set; }
 
         public Message? ReplyToMessage { get; set; }
+
+
+        // Edit
+        public bool IsEdited { get; set; }
+
+        public DateTime? EditedAt { get; set; }
+
+
+        // Delete
+        public bool IsDeleted { get; set; }
+
+        public DateTime? DeletedAt { get; set; }
+
+
+        // Time
+        public DateTime SendAt { get; set; }
+            = DateTime.UtcNow;
+
+        // Delete For Everyone Feature
+        public bool IsDeletedForEveryone { get; set; } = false;
         //forwarded Message Feature
         public bool IsForwarded { get; set; }
 

@@ -15,7 +15,12 @@ namespace chatbot.Ef.Services.Providers
 
         public Task DeleteAsync(string path, CancellationToken cancellationToken = default)
         {
-            var fullPath = Path.Combine(environment.WebRootPath, "uploads", path);
+            var rootPath = environment.WebRootPath;
+            if (string.IsNullOrEmpty(rootPath))
+            {
+                rootPath = Path.Combine(environment.ContentRootPath, "wwwroot");
+            }
+            var fullPath = Path.Combine(rootPath, "uploads", path);
             if (File.Exists(fullPath))
             {
                 File.Delete(fullPath);
@@ -23,9 +28,30 @@ namespace chatbot.Ef.Services.Providers
             return Task.CompletedTask;
         }
 
+        public Task<Stream?> DownloadAsync(string path, CancellationToken cancellationToken = default)
+        {
+            var rootPath = environment.WebRootPath;
+            if (string.IsNullOrEmpty(rootPath))
+            {
+                rootPath = Path.Combine(environment.ContentRootPath, "wwwroot");
+            }
+            var fullPath = Path.Combine(rootPath, "uploads", path);
+            if (!File.Exists(fullPath))
+            {
+                return Task.FromResult<Stream?>(null);
+            }
+            Stream stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            return Task.FromResult<Stream?>(stream);
+        }
+
         public Task<bool> ExistsAsync(string path, CancellationToken cancellationToken = default)
         {
-            var fullPath = Path.Combine(environment.WebRootPath, "uploads", path);
+            var rootPath = environment.WebRootPath;
+            if (string.IsNullOrEmpty(rootPath))
+            {
+                rootPath = Path.Combine(environment.ContentRootPath, "wwwroot");
+            }
+            var fullPath = Path.Combine(rootPath, "uploads", path);
             return Task.FromResult(File.Exists(fullPath));
         }
 
@@ -34,19 +60,24 @@ namespace chatbot.Ef.Services.Providers
             return $"/uploads/{path.Replace("\\", "/")}";
         }
 
-        public async Task<string> UploadAsync(Stream stream, string path, string contentType, CancellationToken cancellationToken = default)
+        public async Task UploadAsync(Stream stream, string path, string contentType, CancellationToken cancellationToken = default)
         {
-            var FullPath=Path.Combine(environment.WebRootPath, "uploads", path);
+            var rootPath = environment.WebRootPath;
+            if (string.IsNullOrEmpty(rootPath))
+            {
+                rootPath=Path.Combine(environment.ContentRootPath, "wwwroot");
+            }
+            var FullPath=Path.Combine(rootPath, "uploads", path);
             var directory = Path.GetDirectoryName(FullPath);
             if (!Directory.Exists(directory))
             {
                 Directory.CreateDirectory(directory);
             }
 
-            await using var fileStream = new FileStream(FullPath, FileMode.Create,FileAccess.Write);
+            await using var fileStream = new FileStream(FullPath, FileMode.Create,FileAccess.Write,FileShare.None);
             await stream.CopyToAsync(fileStream, cancellationToken);
 
-            return path;
+            
         }
     }
 }

@@ -8,6 +8,8 @@ using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Interfaces.Validators;
 using chatbot.Core.Models;
+using chatbot.Ef.UnitOfWork;
+using Microsoft.AspNetCore.Http;
 
 namespace chatbot.Ef.Services
 {
@@ -78,27 +80,38 @@ namespace chatbot.Ef.Services
             validator.ValidateFile(filedto.FileUrl)
         }
 
-        public async Task<Message> SendMessageAsync(string senderId, SendMessageDto messageDto)
+        public async Task SendMessageAsync(
+           Guid conversationId,
+           Guid senderId,
+          string? content,
+          IEnumerable<IFormFile>? files,
+          CancellationToken cancellationToken = default)
         {
-            var Message = new Message
+            var message = new Message
             {
                 Id = Guid.NewGuid(),
-                ConversationId = messageDto.ConversationId,
-                Content = messageDto.Content,
+                ConversationId = conversationId,
                 SenderId = senderId,
-                Type = messageDto.Type,
-                FileUrl = messageDto.FileUrl,
-                FileName = messageDto.FileName,
-                FileSizeBytes = messageDto.FileSizeBytes,
-                FileDurationSeconds = messageDto.FileDurationSeconds,
+                Content = content,
                 SentAt = DateTime.UtcNow
-
             };
-            await unitOfWork.Messages.AddAsync(Message);
+
             
+            await unitOfWork.Messages.AddAsync(message);
+
+            if (files != null && files.Any())
+            {
+                await storage.UploadManyAsync(
+                    files,
+                    message.Id,
+                    "messages",
+                    senderId,
+                    cancellationToken);
+            }
+
+
             await unitOfWork.SaveChangesAsync();
-            return Message;
         }
-       
+
     }
 }

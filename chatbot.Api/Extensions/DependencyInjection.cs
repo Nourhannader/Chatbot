@@ -4,6 +4,7 @@ using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Interfaces.Validators;
 using chatbot.Core.Models;
+using chatbot.Ef.Background;
 using chatbot.Ef.Data;
 using chatbot.Ef.Repositories;
 using chatbot.Ef.Services;
@@ -46,6 +47,12 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IStorageProvider, LocalStorageProvider>();
             Services.AddScoped<IStorageProvider, AzureBlobStorageProvider>();
             Services.AddScoped<IStorageService, StorageService>();
+            Services.AddScoped<IVoiceNoteService, VoiceNoteService>();
+            Services.AddScoped<IMediaMessageService, MediaMessageService>();
+
+
+            //background services
+            Services.AddHostedService<FileCleanupBackgroundService>();
 
             return Services;
         }

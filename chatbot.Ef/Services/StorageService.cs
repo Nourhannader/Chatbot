@@ -19,7 +19,9 @@ namespace chatbot.Ef.Services
         IFileValidationService validators,IFileProcessorService processor,
         IEnumerable<IStorageProvider> providers) : IStorageService
     {
-        private string GeneratePath( string folder,string fileName)
+        private static string GeneratePath(
+        string folder,
+        string fileName)
         {
             var extension =
                 Path.GetExtension(fileName)
@@ -27,7 +29,7 @@ namespace chatbot.Ef.Services
 
             var now = DateTime.UtcNow;
 
-            var storedName =
+            var uniqueFileName =
                 $"{Guid.NewGuid()}{extension}";
 
             return Path.Combine(
@@ -35,97 +37,165 @@ namespace chatbot.Ef.Services
                 now.Year.ToString(),
                 now.Month.ToString("00"),
                 now.Day.ToString("00"),
-                storedName
-            ).Replace("\\", "/");
+                uniqueFileName)
+                .Replace("\\", "/");
         }
         private IStorageProvider GetProvider(StorageProviderType providerType)
         {
             return providers.First(x =>
-                x.ProviderType == providerType);
+                x.ProviderType == providerType)??
+                throw new InvalidOperationException($"Storage provider '{providerType}' is not registered.");
         }
-        public async Task DeleteAsync(Guid fileId)
-        {
 
-            var file = await unitOfWork.StoredFiles.GetByIdAsync(fileId);
-            if(file == null)
-                throw new Exception("File not found");
-            if(file.IsDeleted)
+        public async Task<StoredFile?> GetByIdAsync(Guid fileId, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return await unitOfWork.StoredFiles.GetByIdAsync(fileId);
+        }
+        public async Task SoftDeleteAsync(
+        Guid fileId,
+        CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var storedFile = await unitOfWork.StoredFiles.GetByIdAsync(fileId);
+
+            if (storedFile == null)
+            {
+                throw new KeyNotFoundException(
+                    "File not found.");
+            }
+            if (storedFile.IsDeleted)
                 return;
-            file.IsDeleted = true;
-            file.DeletedAt = DateTime.UtcNow;
-             unitOfWork.StoredFiles.Update(file);
+
+            storedFile.IsDeleted = true;
+            storedFile.DeletedAt = DateTime.UtcNow;
+            unitOfWork.StoredFiles.UpdateAsync(storedFile);
         }
 
-        public async Task<Stream> DownloadAsync(string fileUrl)
+        public async Task<DownloadFileDto?> DownloadAsync(Guid fileId,CancellationToken cancellationToken=default)
         {
-            var path = Path.Combine(environment.WebRootPath, fileUrl.TrimStart('/'));
-            return await Task.FromResult(new FileStream(path, FileMode.Open, FileAccess.Read));
+            var storedFile=await unitOfWork.StoredFiles.GetByIdAsync(fileId);
+            if (storedFile == null || storedFile.IsDeleted || storedFile.IsPhysicallyDeleted)
+                return null;
+
+            cancellationToken.ThrowIfCancellationRequested();
+            var provider = GetProvider(storedFile.StorageProvider);
+
+            var stream = await provider.DownloadAsync(storedFile.Path,cancellationToken);
+            if (stream == null)
+                return null;
+            return new DownloadFileDto
+            {
+                stream = stream,
+                FileName = storedFile.OriginalName,
+                ContentType = string.IsNullOrWhiteSpace(
+                    storedFile.ContentType)
+                ? "application/octet-stream"
+                : storedFile.ContentType
+            };
+
         }
 
-        public async Task<UploadResultDto> UploadAsync(IFormFile file, string folder, string uploadedBy, StorageProviderType providerType = StorageProviderType.Local)
+        public async Task<UploadResultDto> UploadAsync(
+       IFormFile file,
+       string folder,
+       Guid uploadedBy,
+       Guid messageId,
+       CancellationToken cancellationToken = default)
         {
             //validation
             await validators.ValidateFile(file);
+            cancellationToken.ThrowIfCancellationRequested();
             //select provider
-            var provider=GetProvider(providerType);
+            var provider=GetProvider(StorageProviderType.Local);
             //generate unique path
             var relativePath = GeneratePath(folder, file.FileName);
 
             //upload physical file
             await using var stream=file.OpenReadStream();
-            await provider.UploadAsync(stream,relativePath, file.ContentType);
-            //generate thumbnail if image
-            string? thumbnailPath = null;
-            if (file.ContentType.StartsWith("image/"))
-            {
-                thumbnailPath =
-                    await processor.createThumbnailAsync(
-                        relativePath);
-            }
-            //save file metadata to database
+
             var storedFile = new StoredFile
             {
                 Id = Guid.NewGuid(),
-                OriginalName = file.FileName,
-                StoredName = Path.GetFileName(relativePath),
-                ContentType = file.ContentType,
-                Size = file.Length,
+
+                OriginalName = Path.GetFileName(
+                file.FileName),
+
+                StoredName = Path.GetFileName(
+                relativePath),
+
                 Path = relativePath,
-                StorageProvider = providerType,
-                UploadedByUserId = Guid.Parse(uploadedBy),
-                ThumbnailPath = thumbnailPath
+
+                ContentType = file.ContentType,
+
+                Size = file.Length,
+
+                MessageId = messageId,
+
+                UploadedByUserId =uploadedBy,
+
+                StorageProvider = provider.ProviderType,
+
+                IsDeleted = false,
+
+                CreatedAt = DateTime.UtcNow
             };
+
             await unitOfWork.StoredFiles.AddAsync(storedFile);
 
             return new UploadResultDto
             {
                 Success = true,
 
-                FileId =
-                    storedFile.Id,
+                FileId = storedFile.Id,
 
-                FileUrl =
-                    provider.GetFileUrl(
-                        storedFile.Path),
+                FileUrl = provider.GetFileUrl(
+                 storedFile.Path),
 
-                ThumbnailUrl =
-                    thumbnailPath != null
-                        ? provider.GetFileUrl(
-                            thumbnailPath)
-                        : string.Empty,
+                ContentType = storedFile.ContentType,
 
-                ContentType =
-                    storedFile.ContentType,
-
-                Size =
-                    storedFile.Size
+                Size = storedFile.Size
             };
         }
 
-        public Task<string?> GetFileUrlAsync(Guid fileId)
+        public async Task<List<UploadResultDto>> UploadManyAsync(
+        IEnumerable<IFormFile> files,
+        Guid messageId,
+        string folder,
+        Guid uploadedBy,
+        CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            var results = new List<UploadResultDto>();
+
+            foreach (var file in files)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var result = await UploadAsync(
+                    file,
+                    folder,
+                    uploadedBy,
+                    messageId,
+                    cancellationToken);
+
+                results.Add(result);
+            }
+
+            return results;
         }
+
+        public async Task<string?> GetFileUrlAsync(Guid fileId,CancellationToken cancellationToken=default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var storedFile = await unitOfWork.StoredFiles.GetByIdAsync(fileId);
+            if (storedFile == null || storedFile.IsDeleted || storedFile.IsPhysicallyDeleted)
+                return null;
+
+            var provider = GetProvider(storedFile.StorageProvider);
+            return provider.GetFileUrl(storedFile.Path);
+        }
+
+        
     }
     
 }

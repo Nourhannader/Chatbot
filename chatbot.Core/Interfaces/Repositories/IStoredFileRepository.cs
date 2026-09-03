@@ -7,8 +7,20 @@ using chatbot.Core.Models;
 
 namespace chatbot.Core.Interfaces.Repositories
 {
-    public interface IStoredFileRepository : IBaseRepository< StoredFile,Guid>
+    public interface IStoredFileRepository
     {
-        Task<IEnumerable<StoredFile>> GetDeletedFilesAsync(DateTime olderThan);
+        Task AddAsync(StoredFile file);
+
+        Task AddRangeAsync(IEnumerable<StoredFile> files);
+
+        Task<StoredFile?> GetByIdAsync(Guid id);
+
+        Task<List<StoredFile>> GetByMessageIdAsync( Guid messageId);
+
+        Task<List<StoredFile>> GetFilesForCleanupAsync(DateTime olderThan);
+
+        Task UpdateAsync(StoredFile file);
+
+        Task DeleteAsync(StoredFile file);
     }
 }

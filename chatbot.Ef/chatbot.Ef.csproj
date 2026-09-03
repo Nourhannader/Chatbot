@@ -33,8 +33,4 @@
     <ProjectReference Include="..\chatbot.Core\chatbot.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Background\" />
-  </ItemGroup>
-
 </Project>
