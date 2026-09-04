@@ -32,7 +32,7 @@ namespace chatbot.Ef.Repositories
         {
             var items = await context.Messages
                 .Where(m => m.ConversationId == conversationId)
-                .OrderByDescending(m => m.SentAt)
+                .OrderByDescending(m => m.SendAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Include(m => m.Reactions)
@@ -48,11 +48,25 @@ namespace chatbot.Ef.Repositories
             return PagedResult;
         }
 
+        public async Task<Message?> GetWithFilesAsync(Guid id)
+        {
+            return  await context.Messages
+                .Include(m=> m.Files)
+                .Include(m => m.VoiceNote)
+                .FirstOrDefaultAsync(m => m.Id == id);
+                
+        }
+
+        public void Remove(Message message)
+        {
+            context.Messages.Remove(message);
+        }
+
         public async Task<List<Message>> SearchMessagesAsync(Guid conversationId, string keyword)
         {
             return await context.Messages
                 .Where(x =>x.ConversationId == conversationId &&x.Content.Contains(keyword))
-              .OrderByDescending(x => x.SentAt)
+              .OrderByDescending(x => x.SendAt)
                .ToListAsync();
         }
 

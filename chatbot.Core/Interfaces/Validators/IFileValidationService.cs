@@ -9,6 +9,6 @@ namespace chatbot.Core.Interfaces.Validators
 {
     public interface IFileValidationService
     {
-        Task ValidateFile(IFormFile file);
+        Task ValidateFile(IFormFile file,CancellationToken cancellationToken=default);
     }
 }

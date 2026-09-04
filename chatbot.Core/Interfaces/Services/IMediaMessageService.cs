@@ -11,6 +11,7 @@ namespace chatbot.Core.Interfaces.Services
     {
         Task<MessageDto> SendMediaAsync(
          SendMediaDto dto,
+         Guid userId
          CancellationToken cancellationToken = default);
     }
 }

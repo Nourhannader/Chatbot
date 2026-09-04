@@ -20,18 +20,15 @@ namespace chatbot.Ef.Services
             if (files.Count == 0)
                 return MessageType.Text;
 
-            if (files.Count > 1)
-                return MessageType.File;
+            var file = files.First();
 
-            var contentType = files[0].ContentType;
-
-            if (contentType.StartsWith("image/"))
+            if (file.ContentType.StartsWith("image/"))
                 return MessageType.Image;
 
-            if (contentType.StartsWith("video/"))
+            if (file.ContentType.StartsWith("video/"))
                 return MessageType.Video;
 
-            if (contentType.StartsWith("audio/"))
+            if (file.ContentType.StartsWith("audio/"))
                 return MessageType.Audio;
 
             return MessageType.File;
@@ -87,10 +84,23 @@ namespace chatbot.Ef.Services
 
             return dto;
         }
-        public async Task<MessageDto> SendMediaAsync( SendMediaDto dto, CancellationToken cancellationToken = default)
+        public async Task<MessageDto> SendMediaAsync( SendMediaDto dto, Guid userId,CancellationToken cancellationToken = default)
         {
-            var userId = Guid.Parse("CURRENT_USER_ID");
+           cancellationToken.ThrowIfCancellationRequested();
+            //check if the user is a member of the conversation
+            var isMember =await unitOfWork.Conversations.IsMemberAsync(dto.ConversationId, userId, cancellationToken);
 
+            if (!isMember)
+            {
+                throw new UnauthorizedAccessException("You are not a member of this conversation.");
+            }
+            //check files are not null or empty
+            if (dto.Files == null || !dto.Files.Any())
+            {
+                throw new ArgumentException(
+                    "At least one file is required.");
+            }
+            //create message
             var message = new Message
             {
                 Id = Guid.NewGuid(),
@@ -101,7 +111,9 @@ namespace chatbot.Ef.Services
                 SendAt = DateTime.UtcNow
             };
 
-            var uploadedFiles = new List<UploadResultDto>();
+            await unitOfWork.Messages.AddAsync(message);
+
+            var uploadedFiles = storageService.UploadManyAsync(dto.Files,message.Id,"messages",userId,cancellationToken);
             await unitOfWork.SaveChangesAsync();
 
             return await MapToMessageDtoAsync(message,cancellationToken);

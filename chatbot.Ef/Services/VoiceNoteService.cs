@@ -29,9 +29,6 @@ namespace chatbot.Ef.Services
                 throw new UnauthorizedAccessException("You are not a member of this conversation.");
             }
 
-            //validate file
-           await validationService.ValidateFile(dto.Audio);
-
             var message = new Message
             {
                 Id = Guid.NewGuid(),
@@ -54,7 +51,7 @@ namespace chatbot.Ef.Services
             folder: "voice-notes",
             uploadedBy: userId,
             messageId: message.Id,
-            cancellationToken: cancellationToken);
+            cancellationToken);
 
 
             var voiceNote = new VoiceNote
@@ -73,7 +70,7 @@ namespace chatbot.Ef.Services
             };
 
 
-            //await unitOfWork.VoiceNotes.AddAsync(voiceNote);
+            await unitOfWork.VoiceNotes.AddAsync(voiceNote);
 
             await unitOfWork.SaveChangesAsync();
 

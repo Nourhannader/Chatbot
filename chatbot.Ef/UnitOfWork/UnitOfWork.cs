@@ -26,6 +26,11 @@ namespace chatbot.Ef.UnitOfWork
         public IForwardRepository ForwardMessages {  get; private set; }
         public ISearchRepository Searches { get; private set; }
         public IStoredFileRepository StoredFiles { get; private set; }
+
+        public IVoiceNoteRepository VoiceNotes { get;private set; }
+
+        public IUploadSessionRepository UploadSessions { get; private set; }
+
         public UnitOfWork(ApplicationDbContext _context)
         {
             this.context = _context;
@@ -40,6 +45,8 @@ namespace chatbot.Ef.UnitOfWork
             this.ForwardMessages = new ForwardRepository(context);
             this.Searches = new SearchRepository(context);
             this.StoredFiles = new StoredFileRepository(context);
+            this.VoiceNotes = new VoiceNoteRepository(context);
+            this.UploadSessions = new UploadSessionRepository(context);
         }
 
         public void Dispose()

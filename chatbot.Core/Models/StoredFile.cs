@@ -58,7 +58,9 @@ namespace chatbot.Core.Models
         public DateTime CreatedAt { get; set; }
             = DateTime.UtcNow;
 
-        public string UploadedByUser { get; set; }
-            = string.Empty;
+        public Guid UploadedByUser { get; set; }
+        public string? Hash { get; set; }
+        public string? CDNUrl { get; set; }
+
     }
 }
