@@ -4,31 +4,30 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.Enums;
 
 namespace chatbot.Core.Models
 {
     public class UserDevice : BaseEntity
     {
-        
         public Guid UserId { get; set; }
-        public ApplicationUser User { get; set; } = null!;
 
-        //Firebase 
-        public string DeviceToken { get; set; }=string.Empty;
-        //Andriod, iOS, Web
-        public string DeviceType { get; set; } = string.Empty;
+        public ApplicationUser User { get; set; }
+            = null!;
+
+        public string DeviceToken { get; set; }
+            = string.Empty;
+
+        public DeviceType DeviceType { get; set; }
+
         public string? DeviceName { get; set; }
 
-        public bool IsActive { get; set; }
+        public bool IsActive { get; set; } = true;
 
         public DateTime LastLogin { get; set; }
-        //signalR connection id for real-time communication
-        public string? ConnectionId { get; set; }
+            = DateTime.UtcNow;
 
-        public bool IsOnline { get; set; }
-
-        public DateTime ConnectedAt { get; set; }
-
-        public DateTime? DisconnectedAt { get; set; }
+        public ICollection<UserConnection> Connections { get; set; }
+            = new List<UserConnection>();
     }
 }

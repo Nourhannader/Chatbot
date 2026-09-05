@@ -49,6 +49,7 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IStorageService, StorageService>();
             Services.AddScoped<IVoiceNoteService, VoiceNoteService>();
             Services.AddScoped<IMediaMessageService, MediaMessageService>();
+            Services.AddScoped<IChunkUploadService, ChunkUploadService>();
 
 
             //background services

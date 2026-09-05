@@ -12,45 +12,76 @@ namespace chatbot.Ef.Services
 {
     public class MessageStatusService(IUnitOfWork unitOfWork) : IMessageStatusService
     {
-        public async Task<MessageStatus> GetStatusAsync(Guid messageId, Guid recipientId)
+        public async Task<MessageStatus?> GetStatusAsync(Guid messageId, Guid recipientId)
         {
-            var status= await unitOfWork.MessageStatuses.GetAsync(messageId, recipientId);
-            return status?.Status ?? MessageStatus.Sent;
+            return await unitOfWork.MessageStatuses.GetStatusAsync(messageId,recipientId) ;
 
         }
 
-        public  async Task<List<MessageRecipientStatus>> GetStatusesAsync(Guid messageId)
-        {
-            return await unitOfWork.MessageStatuses.GetByMessageAsync(messageId);
-        }
-
-        public async Task MarkDeliveredAsync(Guid messageId, Guid recipientId)
+        public async Task MarkASSentAsync(Guid messageId, Guid recipientId)
         {
             var status = await unitOfWork.MessageStatuses.GetAsync(messageId, recipientId);
-            if (status == null)
+            if (status != null)
+                return;
+            status = new MessageRecipientStatus
             {
-                return;
-            }
-            if (status.Status >= MessageStatus.Delivered)
-                return;
-            status.Status = MessageStatus.Delivered;
-            status.DeliveredAt = DateTime.UtcNow;
-            unitOfWork.MessageStatuses.Update(status);
+                Id = Guid.NewGuid(),
+                MessageId = messageId,
+                RecipientId = recipientId,
+                Status = MessageStatus.Sent,
+                SentAt = DateTime.UtcNow
+            };
+            await unitOfWork.MessageStatuses.AddAsync(status);
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task MarkReadAsync(Guid messageId, Guid recipientId)
+        public async Task MarkAsDeliveredAsync(Guid messageId, Guid recipientId)
         {
             var status = await unitOfWork.MessageStatuses.GetAsync(messageId, recipientId);
             if (status == null)
             {
-                return;
+                status = new MessageRecipientStatus
+                {
+                    Id = Guid.NewGuid(),
+                    MessageId = messageId,
+                    RecipientId = recipientId,
+                    Status = MessageStatus.Delivered,
+                    DeliveredAt = DateTime.UtcNow
+                };
+                await unitOfWork.MessageStatuses.AddAsync(status);
             }
-            if (status.Status == MessageStatus.Seen)
-                return;
-            status.Status = MessageStatus.Seen;
-            status.ReadAt = DateTime.UtcNow;
-            unitOfWork.MessageStatuses.Update(status);
+            else if(status.Status < MessageStatus.Delivered)
+            {
+              
+                status.Status = MessageStatus.Delivered;
+                status.DeliveredAt = DateTime.UtcNow;
+                unitOfWork.MessageStatuses.Update(status);
+               
+            }
+          await  unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task MarkAsReadAsync(Guid messageId, Guid recipientId)
+        {
+            var status = await unitOfWork.MessageStatuses.GetAsync(messageId, recipientId);
+            if (status == null)
+            {
+                status = new MessageRecipientStatus
+                {
+                    Id = Guid.NewGuid(),
+                    MessageId = messageId,
+                    RecipientId = recipientId,
+                    Status = MessageStatus.Delivered,
+                    DeliveredAt = DateTime.UtcNow
+                };
+                await unitOfWork.MessageStatuses.AddAsync(status);
+            }
+            else if (status.Status < MessageStatus.Seen)
+            {
+                status.Status = MessageStatus.Seen;
+                status.ReadAt = DateTime.UtcNow;
+                unitOfWork.MessageStatuses.Update(status);
+            }
             await unitOfWork.SaveChangesAsync();
         }
     }

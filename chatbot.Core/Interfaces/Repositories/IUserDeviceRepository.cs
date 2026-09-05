@@ -9,8 +9,18 @@ namespace chatbot.Core.Interfaces.Repositories
 {
     public interface IUserDeviceRepository:IBaseRepository<UserDevice,Guid>
     {
-        Task<UserDevice?> GetByUserAsync(Guid userId,string deviceToken);
-        Task<List<UserDevice>> GetUserDevicesAsync(Guid userId);
+        Task<UserDevice?> GetByTokenAsync(
+        string deviceToken);
+
+        Task<IEnumerable<UserDevice>>
+            GetUserDevicesAsync(
+                Guid userId);
+
+        Task<IEnumerable<UserDevice>>
+            GetActiveDevicesAsync(
+                Guid userId);
+
+        
 
     }
 }

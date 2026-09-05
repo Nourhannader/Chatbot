@@ -12,7 +12,10 @@ namespace chatbot.Core.Enums
         MessageReaction = 2,
         MessageReply = 3,
         AddedToGroup = 4,
-        RemovedFromGroup = 5
+        RemovedFromGroup = 5,
+        Mention = 6,
+        System=7,
+        FriendRequest = 8
 
 
     }

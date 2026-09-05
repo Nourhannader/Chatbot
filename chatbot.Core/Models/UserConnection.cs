@@ -8,13 +8,23 @@ namespace chatbot.Core.Models
 {
     public class UserConnection : BaseEntity
     {
-        public Guid UserId { get; set; } 
-        public ApplicationUser User { get; set; } = null!;
+        public Guid UserId { get; set; }
 
-        public Guid ConnectionId { get; set; } 
+        public ApplicationUser User { get; set; }
+            = null!;
 
-        public string DeviceType { get; set; } = string.Empty;
+        public Guid? UserDeviceId { get; set; }
 
-        public DateTime ConnectedAt { get; set; } = DateTime.UtcNow;
+        public UserDevice? UserDevice { get; set; }
+
+        public string ConnectionId { get; set; }
+            = string.Empty;
+
+        public bool IsOnline { get; set; }
+
+        public DateTime ConnectedAt { get; set; }
+            = DateTime.UtcNow;
+
+        public DateTime? DisconnectedAt { get; set; }
     }
 }

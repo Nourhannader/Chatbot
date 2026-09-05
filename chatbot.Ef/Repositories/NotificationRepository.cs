@@ -23,6 +23,14 @@ namespace chatbot.Ef.Repositories
                 .FirstOrDefaultAsync(n => n.Id == id);
         }
 
+        public async Task<List<Notification>> GetUnreadUserNotificationsAsync(Guid userId)
+        {
+            return await context.Notifications
+                .Where(n => n.UserId == userId && !n.IsRead)
+                .OrderByDescending(n => n.CreatedAt)
+                .ToListAsync();
+        }
+
         public async Task<List<Notification>> GetUserNotificationsAsync(Guid userId)
         {
             return await context.Notifications

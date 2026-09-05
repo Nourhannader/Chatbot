@@ -10,9 +10,9 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IMessageStatusService
     {
-        Task MarkDeliveredAsync(Guid messageId, Guid recipientId);
-        Task MarkReadAsync(Guid messageId, Guid recipientId);
-        Task<MessageStatus> GetStatusAsync(Guid messageId, Guid recipientId);
-        Task<List<MessageRecipientStatus>> GetStatusesAsync(Guid messageId);
+        Task MarkASSentAsync(Guid messageId, Guid recipientId);
+        Task MarkAsDeliveredAsync(Guid messageId, Guid recipientId);
+        Task MarkAsReadAsync(Guid messageId, Guid recipientId);
+        Task<MessageStatus?> GetStatusAsync(Guid messageId, Guid recipientId);
     }
 }

@@ -15,8 +15,9 @@ namespace chatbot.Core.Models
         public ApplicationUser Recipient { get; set; } = null!;
 
         public MessageStatus Status { get; set; } = MessageStatus.Sent;
-
+        public DateTime? SentAt { get; set; }
         public DateTime? ReadAt { get; set; }
         public DateTime? DeliveredAt { get; set; }
+
     }
 }

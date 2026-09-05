@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,71 +12,44 @@ using Microsoft.AspNetCore.Identity;
 
 namespace chatbot.Ef.Services
 {
-    public class PresenceService
-        (IUnitOfWork unitOfWork,UserManager<ApplicationUser> userManager) : IPresenceService
+    public class PresenceService(IUnitOfWork unitOfWork) : IPresenceService
     {
-        public async Task<List<string>> GetConnectionIdsAsync(Guid userId)
-        {
-            var connections=await  unitOfWork.UserConnections.GetUserConnectionsAsync(userId);
+        private readonly ConcurrentDictionary<string,ConcurrentDictionary<string, byte>>users = new();
 
-            return connections.Select(c => c.ConnectionId).ToList();
-        }
-
-        public async Task<DateTime?> GetLastSeenAsync(Guid userId)
+        public Task<int> GetConnectionCountAsync(Guid userId)
         {
-            var user=await userManager.FindByIdAsync(userId);
-            return user?.LastSeen;
+            if(users.TryGetValue(userId.ToString(),out var connections))
+            {
+                return Task.FromResult(connections.Count);
+            }
+            return Task.FromResult(0);
         }
 
         public async Task<bool> IsOnlineAsync(Guid userId)
         {
-            return await unitOfWork.UserConnections.HasConnectionsAsync(userId);
+            return await Task.FromResult(users.ContainsKey(userId.ToString()));
         }
 
-
-        public async Task UserConnectedAsync(Guid userId, string connectionId, string deviceType)
+        public  Task UserConnectedAsync(Guid userId, string connectionId)
         {
-            await unitOfWork.UserConnections.AddAsync(new UserConnection
-            {
-                UserId = userId,
-                ConnectionId = connectionId,
-                DeviceType = deviceType
-            });
-            await unitOfWork.SaveChangesAsync();
-            
-            var user=await userManager.FindByIdAsync(userId);
-            if (user != null)
-            {
-                user.IsOnline = true;
-                user.LastSeen = DateTime.UtcNow;
-                await userManager.UpdateAsync(user);
-            }
+            var connections=users.GetOrAdd(userId.ToString(), _ => new ConcurrentDictionary<string, byte>());
+            connections.TryAdd(connectionId, 0);
+            return Task.CompletedTask;
 
         }
 
-        public async Task UserDisconnectedAsync(Guid connectionId)
+        public  Task UserDisconnectedAsync(Guid userId,string connectionId)
         {
-            var connection= await unitOfWork.UserConnections.GetByIdAsync(connectionId);
-            if(connection == null)
-            {
-                return;
-            }
-            var userId = connection.UserId;
-            await unitOfWork.UserConnections.RemoveAsync(connectionId);
-            await unitOfWork.SaveChangesAsync();
+           if(users.TryGetValue(userId.ToString(),out var connections))
+           {
+                connections.TryRemove(connectionId, out _);
+                if (connections.IsEmpty)
+                {
+                    users.TryRemove(userId.ToString(), out _);
+                }
+           }
 
-            var hasOtherConnections = await unitOfWork.UserConnections.HasConnectionsAsync(userId);
-            if(hasOtherConnections)
-            {
-                return;
-            }
-            var user = await userManager.FindByIdAsync(userId);
-            if (user != null)
-            {
-                user.IsOnline = false;
-                user.LastSeen = DateTime.UtcNow;
-                await userManager.UpdateAsync(user);
-            }
+           return Task.CompletedTask;
         }
     }
 }

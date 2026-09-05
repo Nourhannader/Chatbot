@@ -10,5 +10,6 @@ namespace chatbot.Core.Interfaces.Repositories
     public interface INotificationRepository:IBaseRepository<Notification,Guid>
     {
         Task<List<Notification>> GetUserNotificationsAsync(Guid userId);
+        Task<List<Notification>> GetUnreadUserNotificationsAsync(Guid userId);
     }
 }

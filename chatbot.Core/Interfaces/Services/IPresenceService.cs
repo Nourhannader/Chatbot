@@ -8,11 +8,9 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IPresenceService
     {
-        Task UserConnectedAsync(Guid userId,Guid connectionId,string deviceType);
-        Task UserDisconnectedAsync( Guid connectionId);
+        Task UserConnectedAsync(Guid userId,string connectionId);
+        Task UserDisconnectedAsync(Guid userId, string connectionId);
         Task<bool> IsOnlineAsync(Guid userId);
-        Task<DateTime?> GetLastSeenAsync(Guid userId);
-
-        Task<List<string>> GetConnectionIdsAsync(Guid userId);
+        Task<int> GetConnectionCountAsync(Guid userId);
     }
 }

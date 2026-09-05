@@ -17,13 +17,18 @@ namespace chatbot.Ef.Configurations
            .IsRequired()
            .HasMaxLength(200);
 
-            builder.Property(x => x.DeviceType)
-                .HasMaxLength(100);
+
             // Relationships
             builder.HasOne(x => x.User) 
-                .WithMany() 
+                .WithMany(x => x.Connections) 
                 .HasForeignKey(x => x.UserId) 
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(x => x.UserDevice)
+           .WithMany(x => x.Connections)
+           .HasForeignKey(x => x.UserDeviceId)
+           .OnDelete(DeleteBehavior.Cascade);
+
             // Indexes
             builder.HasIndex(x => x.UserId);
             
