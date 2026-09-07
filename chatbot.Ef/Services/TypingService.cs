@@ -7,6 +7,7 @@ using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Ef.Repositories;
 using chatbot.Ef.UnitOfWork;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace chatbot.Ef.Services
@@ -15,7 +16,7 @@ namespace chatbot.Ef.Services
     {
         
 
-        public Task<List<string>> GetTypingUsersAsync(Guid conversationId)
+        public Task<List<Guid>> GetTypingUsersAsync(Guid conversationId)
         {
             return Task.FromResult(
            typing.GetTypingUsers(

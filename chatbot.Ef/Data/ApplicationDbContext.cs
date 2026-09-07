@@ -54,6 +54,8 @@ namespace chatbot.Ef.Data
             => Set<UserConnection>();
         public DbSet<VoiceNote> VoiceNotes => Set<VoiceNote>();
         public DbSet<UploadSession> UploadSessions => Set<UploadSession>();
+        public DbSet<Sticker> Stickers => Set<Sticker>();
+        public DbSet<StickerPack> StickerPacks => Set<StickerPack>();
 
         #endregion
 

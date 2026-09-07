@@ -16,28 +16,24 @@ namespace chatbot.Ef.Services
         {
             var original = await unitOfWork.Messages.GetByIdAsync(dto.MessageId);
             if(original ==null)
-                throw new Exception("Message not found.");
+                throw new KeyNotFoundException("Message not found.");
             var messages=new List<Message>();
             foreach(var id in dto.ConversationIds)
             {
-                if (!await unitOfWork.ForwardMessages.ConversationExistsAsync(id))
+                if (!await unitOfWork.ForwardMessages.ConversationExistsAsync(Guid.Parse(id)))
                     continue;
-                if (!await unitOfWork.ForwardMessages.IsMemberAsync(id, senderId))
+                if (!await unitOfWork.ForwardMessages.IsMemberAsync(Guid.Parse(id), senderId))
                     continue;
 
                 messages.Add(new Message
                 {
                     SenderId = senderId,
-                    ConversationId = id,
-                    Type = original.Type,
+                    ConversationId = Guid.Parse(id),
+                    MessageType = original.MessageType,
                     Content = original.Content,
-                    FileUrl = original.FileUrl,
-                    FileName = original.FileName,
-                    FileSizeBytes = original.FileSizeBytes,
-                    FileDurationSeconds = original.FileDurationSeconds,
                     OriginalMessageId = original.Id,
                     IsForwarded = true,
-                    SentAt=DateTime.UtcNow
+                    SendAt=DateTime.UtcNow
                 });
 
             }

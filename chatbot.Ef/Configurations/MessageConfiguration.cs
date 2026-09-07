@@ -18,7 +18,7 @@ namespace chatbot.Ef.Configurations
             builder.Property(x => x.Content)
                 .HasMaxLength(4000);
 
-            builder.Property(x => x.Type)
+            builder.Property(x => x.MessageType)
                 .HasConversion<int>()
                 .IsRequired();
 
@@ -33,7 +33,9 @@ namespace chatbot.Ef.Configurations
             // Relationships
             builder.HasMany(x => x.Reactions)
                 .WithOne(x => x.Message)
-                .HasForeignKey(x => x.MessageId);
+                .HasForeignKey(x => x.MessageId)
+                .OnDelete(DeleteBehavior.Cascade);
+
 
             builder.HasMany(x => x.RecipientStatuses)
                 .WithOne(x => x.Message)
@@ -48,7 +50,17 @@ namespace chatbot.Ef.Configurations
               .HasForeignKey(x => x.OriginalMessageId)
               .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasMany(x=> x.StoredFiles)
+            builder.HasOne(x => x.ReplyToMessage)
+                .WithMany( x => x.Replies)
+                .HasForeignKey(x => x.ReplyToMessageId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasOne(x => x.Sticker)
+                .WithMany()
+                .HasForeignKey(x => x.StickerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasMany(x=> x.Files)
                 .WithOne(x=> x.Message)
                 .HasForeignKey(x => x.MessageId)
                 .OnDelete(DeleteBehavior.Restrict);
@@ -63,7 +75,7 @@ namespace chatbot.Ef.Configurations
                 new
                 {
                     x.ConversationId,
-                    x.SentAt
+                    x.SendAt
                 });
         }
     }

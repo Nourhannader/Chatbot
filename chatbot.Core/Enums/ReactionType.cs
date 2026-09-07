@@ -8,7 +8,8 @@ namespace chatbot.Core.Enums
 {
     public enum ReactionType
     {
-        Like=1,
+        None = 0,
+        Like =1,
         Love=2,
         Laugh=3,
         Wow=4,

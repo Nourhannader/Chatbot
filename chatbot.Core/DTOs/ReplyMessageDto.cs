@@ -9,16 +9,12 @@ namespace chatbot.Core.DTOs
 {
     public class ReplyMessageDto
     {
-        public string ConversationId { get; set; } = string.Empty;
+        public Guid ConversationId { get; set; } 
 
-        public string ReplyToMessageId { get; set; } = string.Empty;
+        public Guid MessageId { get; set; } 
 
         public string Content { get; set; } = string.Empty;
 
         public MessageType Type { get; set; }
-
-        public string? FileUrl { get; set; }
-
-        public string? FileName { get; set; }
     }
 }

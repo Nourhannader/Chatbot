@@ -4,19 +4,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using chatbot.Core.Interfaces.Services;
+using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Models;
 using chatbot.Ef.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace chatbot.Ef.Services
 {
-    public class ChatService : IChatService
+    public class ChatService(IUnitOfWork unitOfWork) : IChatService
     {
-        private readonly ApplicationDbContext _context;
-        public ChatService(ApplicationDbContext context)
-        {
-            this._context = context;
-        }
+
         //public async Task<Message> CreateMessage(int chatId, string senderId, string text)
         //{
         //    var msg = new Message
@@ -43,12 +40,12 @@ namespace chatbot.Ef.Services
 
         //   return await _context.BlockLists.AnyAsync(bl => bl.BlockedId == senderId && ChatUser.Contains(bl.BlockerId));
         //}
-        
+
 
         //public async Task<bool> IsMember(int chatId, string userId) =>
         //   await _context.ChatMembers.AnyAsync(cm => cm.ChatId == chatId && cm.UserId == userId);
 
-        
+
 
         //public async Task SetUserOffline(string connectionId)
         //{
@@ -73,5 +70,9 @@ namespace chatbot.Ef.Services
         //    _context.UserDevices.Add(device);
         //    await _context.SaveChangesAsync();
         //}
+        public async Task<bool> IsMemberAsync(Guid conversationId, Guid userId)
+        {
+            return await unitOfWork.Conversations.IsMemberAsync(conversationId, userId);
+        }
     }
 }

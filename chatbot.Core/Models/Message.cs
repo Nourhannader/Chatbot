@@ -34,11 +34,6 @@ namespace chatbot.Core.Models
         public MessageType MessageType { get; set; }
 
 
-        // Multiple Files
-        public ICollection<StoredFile> Files { get; set; }
-            = new List<StoredFile>();
-
-
         // Voice Note Metadata
         public VoiceNote? VoiceNote { get; set; }
 
@@ -47,6 +42,9 @@ namespace chatbot.Core.Models
         public Guid? ReplyToMessageId { get; set; }
 
         public Message? ReplyToMessage { get; set; }
+        //sticker
+        public Guid? StickerId { get; set; }
+        public Sticker? Sticker { get; set; }
 
 
         // Edit
@@ -85,7 +83,8 @@ namespace chatbot.Core.Models
         // Navigation Property for Recipient Statuses
         public ICollection<MessageRecipientStatus> RecipientStatuses { get; set; } = new List<MessageRecipientStatus>();
         public ICollection<MessageReaction> Reactions { get; set; } = new List<MessageReaction>();
-        public ICollection<StoredFile> StoredFiles { get; set; } = new List<StoredFile>();
+        // Multiple Files
+        public ICollection<StoredFile> Files { get; set; }= new List<StoredFile>();
     }
 }
 

@@ -35,7 +35,8 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IConversationService, ConversationService>();
             Services.AddScoped<IReactionService, ReactionService>();
             Services.AddScoped<IUserDeviceService, UserDeviceService>();
-            Services.AddScoped<INotificationsService, NotificationsService>();
+            Services.AddScoped<INotificationService,NotificationService>();
+            Services.AddScoped<IPushNotificationService, FirebaseNotificationService>();
             Services.AddScoped<IPresenceService, PresenceService>();
             Services.AddScoped<IMessageStatusService, MessageStatusService>();
             Services.AddScoped<ITypingService, TypingService>();
@@ -50,6 +51,8 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IVoiceNoteService, VoiceNoteService>();
             Services.AddScoped<IMediaMessageService, MediaMessageService>();
             Services.AddScoped<IChunkUploadService, ChunkUploadService>();
+            Services.AddScoped<IStickerService, StickerService>();
+            Services.AddSingleton<TypingRepository>();
 
 
             //background services

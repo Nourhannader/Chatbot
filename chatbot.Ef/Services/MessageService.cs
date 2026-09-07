@@ -52,22 +52,20 @@ namespace chatbot.Ef.Services
 
         public async Task<Message> ReplyAsync(Guid senderId, ReplyMessageDto dto)
         {
-            var repliedMessage = await unitOfWork.Messages.GetByIdAsync(dto.ReplyToMessageId);
-            if (repliedMessage == null)
+            var originalMessage = await unitOfWork.Messages.GetByIdAsync(dto.MessageId);
+            if (originalMessage == null)
                 throw new Exception("Message not found.");
-            if (repliedMessage.ConversationId != dto.ConversationId)
-                throw new Exception("Invalid conversation.");
+            if (originalMessage.ConversationId != dto.ConversationId)
+                throw new InvalidOperationException("The original message does not belong to the this conversation.");
 
             var message = new Message
             {
                 SenderId = senderId,
                 ConversationId = dto.ConversationId,
                 Content = dto.Content,
-                //FileUrl = dto.FileUrl,
-                FileName = dto.FileName,
-                Type = dto.Type,
-                SentAt = DateTime.UtcNow,
-                ReplyToMessageId = dto.ReplyToMessageId
+                MessageType = dto.Type,
+                SendAt = DateTime.UtcNow,
+                ReplyToMessageId = dto.MessageId
 
             };
            await unitOfWork.Messages.AddAsync(message);
@@ -93,7 +91,7 @@ namespace chatbot.Ef.Services
                 ConversationId = conversationId,
                 SenderId = senderId,
                 Content = content,
-                SentAt = DateTime.UtcNow
+                SendAt = DateTime.UtcNow
             };
 
             

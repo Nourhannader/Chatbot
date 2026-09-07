@@ -24,6 +24,7 @@ namespace chatbot.Core.Interfaces.UnitOFWork
         IStoredFileRepository StoredFiles { get; }
         IVoiceNoteRepository VoiceNotes { get; }
         IUploadSessionRepository UploadSessions { get; }
+        IStickerRepository Stickers { get; }
 
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();

@@ -9,6 +9,7 @@ namespace chatbot.Core.Interfaces.Services
 {
      public interface IChatService
     {
+        Task<bool> IsMemberAsync(Guid conversationId,Guid userId);
         //Task<bool> IsMember(int chatId, string userId);
         //Task<bool> IsBlocked(int chatId, string senderId);
         //Task<Message> CreateMessage(int chatId, string senderId, string text);

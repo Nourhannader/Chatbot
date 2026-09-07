@@ -6,11 +6,10 @@ using System.Threading.Tasks;
 
 namespace chatbot.Core.DTOs
 {
-    public class ForwardMessageDto
+    public class SendStickerDto
     {
-        public Guid MessageId { get; set; } 
+        public Guid ConversationId { get; set; }
 
-        public List<string> ConversationIds { get; set; }
-            = new();
+        public Guid StickerId { get; set; }
     }
 }
