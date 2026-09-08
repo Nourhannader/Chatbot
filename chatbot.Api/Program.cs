@@ -11,6 +11,7 @@ using chatbot.Ef.Data;
 using chatbot.Ef.Repositories;
 using chatbot.Ef.Services;
 using chatbot.Ef.UnitOfWork;
+using chatbot.Ef.ValidatorService;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
 using Microsoft.AspNetCore.Identity;
@@ -43,7 +44,7 @@ namespace chatbot.Api
                           .AllowCredentials();
                 });
             });
-
+        
             builder.Services.AddDbContext<ApplicationDbContext>(options => 
               options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
                 b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
@@ -103,6 +104,8 @@ namespace chatbot.Api
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+
+            app.UseExceptionHandler();
 
             app.UseHttpsRedirection();
 

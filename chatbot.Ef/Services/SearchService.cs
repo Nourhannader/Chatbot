@@ -3,70 +3,121 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AutoMapper;
 using chatbot.Core.DTOs;
+using chatbot.Core.Enums;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
+using chatbot.Ef.Repositories;
 
 namespace chatbot.Ef.Services
 {
-    public class SearchService(IUnitOfWork unitOfWork) : ISearchService
+    public class SearchService(IUnitOfWork unitOfWork,IMapper mapper) : ISearchService
     {
-        public async Task<List<ConversationDto>> SearchConversationsAsync(Guid userId, string keyword)
+        private async Task<SearchResultDto> SearchUserAsync(SearchDto dto)
         {
-            var conversations=await unitOfWork.Searches.SearchConversationsAsync(userId, keyword);
-            return conversations.Select(
-                c => new ConversationDto
-                {
-                    Id=c.Id.ToString(),
-                    Title=c.Title,
-                    Type=c.Type,
-                    GroupPictureUrl=c.GroupPictureUrl,
-                    CreatedAt=c.CreatedAt
-                }
-                ).ToList();
+            var result= await unitOfWork.Searches.SearchUsersAsync(dto.Keyword,dto.PageNumber,dto.PageSize);
+            return new SearchResultDto
+            {
+                Type = SearchType.Users,
+
+                TotalCount = result.TotalCount,
+
+                PageNumber = dto.PageNumber,
+
+                PageSize = dto.PageSize,
+
+                Data = mapper.Map<
+            List<UserSearchDto>>(result.Items)
+            };
         }
 
-        public async Task<List<MessageDto>> SearchFilesAsync(Guid conversationId, string keyword)
+        private async Task<SearchResultDto>SearchConversationsAsync(Guid userId,SearchDto dto)
         {
-            var files = await unitOfWork.Searches.SearchFilesAsync(conversationId, keyword);
-            return files.Select(
-                f => new MessageDto
-                {
-                    Id = f.Id.ToString(),
-                    FileUrl = f.FileUrl,
-                    SenderId = f.SenderId,
-                    Type = f.Type,
-                    Content = f.Content
-                }
-                ).ToList();
+            var result =
+                await unitOfWork.Searches
+                    .SearchConversationsAsync(userId,dto.Keyword,dto.PageNumber,dto.PageSize);
 
+            return new SearchResultDto
+            {
+                Type = SearchType.Conversations,
+
+                TotalCount = result.TotalCount,
+
+                PageNumber = dto.PageNumber,
+
+                PageSize = dto.PageSize,
+
+                Data = mapper.Map<
+                    List<ConversationSearchDto>>(
+                        result.Items)
+            };
         }
 
-        public async Task<List<MessageDto>> SearchMessagesAsync(Guid conversationId, string keyword)
+        private async Task<SearchResultDto> SearchMessagesAsync(Guid userId,SearchDto dto)
         {
-            var messages = await unitOfWork.Searches.SearchMessagesAsync(conversationId, keyword);
-            return messages.Select(
-               m => new MessageDto
-               {
-                   Id = m.Id.ToString(),
-                   FileUrl = m.FileUrl,
-                   SenderId = m.SenderId.ToString(),
-                   Type = m.Type,
-                   Content = m.Content
-               }
-               ).ToList();
-        }
+            var result = await unitOfWork.Searches
+                    .SearchMessagesAsync(userId,dto.Keyword,dto.PageNumber,dto.PageSize,dto.MessageType,dto.From,dto.To);
 
-        public async Task<List<UserDto>> SearchUsersAsync(string keyword)
+            return new SearchResultDto
+            {
+                Type = SearchType.Messages,
+
+                TotalCount = result.TotalCount,
+
+                PageNumber = dto.PageNumber,
+
+                PageSize = dto.PageSize,
+
+                Data = mapper.Map<
+                    List<MessageSearchDto>>(
+                        result.Items)
+            };
+        }
+        
+        private async Task<SearchResultDto> SearchFilesAsync(Guid userId,SearchDto dto)
         {
-            var users = await unitOfWork.Searches.SearchUsersAsync(keyword);
-            return users.Select(
-               u => new UserDto
-               {
-                   Id = u.Id.ToString()
-               }
-               ).ToList();
+            var result =
+                await unitOfWork.Searches
+                    .SearchFilesAsync(userId, dto.Keyword, dto.PageNumber, dto.PageSize);
+
+            return new SearchResultDto
+            {
+                Type = SearchType.Messages,
+
+                TotalCount = result.TotalCount,
+
+                PageNumber = dto.PageNumber,
+
+                PageSize = dto.PageSize,
+
+                Data = mapper.Map<
+                    List<FileSearchDto>>(
+                        result.Items)
+            };
+        }
+        public async Task<SearchResultDto> SearchAsync(Guid userId, SearchDto dto)
+        {
+            if (dto.PageNumber < 1)
+                dto.PageNumber = 1;
+            if (dto.PageSize < 1)
+                dto.PageSize = 20;
+            if (dto.PageSize > 100)
+                dto.PageSize = 100;
+            return dto.SearchType switch
+            {
+                SearchType.Users =>
+                    await SearchUserAsync(dto),
+                SearchType.Conversations => 
+                    await SearchConversationsAsync(userId,dto),
+                SearchType.Messages =>
+                    await SearchMessagesAsync(userId,dto),
+                SearchType.Files =>
+                       await SearchFilesAsync(userId,dto),
+
+                _ => throw new ArgumentException("Invalid search type")
+            };
         }
     }
 }

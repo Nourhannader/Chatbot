@@ -13,7 +13,8 @@ namespace chatbot.Ef.Configurations
     {
         public void Configure(EntityTypeBuilder<Message> builder)
         {
-           
+
+            builder.HasQueryFilter(m => !m.IsDeleted);
 
             builder.Property(x => x.Content)
                 .HasMaxLength(4000);

@@ -1,4 +1,5 @@
-﻿using chatbot.Core.Helper;
+﻿using chatbot.Api.Middlewares;
+using chatbot.Core.Helper;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
@@ -11,7 +12,9 @@ using chatbot.Ef.Services;
 using chatbot.Ef.Services.Providers;
 using chatbot.Ef.UnitOfWork;
 using chatbot.Ef.ValidatorService;
+using FluentValidation;
 using Microsoft.AspNetCore.Identity;
+using StackExchange.Redis;
 
 
 namespace chatbot.Api.Extensions
@@ -24,7 +27,11 @@ namespace chatbot.Api.Extensions
             Services.Configure<MailSettings>(Configuration.GetSection("MailSettings"));
             Services.AddIdentity<ApplicationUser, IdentityRole>()
                 .AddEntityFrameworkStores<ApplicationDbContext>();
+            Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(Configuration.GetConnectionString("Redis"))!);
 
+            Services.AddExceptionHandler<GlobalExceptionHandler>();
+            Services.AddProblemDetails();
+            Services.AddValidatorsFromAssemblyContaining<SendMessageValidator>();
             Services.AddTransient<IUnitOfWork, UnitOfWork>();
             Services.AddScoped<IAuthRepository, AuthRepository>();
             Services.AddScoped<IAuthService, AuthService>();
@@ -42,6 +49,7 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<ITypingService, TypingService>();
             Services.AddScoped<IForwardService, ForwardService>();
             Services.AddScoped<ISearchService, SearchService>();
+            Services.AddScoped<ICacheService, RedisCacheService>();
             Services.AddScoped<IStorageService, StorageService>();
             Services.AddScoped<IFileValidationService, FileValidationService>();
             Services.AddScoped<IFileProcessorService, ImageProcessorService>();
