@@ -18,6 +18,11 @@ namespace chatbot.Ef.Repositories
             await context.Messages.AddAsync(entity);
         }
 
+        public async Task AddDeletionAsync(MessageDeletion message)
+        {
+            await context.Deletions.AddAsync(message);
+        }
+
         public async Task<Message> GetByIdAsync(Guid id)
         {
             return await context.Messages
@@ -55,6 +60,12 @@ namespace chatbot.Ef.Repositories
                 .Include(m => m.VoiceNote)
                 .FirstOrDefaultAsync(m => m.Id == id);
                 
+        }
+
+        public async Task<bool> IsDeletedForUserAsync(Guid messageId, Guid userId)
+        {
+            return await context.Deletions
+                .AnyAsync(m => m.UserId == userId && m.MessageId == messageId);
         }
 
         public void Remove(Message message)

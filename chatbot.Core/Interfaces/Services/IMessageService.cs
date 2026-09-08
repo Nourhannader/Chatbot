@@ -15,10 +15,13 @@ namespace chatbot.Core.Interfaces.Services
            IEnumerable<IFormFile>? files,
            CancellationToken cancellationToken = default);
         Task<PagedResultDto<Message>> GetMessagesAsyns(Guid conversationId, int page, int pageSize);
-        Task DeleteForEveryoneAsync(Guid messageId,Guid userId);
+        
         Task MarkDeliveredAsync(Guid messageId, Guid userId);
         Task MarkReadAsync(Guid conversationId, Guid userId);
         Task<Message> ReplyAsync(Guid senderId, ReplyMessageDto dto);
         Task<MessageDto> SendFileAsync(SendFileDto filedto);
+        Task DeleteForMeAsync(Guid messageId,Guid userId);
+
+        Task DeleteForEveryoneAsync( Guid messageId,Guid userId);
     }
 }

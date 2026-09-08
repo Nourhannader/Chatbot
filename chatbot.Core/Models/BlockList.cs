@@ -13,8 +13,8 @@ namespace chatbot.Core.Models
         public Guid BlockerId { get; set; }
         public ApplicationUser Blocker { get; set; }
         [ForeignKey("Blocked")]
-        public Guid BlockedId { get; set; }
-        public ApplicationUser Blocked { get; set; }
+        public Guid BlockedUserId { get; set; }
+        public ApplicationUser BlockedUser { get; set; }
         public DateTime BlockedAt { get; set; }
     }
 }

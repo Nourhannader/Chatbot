@@ -40,6 +40,7 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IChatService, ChatService>();
             Services.AddScoped<IMessageService, MessageService>();
             Services.AddScoped<IConversationService, ConversationService>();
+            Services.AddScoped<IConversationSettingsService, ConversationSettingsService>();
             Services.AddScoped<IReactionService, ReactionService>();
             Services.AddScoped<IUserDeviceService, UserDeviceService>();
             Services.AddScoped<INotificationService,NotificationService>();

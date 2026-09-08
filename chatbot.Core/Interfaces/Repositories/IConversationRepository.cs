@@ -13,5 +13,6 @@ namespace chatbot.Core.Interfaces.Repositories
         Task<bool> ConversationExistsAsync(Guid firstUserId, Guid secondUserId);
         Task<bool> IsMemberAsync(Guid conversationId,Guid userId,CancellationToken cancellationToken = default);
 
+
     }
 }

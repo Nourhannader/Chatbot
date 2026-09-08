@@ -17,21 +17,60 @@ namespace chatbot.Ef.Services
     {
         public async Task DeleteForEveryoneAsync(Guid messageId, Guid userId)
         {
-            var message = await unitOfWork.Messages.GetByIdAsync(messageId);
+            var message =
+           await unitOfWork.Messages
+               .GetByIdAsync(messageId);
+
             if (message == null)
-            {
-                throw new Exception("Message not found");
-            }
+                throw new KeyNotFoundException("Message not found.");
+
             if (message.SenderId != userId)
-            {
-                throw new Exception("Unauthorized");
-            }
+                throw new UnauthorizedAccessException("Only sender can delete this message.");
+
+            if (message.IsDeletedForEveryone)
+                return;
+
             message.IsDeletedForEveryone = true;
-            message.DeletedAt = DateTime.UtcNow;
 
-            unitOfWork.Messages.Update(message);
-            await unitOfWork.SaveChangesAsync();
+            message.DeletedForEveryoneAt =
+                DateTime.UtcNow;
 
+            message.Content = "This message was deleted";
+
+            await unitOfWork
+                .SaveChangesAsync();
+
+        }
+
+        public async Task DeleteForMeAsync(Guid messageId, Guid userId)
+        {
+            var message =
+            await unitOfWork.Messages.GetByIdAsync(messageId);
+
+            if (message == null)
+                throw new KeyNotFoundException("Message not found.");
+
+            var exists =
+                await unitOfWork.Messages
+                    .IsDeletedForUserAsync(
+                        messageId,
+                        userId);
+
+            if (exists)
+                return;
+
+            var deletion = new MessageDeletion
+            {
+                MessageId = messageId,
+                UserId = userId,
+                DeletedAt = DateTime.UtcNow
+            };
+
+            await unitOfWork.Messages
+                .AddDeletionAsync(deletion);
+
+            await unitOfWork
+                .SaveChangesAsync();
         }
 
         public async Task<PagedResultDto<Message>> GetMessagesAsyns(Guid conversationId, int page, int pageSize)
@@ -75,7 +114,8 @@ namespace chatbot.Ef.Services
 
         public Task<MessageDto> SendFileAsync(SendFileDto filedto)
         {
-            validator.ValidateFile(filedto.FileUrl)
+           // validator.ValidateFile(filedto.)
+           throw new NotImplementedException();
         }
 
         public async Task SendMessageAsync(

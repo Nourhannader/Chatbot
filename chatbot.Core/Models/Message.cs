@@ -65,6 +65,8 @@ namespace chatbot.Core.Models
 
         // Delete For Everyone Feature
         public bool IsDeletedForEveryone { get; set; } = false;
+
+        public DateTime? DeletedForEveryoneAt { get; set; }
         //forwarded Message Feature
         public bool IsForwarded { get; set; }
 
@@ -78,7 +80,7 @@ namespace chatbot.Core.Models
         public ICollection<Message> Replies { get; set; } = new List<Message>();
 
         // Navigation Property for Delete For Me Feature
-        public ICollection<DeletedMessageForUser> DeletedForUsers { get; set; } = new List<DeletedMessageForUser>();
+        public ICollection<MessageDeletion> Deletions { get; set; } = new List<MessageDeletion>();
 
         // Navigation Property for Recipient Statuses
         public ICollection<MessageRecipientStatus> RecipientStatuses { get; set; } = new List<MessageRecipientStatus>();

@@ -17,19 +17,29 @@ namespace chatbot.Ef.Repositories
             await context.BlockLists.AddAsync(entity);
         }
 
-        public async Task<BlockList?> GetAsync(Guid blockerId, Guid blockedId)
+        public async Task<bool> CheckFoundOrNot(Guid userId, Guid blockedUserId)
         {
+            
             return await context.BlockLists
-                .FirstOrDefaultAsync(b =>
-                b.BlockerId == blockerId && b.BlockedId == blockedId
+                .AnyAsync(x => 
+                x.BlockerId == userId && 
+                x.BlockedUserId==blockedUserId
                 );
         }
 
-        public async Task<List<BlockList>> GetBlockedUsersAsync(Guid blockerId)
+        public async Task<BlockList?> GetAsync(Guid blockerId, Guid blockedUserId)
+        {
+            return await context.BlockLists
+                .FirstOrDefaultAsync(b =>
+                b.BlockerId == blockerId && b.BlockedUserId == blockedUserId
+                );
+        }
+
+        public async Task<List<Guid>> GetBlockedUsersAsync(Guid blockerId)
         {
             return await context.BlockLists
                 .Where(b => b.BlockerId == blockerId)
-                .Include(b => b.Blocked)
+                .Select(b => b.BlockedUserId)
                 .ToListAsync();
         }
 
@@ -38,11 +48,11 @@ namespace chatbot.Ef.Repositories
            return await context.BlockLists.FirstOrDefaultAsync(b => b.Id == id);
         }
 
-        public async Task<bool> IsBlockedAsync(Guid firstUserId, Guid secondUserId)
+        public async Task<bool> IsBlockedAsync(Guid userId, Guid otherUserId)
         {
            return await context.BlockLists.AnyAsync(b =>
-                      (b.BlockerId==firstUserId && b.BlockedId == secondUserId)||
-                      (b.BlockerId == secondUserId && b.BlockedId == firstUserId));
+                      (b.BlockerId==userId && b.BlockedUserId == otherUserId)||
+                      (b.BlockerId == otherUserId && b.BlockedUserId == userId));
         }
 
         public Task RemoveAsync(BlockList block)

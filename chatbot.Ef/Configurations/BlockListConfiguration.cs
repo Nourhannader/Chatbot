@@ -22,9 +22,9 @@ namespace chatbot.Ef.Configurations
                 .HasForeignKey(x => x.BlockerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasOne(x => x.Blocked)
+            builder.HasOne(x => x.BlockedUser)
                 .WithMany(x => x.BlockedByUsers)
-                .HasForeignKey(x => x.BlockedId)
+                .HasForeignKey(x => x.BlockedUserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // Indexes
@@ -32,7 +32,7 @@ namespace chatbot.Ef.Configurations
                 new
                 {
                     x.BlockerId,
-                    x.BlockedId
+                    x.BlockedUserId
                 })
                 .IsUnique();
         }

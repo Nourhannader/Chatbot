@@ -33,6 +33,8 @@ namespace chatbot.Ef.UnitOfWork
 
         public IStickerRepository Stickers { get; private set; }
 
+        public IConversationSettingRepository Settings { get; private set; }
+
         public UnitOfWork(ApplicationDbContext _context)
         {
             this.context = _context;
@@ -50,6 +52,7 @@ namespace chatbot.Ef.UnitOfWork
             this.VoiceNotes = new VoiceNoteRepository(context);
             this.UploadSessions = new UploadSessionRepository(context);
             this.Stickers = new StickerRepository(context);
+            this.Settings = new ConversationSettingRepository(context);
         }
 
         public void Dispose()

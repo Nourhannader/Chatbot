@@ -56,6 +56,8 @@ namespace chatbot.Ef.Data
         public DbSet<UploadSession> UploadSessions => Set<UploadSession>();
         public DbSet<Sticker> Stickers => Set<Sticker>();
         public DbSet<StickerPack> StickerPacks => Set<StickerPack>();
+        public DbSet<ConversationUserSettings> Settings => Set<ConversationUserSettings>();
+        public DbSet<MessageDeletion> Deletions => Set<MessageDeletion>();
 
         #endregion
 
