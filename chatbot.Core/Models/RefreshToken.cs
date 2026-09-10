@@ -11,20 +11,30 @@ namespace chatbot.Core.Models
     public class RefreshToken : BaseEntity
     {
 
-        public string Token { get; set; } = string.Empty;
+        public Guid UserId { get; set; }
 
-        public DateTime ExpiresOn { get; set; }
+        public ApplicationUser User { get; set; }
+            = null!;
 
-        public DateTime CreatedOn { get; set; }
+        public string TokenHash { get; set; }
+            = string.Empty;
 
-        public DateTime? RevokedOn { get; set; }
+        public DateTime ExpiresAt { get; set; }
 
-        public bool IsExpired => DateTime.UtcNow >= ExpiresOn;
+        public DateTime CreatedAt { get; set; }
+            = DateTime.UtcNow;
 
-        public bool IsActive => RevokedOn == null && !IsExpired;
+        public DateTime? RevokedAt { get; set; }
 
-        public Guid UserId { get; set; } 
+        public string? ReplacedByTokenHash { get; set; }
 
-        public ApplicationUser User { get; set; } = null!;
+        public bool IsRevoked =>
+            RevokedAt.HasValue;
+
+        public bool IsExpired =>
+            DateTime.UtcNow >= ExpiresAt;
+
+        public bool IsActive =>
+            !IsRevoked && !IsExpired;
     }
 }

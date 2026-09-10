@@ -26,6 +26,7 @@ namespace chatbot.Core.Interfaces.UnitOFWork
         IUploadSessionRepository UploadSessions { get; }
         IStickerRepository Stickers { get; }
         IConversationSettingRepository Settings { get; }
+        ISessionRepository Sessions { get; }
 
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();

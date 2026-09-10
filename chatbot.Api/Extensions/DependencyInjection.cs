@@ -14,6 +14,9 @@ using chatbot.Ef.UnitOfWork;
 using chatbot.Ef.ValidatorService;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
+using ServiceStack;
 using StackExchange.Redis;
 
 
@@ -23,7 +26,7 @@ namespace chatbot.Api.Extensions
     {
         public static IServiceCollection AddApplicationServices(this IServiceCollection Services,IConfiguration Configuration)
         {
-            Services.Configure<JwtSettings>(Configuration.GetSection("JWT"));
+            
             Services.Configure<MailSettings>(Configuration.GetSection("MailSettings"));
             Services.AddIdentity<ApplicationUser, IdentityRole>()
                 .AddEntityFrameworkStores<ApplicationDbContext>();
@@ -39,6 +42,7 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IMailService, MailService>();
             Services.AddScoped<IChatService, ChatService>();
             Services.AddScoped<IMessageService, MessageService>();
+            Services.AddScoped<IMessageEncryptionService, MessageEncryptionService>();  
             Services.AddScoped<IConversationService, ConversationService>();
             Services.AddScoped<IConversationSettingsService, ConversationSettingsService>();
             Services.AddScoped<IReactionService, ReactionService>();
@@ -61,11 +65,67 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IMediaMessageService, MediaMessageService>();
             Services.AddScoped<IChunkUploadService, ChunkUploadService>();
             Services.AddScoped<IStickerService, StickerService>();
+            Services.AddScoped<ITokenHashService,TokenHashService>();
+            Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
             Services.AddSingleton<TypingRepository>();
 
 
             //background services
             Services.AddHostedService<FileCleanupBackgroundService>();
+            //Cros
+            Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", policy =>
+                {
+                    policy.SetIsOriginAllowed(origin => true)
+                          .AllowAnyMethod()
+                          .AllowAnyHeader()
+                          .AllowCredentials();
+                });
+            });
+
+            //policies
+            Services.AddAuthorization(
+                options =>
+                {
+                    options.AddPolicy("ChatUser",
+                    policy =>
+                    {
+                        policy.RequireAuthenticatedUser();
+                    });
+                    options.AddPolicy("AdminOnly",
+                    policy =>
+                    {
+                       policy.RequireRole("Admin");
+                   });
+
+                });
+            //rate limiting
+            Services.AddRateLimiter( options =>
+            {
+                options.AddFixedWindowLimiter(
+                  "chat",
+                  limiterOptions =>
+                  {
+                   limiterOptions.PermitLimit = 30;
+
+                   limiterOptions.Window =  TimeSpan.FromMinutes(1);
+
+                   limiterOptions.QueueLimit = 0;
+                  });
+                //login rate limit
+                options.AddFixedWindowLimiter(
+                  "login",
+                  limiterOptions =>
+                  {
+                   limiterOptions.PermitLimit = 5;
+
+                   limiterOptions.Window =TimeSpan.FromMinutes(1);
+
+                   limiterOptions.QueueLimit = 0;
+                  });
+            });
+
 
             return Services;
         }

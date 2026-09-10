@@ -10,7 +10,7 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IJwtService
     {
-        Task<JwtSecurityToken> GenerateToken(ApplicationUser user); 
-        RefreshToken GenerateRefreshToken();
+        Task<string> GenerateAccessTokenAsync(ApplicationUser user); 
+       string GenerateRefreshToken();
     }
 }

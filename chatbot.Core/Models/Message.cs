@@ -45,6 +45,9 @@ namespace chatbot.Core.Models
         //sticker
         public Guid? StickerId { get; set; }
         public Sticker? Sticker { get; set; }
+        //Message encrypted
+        public bool IsEncrypted {  get; set; }
+        public string? EncryptionVersion {  get; set; }
 
 
         // Edit

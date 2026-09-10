@@ -10,6 +10,8 @@ namespace chatbot.Core.Enums
     {
         Android = 1,
         IOS = 2,
-        Web = 3
+        Web = 3,
+        Desktop = 4
+
     }
 }

@@ -34,59 +34,14 @@ namespace chatbot.Api
 
             builder.Services.AddSignalR();
 
-            builder.Services.AddCors(options =>
-            {
-                options.AddPolicy("AllowAll", policy =>
-                {
-                    policy.SetIsOriginAllowed(origin => true)
-                          .AllowAnyMethod()
-                          .AllowAnyHeader()
-                          .AllowCredentials();
-                });
-            });
+            
         
             builder.Services.AddDbContext<ApplicationDbContext>(options => 
               options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
                 b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
-
-            builder.Services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            })
-                .AddJwtBearer(o =>
-                {
-                    o.RequireHttpsMetadata = false;
-                    o.SaveToken = false;
-                    o.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidateIssuerSigningKey = true,
-                        ValidateIssuer = true,
-                        ValidateAudience = true,
-                        ValidateLifetime = true,
-                        ValidIssuer = builder.Configuration["JWT:Issuer"],
-                        ValidAudience = builder.Configuration["JWT:Audience"],
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"])),
-                        ClockSkew = TimeSpan.Zero
-                    };
-                    o.Events = new JwtBearerEvents
-                    {
-                        OnMessageReceived = context =>
-                        {
-                            var accessToken = context.Request.Query["access_token"];
-                            var path = context.HttpContext.Request.Path;
-                            if (!string.IsNullOrEmpty(accessToken)
-                            && path.StartsWithSegments("/chathub"))
-                            {
-                                context.Token = accessToken;
-                            }
-                            return Task.CompletedTask;
-
-                        }
-                    };
-
-                });
+            //add jwtAuthentication
+            builder.Services.AddJWTConfiguration(builder.Configuration);
               
 
             builder.Services.AddControllers();
@@ -109,12 +64,14 @@ namespace chatbot.Api
 
             app.UseHttpsRedirection();
 
+            app.UseRateLimiter();
+
             app.UseAuthentication();
 
             app.UseAuthorization();
 
             app.UseCors("AllowAll");
-            
+           
             app.UseDefaultFiles();
 
             app.UseStaticFiles();

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.SymbolStore;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Runtime;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -20,49 +21,43 @@ namespace chatbot.Ef.Services
     public class JwtService : IJwtService
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly JwtSettings jwt;
-        public JwtService(UserManager<ApplicationUser> userManager, IOptions<JwtSettings> jwt)
+        private readonly JwtSettings settings;
+        public JwtService(UserManager<ApplicationUser> userManager, IOptions<JwtSettings> settings)
         {
             this._userManager = userManager;
-            this.jwt = jwt.Value;
+            this.settings = settings.Value;
         }
-        public RefreshToken GenerateRefreshToken()
+        public string GenerateRefreshToken()
         {
-            var randomNumber = new byte[32];
-            using var generator = new RNGCryptoServiceProvider();
-            generator.GetBytes(randomNumber);
+            var randomBytes = RandomNumberGenerator.GetBytes(64);
+            return Convert.ToBase64String(randomBytes);
 
-            return new RefreshToken
-            {
-                Token = Convert.ToBase64String(randomNumber),
-                ExpiresOn = DateTime.UtcNow.AddDays(10),
-                CreatedOn = DateTime.UtcNow
-
-            };
         }
 
-        public async Task<JwtSecurityToken> GenerateToken(ApplicationUser user)
+        public async Task<string> GenerateAccessTokenAsync(ApplicationUser user)
         {
             var userClaims = await _userManager.GetClaimsAsync(user);
-            var claims = new[]
+            var claims = new List<Claim>
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                 new Claim(ClaimTypes.NameIdentifier,user.Id.ToString()),
+
+                 new Claim( ClaimTypes.Email,user.Email ?? string.Empty),
+
+                new Claim(ClaimTypes.Name,user.UserName ?? string.Empty),
                 new Claim("uid", user.Id.ToString()) // Convert Guid to string
             }
             .Union(userClaims);
 
-            var symmetricSecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Key));
+            var symmetricSecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Key));
             var signingCredentials = new SigningCredentials(symmetricSecurityKey, SecurityAlgorithms.HmacSha256);
             var token = new JwtSecurityToken(
-                issuer: jwt.Issuer,
-                audience: jwt.Audience,
+                issuer: settings.Issuer,
+                audience: settings.Audience,
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(jwt.DurationInMinutes),
+                expires: DateTime.UtcNow.AddMinutes(settings.AccessTokenExpirationMinutes),
                 signingCredentials: signingCredentials
             );
-            return token;
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
 }
