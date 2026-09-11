@@ -9,7 +9,9 @@ using chatbot.Core.DTOs.Auth;
 using chatbot.Core.Helper;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
+using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Models;
+using chatbot.Ef.Repositories;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Options;
@@ -18,97 +20,167 @@ namespace chatbot.Ef.Services
 {
     public class AuthService : IAuthService
     {
-        private readonly IAuthRepository _authRepository;
+        private readonly IUnitOfWork unitOfWork;
         private readonly JwtSettings jwt;
-        private readonly IJwtService _jwtService;
-        public AuthService(IAuthRepository authRepository, IOptions<JwtSettings> jwt,IJwtService jwtService)
+        private readonly IJwtService jwtService;
+        private readonly ITokenHashService hashService;
+        public AuthService(IUnitOfWork unitOfWork,
+            IOptions<JwtSettings> jwt,IJwtService jwtService, ITokenHashService hashService)
         {
-            this._authRepository = authRepository;
+            this.unitOfWork = unitOfWork;
             this.jwt = jwt.Value;
-            this._jwtService = jwtService;
+            this.jwtService = jwtService;
+            this.hashService = hashService;
         }
-
+        //login
         public async Task<AuthResponseDto> GetTokenAsync(LoginDto model)
         {
-            var authResponse = new AuthResponseDto();
-            var user = await _authRepository.GetByEmailAsync(model.Email);
-            if (user is null || !await _authRepository.CheckPasswordAsync(user, model.Password))
+           
+            var user = await unitOfWork.Auth.GetByEmailAsync(model.Email);
+            if (user is null)
             {
-                authResponse.Message = "Invalid email or password!";
-                return authResponse;
+                throw new UnauthorizedAccessException("Invalid email or password");
             }
-            var token = await _jwtService.GenerateToken(user);
-            authResponse.IsAuthenticated = true;
-            authResponse.Token = new JwtSecurityTokenHandler().WriteToken(token);
-            authResponse.ExpiresOn = token.ValidTo;
-            authResponse.Username = user.UserName;
-            authResponse.Email = user.Email;
-            authResponse.ImageProfileUrl = user.ProfileImageUrl;
-            authResponse.PhoneNumber = user.PhoneNumber;
-
-            if(user.RefreshTokens.Any(t => t.IsActive))
+            //check Password
+            var validPassword = await unitOfWork.Auth.CheckPasswordAsync(user, model.Password);
+            if (!validPassword)
+                throw new UnauthorizedAccessException("Invalid email or password");
+            // Create Device Session
+            var session = new DeviceSession
             {
-                var activeRefreshToken=user.RefreshTokens.FirstOrDefault(t => t.IsActive);
-                authResponse.RefreshToken = activeRefreshToken.Token;
-                authResponse.RefreshTokenExpiration = activeRefreshToken.ExpiresOn;
-            }
-            else
+                UserId = user.Id,
+
+                DeviceId = model.DeviceId,
+
+                DeviceType = model.DeviceType,
+
+                DeviceName = model.DeviceName,
+
+                CreatedAt = DateTime.UtcNow,
+
+                LastActivityAt = DateTime.UtcNow,
+
+                IsActive = true
+            };
+            await unitOfWork.Auth.CreateDeviceSessionAsync(session);
+            var accessToken = await jwtService.GenerateAccessTokenAsync(user);
+
+            var refreshToken =  jwtService.GenerateRefreshToken();
+
+            // Save Refresh Token
+            var refreshTokenEntity = new RefreshToken
             {
-                var refreshToken = _jwtService.GenerateRefreshToken();
-                authResponse.RefreshToken = refreshToken.Token;
-                authResponse.RefreshTokenExpiration = refreshToken.ExpiresOn;
-                user.RefreshTokens.Add(refreshToken);
-                await _authRepository.SaveRefreshTokenAsync(user);
+                UserId = user.Id,
 
-            }
+                DeviceSessionId = session.Id,
 
+                TokenHash =hashService.Hash(refreshToken),
 
-            return authResponse;
+                CreatedAt = DateTime.UtcNow,
+
+                ExpiresAt =
+                    DateTime.UtcNow.AddDays(7)
+            };
+
+            await unitOfWork.Auth.SaveRefreshTokenAsync(refreshTokenEntity);
+
+            await unitOfWork.SaveChangesAsync();
+            return new AuthResponseDto
+            {
+                AccessToken = accessToken,
+
+                RefreshToken = refreshToken
+            };
         }
 
         public async Task<AuthResponseDto> RefreshTokenAsync(string token)
         {
-            var authModelDto = new AuthResponseDto();
-            var user=await _authRepository.GetByToken(token);
-            if (user is null)
-            {
-                authModelDto.Message = "Invalid token!";
-                return authModelDto;
-            }
-            var refreshToken = user.RefreshTokens.Single(t => t.Token == token);
-            if (!refreshToken.IsActive)
-            {
-                authModelDto.Message = "Inactive token!";
-                return authModelDto;
-            }
-            refreshToken.RevokedOn = DateTime.UtcNow;
-            var newRefreshToken = _jwtService.GenerateRefreshToken();
-            user.RefreshTokens.Add(newRefreshToken);
-            await _authRepository.SaveRefreshTokenAsync(user);
-            var jwtToken = await _jwtService.GenerateToken(user);
-            authModelDto.IsAuthenticated = true;
-            authModelDto.Token = new JwtSecurityTokenHandler().WriteToken(jwtToken);
-            authModelDto.ExpiresOn = jwtToken.ValidTo;
-            authModelDto.Username = user.UserName;
-            authModelDto.Email = user.Email;
-            authModelDto.ImageProfileUrl = user.ProfileImageUrl;
-            authModelDto.PhoneNumber = user.PhoneNumber;
-            authModelDto.RefreshToken = newRefreshToken.Token;
-            authModelDto.RefreshTokenExpiration = newRefreshToken.ExpiresOn;
+            if (string.IsNullOrWhiteSpace(token))
+                throw new UnauthorizedAccessException("Refresh token is required");
 
-            return authModelDto;
+            var tokenHash = hashService.Hash(token);
+            //find token
+            var refreshToken = await unitOfWork.Auth.GetRefreshTokenAsync(tokenHash);
+
+
+
+            if (refreshToken == null)
+                throw new UnauthorizedAccessException("Invalid refresh token");
+
+
+            // Check token status
+            if (!refreshToken.IsActive)
+                throw new UnauthorizedAccessException("Refresh token is expired or revoked");
+            //check device session
+            var session = refreshToken.DeviceSession;
+            if (session == null)
+                throw new UnauthorizedAccessException("Device session not found");
+
+            if (!session.IsActive)
+                throw new UnauthorizedAccessException("Device session is revoked");
+
+            if (session.ExpiresAt.HasValue &&
+                session.ExpiresAt <= DateTime.UtcNow)
+            {
+                throw new UnauthorizedAccessException("Device session has expired");
+            }
+            var newAccessToken = await jwtService.GenerateAccessTokenAsync(refreshToken.User);
+            var newRefreshToken =  jwtService.GenerateRefreshToken();
+            var newRefreshTokenHash=hashService.Hash(newRefreshToken);
+            var newRefreshTokenEntity =new RefreshToken
+            {
+                UserId = refreshToken.UserId,
+
+                DeviceSessionId =
+                    refreshToken.DeviceSessionId,
+
+                TokenHash =
+                    newRefreshTokenHash,
+
+                CreatedAt =
+                    DateTime.UtcNow,
+
+                ExpiresAt =
+                    DateTime.UtcNow.AddDays(7)
+            };
+            //revoke old token
+            refreshToken.RevokedAt = DateTime.UtcNow;
+            refreshToken.ReplacedByTokenHash = newRefreshTokenHash;
+            // Update session activity
+            session.LastActivityAt =
+                DateTime.UtcNow;
+
+
+            // Save new token
+            await unitOfWork.Auth
+                .SaveRefreshTokenAsync(newRefreshTokenEntity);
+
+
+            await unitOfWork.SaveChangesAsync();
+
+
+            return new AuthResponseDto
+            {
+                AccessToken = newAccessToken,
+
+                RefreshToken = newRefreshToken
+            };
+
         }
 
+        //register
         public async Task<AuthResponseDto> RegisterAsync(RegisterDto model)
         {
-            if(await _authRepository.GetByEmailAsync(model.Email) is not null)
-                return new AuthResponseDto { Message = "Email is already registered!" };
-            if(await _authRepository.GetByNameAsync(model.UserName) is not null)
-                return new AuthResponseDto { Message = "Username is already registered!" };
+            if(await unitOfWork.Auth.GetByEmailAsync(model.Email) is not null)
+                throw new Exception ("Email is already registered!" );
+            if(await unitOfWork.Auth.GetByNameAsync(model.UserName) is not null)
+                throw new Exception ("Username is already registered!" );
             var imageUrl = string.Empty;
             if (model.ImageFile != null && model.ImageFile.Length > 0) {
                 imageUrl = await GetImageUrl(model);
             }
+
+            //create user
             var user = new ApplicationUser
             {
                 FirstName = model.FirstName,
@@ -120,33 +192,57 @@ namespace chatbot.Ef.Services
                 ProfileImageUrl = imageUrl
 
             };
-            var result = await _authRepository.CreateUserAsync(user, model.Password);
+            var result = await unitOfWork.Auth.CreateUserAsync(user, model.Password);
             if (!result.Succeeded)
             {
-                var errors = string.Empty;
-
-                foreach (var error in result.Errors)
-                    errors += $"{error.Description},";
-
-                return new AuthResponseDto { Message = errors };
+                var errors = string.Join(
+                    ", ",
+                    result.Errors.Select(x => x.Description)
+                    );
+                throw new Exception(errors);
             }
-            var token = await _jwtService.GenerateToken(user);
+            //create session
+            var session = new DeviceSession
+            {
+                UserId = user.Id,
+                DeviceId=model.DeviceId,
+                DeviceType=model.DeviceType,
+                DeviceName=model.DeviceName,
+                CreatedAt=DateTime.UtcNow,
+                LastActivityAt=DateTime.UtcNow,
+                IsActive=true
+            };
+            await unitOfWork.Auth.CreateDeviceSessionAsync(session);
+            var accessToken = await jwtService.GenerateAccessTokenAsync(user);
+            var refreshToken = jwtService.GenerateRefreshToken();
+
+            //create refreshtoken entity
+            var refreshTokenEntity = new RefreshToken
+            {
+                UserId = user.Id,
+
+                DeviceSessionId = session.Id,
+
+                TokenHash =hashService.Hash(refreshToken),
+
+                CreatedAt = DateTime.UtcNow,
+
+                ExpiresAt =
+                DateTime.UtcNow.AddDays(7)
+            };
+            await unitOfWork.Auth.SaveRefreshTokenAsync(refreshTokenEntity);
+            await unitOfWork.SaveChangesAsync();
+
 
             return new AuthResponseDto
             {
-                IsAuthenticated = true,
-                Token = new JwtSecurityTokenHandler().WriteToken(token),
-                ExpiresOn = token.ValidTo,
-                Username = user.UserName,
-                Email = user.Email,
-                ImageProfileUrl = user.ProfileImageUrl,
-                PhoneNumber = user.PhoneNumber
-
+                AccessToken=accessToken,
+                RefreshToken=refreshToken
             };
 
         }
 
-        private async    Task<string> GetImageUrl(RegisterDto dto)
+        private async  Task<string> GetImageUrl(RegisterDto dto)
         {
             string fileName = Guid.NewGuid().ToString() + Path.GetExtension(dto.ImageFile.FileName);
             string folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
@@ -164,17 +260,41 @@ namespace chatbot.Ef.Services
 
         }
 
-
+        //Revoke token , logout
         public async Task<bool> RevokeTokenAsync(string token)
         {
-            var user=await _authRepository.GetByToken(token);
-            if (user is null)
+            if (string.IsNullOrWhiteSpace(token))
                 return false;
-            var refreshToken = user.RefreshTokens.Single(t => t.Token == token);
+
+
+            var tokenHash =hashService.Hash(token);
+
+
+            var refreshToken =await unitOfWork.Auth
+                    .GetRefreshTokenAsync(tokenHash);
+
+
+            if (refreshToken == null)
+                return false;
+
+
             if (!refreshToken.IsActive)
                 return false;
-            refreshToken.RevokedOn = DateTime.UtcNow;
-            await _authRepository.SaveRefreshTokenAsync(user);
+
+
+            // Revoke Refresh Token
+            await unitOfWork.Auth
+                .RevokeRefreshTokenAsync(refreshToken);
+
+
+            // Optionally revoke the whole device session
+            await unitOfWork.Auth
+                .RevokeDeviceSessionAsync(refreshToken.DeviceSession);
+
+
+            await unitOfWork.SaveChangesAsync();
+
+
             return true;
         }
         

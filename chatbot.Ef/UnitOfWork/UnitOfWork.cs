@@ -5,8 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.UnitOFWork;
+using chatbot.Core.Models;
 using chatbot.Ef.Data;
 using chatbot.Ef.Repositories;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace chatbot.Ef.UnitOfWork
@@ -14,6 +16,7 @@ namespace chatbot.Ef.UnitOfWork
     public class UnitOfWork : IUnitOfWork
     {
         private readonly ApplicationDbContext context;
+        private readonly UserManager<ApplicationUser> userManager;
         private IDbContextTransaction? transaction;
         public IMessageRepository Messages { get; private set; }
         public IConversationRepository Conversations { get; private set; }
@@ -37,11 +40,14 @@ namespace chatbot.Ef.UnitOfWork
 
         public ISessionRepository Sessions { get; private set; }
 
-        public UnitOfWork(ApplicationDbContext _context)
+        public IAuthRepository Auth { get; private set; }
+
+        public UnitOfWork(ApplicationDbContext _context, UserManager<ApplicationUser> _userManager)
         {
             this.context = _context;
+            this.userManager = _userManager;
             this.Messages = new MessageRepository(context);
-            this.Conversations=new ConversationRepository(context);
+            this.Conversations = new ConversationRepository(context);
             this.Reactions = new ReactionRepository(context);
             this.Blocks = new BlockRepository(context);
             this.UserDevices = new UserDeviceRepository(context);
@@ -55,7 +61,8 @@ namespace chatbot.Ef.UnitOfWork
             this.UploadSessions = new UploadSessionRepository(context);
             this.Stickers = new StickerRepository(context);
             this.Settings = new ConversationSettingRepository(context);
-            this.Sessions=new SessionRepository(context);
+            this.Sessions = new SessionRepository(context);
+            this.Auth = new AuthRepository(context, userManager);
         }
 
         public void Dispose()

@@ -10,13 +10,39 @@ namespace chatbot.Core.Interfaces.Repositories
 {
     public interface IAuthRepository
     {
-        Task<ApplicationUser> GetByEmailAsync(string email);
-        Task<ApplicationUser> GetByNameAsync(string username);
-        Task<ApplicationUser?> GetByToken(string token);
-        Task<IdentityResult> CreateUserAsync(ApplicationUser user, string password);
-        Task<bool> CheckPasswordAsync(ApplicationUser user, string password);
+        Task<ApplicationUser?> GetByEmailAsync(string email);
 
-        Task SaveRefreshTokenAsync(ApplicationUser user);
-        Task<RefreshToken> GetRefreshTokenAsync(string token);
+        Task<ApplicationUser?> GetByNameAsync(string username);
+
+        Task<ApplicationUser?> GetByTokenAsync(string token);
+
+        Task<IdentityResult> CreateUserAsync(
+            ApplicationUser user,
+            string password);
+
+        Task<bool> CheckPasswordAsync(
+            ApplicationUser user,
+            string password);
+
+        // Device Session
+        Task<DeviceSession> CreateDeviceSessionAsync(
+            DeviceSession session);
+
+        Task<DeviceSession?> GetDeviceSessionAsync(
+            Guid sessionId,
+            Guid userId);
+
+        Task RevokeDeviceSessionAsync(
+            DeviceSession session);
+
+        // Refresh Token
+        Task SaveRefreshTokenAsync(
+            RefreshToken refreshToken);
+
+        Task<RefreshToken?> GetRefreshTokenAsync(
+            string tokenHash);
+
+        Task RevokeRefreshTokenAsync(
+            RefreshToken refreshToken);
     }
 }

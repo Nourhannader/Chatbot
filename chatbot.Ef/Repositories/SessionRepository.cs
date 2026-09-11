@@ -16,8 +16,8 @@ namespace chatbot.Ef.Repositories
         {
             return await context.Sessions
                 .Include(x => x.User)
-                .Where(x => !x.IsRevoked
-                 && x.RefreshTokenExpiresAt > DateTime.UtcNow
+                .Where(x => !x.IsActive
+                 && x.ExpiresAt > DateTime.UtcNow
                 ).ToListAsync();
         }
 
@@ -25,9 +25,9 @@ namespace chatbot.Ef.Repositories
         {
             return await context.Sessions
                 .Include(x => x.User)
-                .Where(x => !x.IsRevoked
+                .Where(x => !x.IsActive
                 && x.UserId == userId
-                 && x.RefreshTokenExpiresAt > DateTime.UtcNow
+                 && x.ExpiresAt > DateTime.UtcNow
                 ).ToListAsync();
         }
 

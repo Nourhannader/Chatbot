@@ -10,10 +10,16 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IAuthService
     {
-        Task<AuthResponseDto> RegisterAsync(RegisterDto model);
-        Task<AuthResponseDto> GetTokenAsync(LoginDto model);
-        
-        Task<AuthResponseDto> RefreshTokenAsync(string token);
-        Task<bool> RevokeTokenAsync(string token);
+        Task<AuthResponseDto> RegisterAsync(
+        RegisterDto model);
+
+        Task<AuthResponseDto> GetTokenAsync(
+            LoginDto model);
+
+        Task<AuthResponseDto> RefreshTokenAsync(
+            string token);
+
+        Task<bool> RevokeTokenAsync(
+            string token);
     }
 }

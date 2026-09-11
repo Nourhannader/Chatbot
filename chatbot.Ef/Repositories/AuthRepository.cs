@@ -11,46 +11,66 @@ using Microsoft.EntityFrameworkCore;
 
 namespace chatbot.Ef.Repositories
 {
-    public class AuthRepository : IAuthRepository
+    public class AuthRepository(ApplicationDbContext context, UserManager<ApplicationUser> userManager) : IAuthRepository
     {
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly ApplicationDbContext _context;
-        public AuthRepository(UserManager<ApplicationUser> userManager,ApplicationDbContext context)
+        //user
+        public async Task<ApplicationUser?> GetByEmailAsync(string email)
         {
-           this._userManager = userManager;
-            this._context = context;
-        }
-        public Task<bool> CheckPasswordAsync(ApplicationUser user, string password) =>
-            _userManager.CheckPasswordAsync(user, password);
-
-
-        public Task<IdentityResult> CreateUserAsync(ApplicationUser user, string password) =>
-            _userManager.CreateAsync(user, password);
-        
-
-        public Task<ApplicationUser> GetByEmailAsync(string email) =>
-            _userManager.FindByEmailAsync(email);
-
-        public Task<ApplicationUser> GetByNameAsync(string username) =>
-            _userManager.FindByNameAsync(username);
-
-        public async Task<ApplicationUser?> GetByToken(string token)
-        {
-            
-            var user = await _userManager.Users
-                .SingleOrDefaultAsync(u => u.RefreshTokens != null && u.RefreshTokens.Any(t => t.Token == token));
-            return user; 
+            return await userManager.FindByEmailAsync(email);
         }
 
-        public async Task<RefreshToken> GetRefreshTokenAsync(string token)
+        public async Task<ApplicationUser?> GetByNameAsync(string username)
         {
-            return await _context.RefreshTokens
-             .FirstOrDefaultAsync(x => x.Token == token && !x.IsActive);
+            return await userManager.FindByNameAsync(username);
+        }
+        public async Task<IdentityResult> CreateUserAsync(ApplicationUser user, string password)
+        {
+            return await userManager.CreateAsync(user, password);
+        }
+        public async Task<bool> CheckPasswordAsync(ApplicationUser user, string password)
+        {
+            return await userManager.CheckPasswordAsync(user, password);
+        }
+        //device session
+        public async Task<DeviceSession> CreateDeviceSessionAsync(DeviceSession session)
+        {
+             await context.Sessions.AddAsync(session);
+            return session;
+        }
+        public async Task<DeviceSession?> GetDeviceSessionAsync(Guid sessionId, Guid userId)
+        {
+            return await context.Sessions.FirstOrDefaultAsync(s => s.Id==sessionId && s.UserId == userId);
+        }
+        public async Task RevokeDeviceSessionAsync(DeviceSession session)
+        {
+            session.IsActive = false;
+            session.RevokedAt = DateTime.UtcNow;
+            await Task.CompletedTask;
         }
 
-        public async Task SaveRefreshTokenAsync(ApplicationUser user)
+        //refresh token
+        public Task<ApplicationUser?> GetByTokenAsync(string token)
         {
-          await _userManager.UpdateAsync(user);
+            throw new NotImplementedException();
+        }
+
+        public async Task<RefreshToken?> GetRefreshTokenAsync(string tokenHash)
+        {
+            return await context.RefreshTokens
+                .Include(r => r.User)
+                .Include(r=> r.DeviceSession)
+                .FirstOrDefaultAsync(r => r.ReplacedByTokenHash==tokenHash);
+        }
+
+        public async Task RevokeRefreshTokenAsync(RefreshToken refreshToken)
+        {
+            refreshToken.RevokedAt = DateTime.UtcNow;
+            await Task.CompletedTask;
+        }
+
+        public async Task SaveRefreshTokenAsync(RefreshToken refreshToken)
+        {
+            await context.RefreshTokens.AddAsync(refreshToken);
         }
     }
 }

@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.Enums;
 using Microsoft.AspNetCore.Http;
 using ServiceStack.DataAnnotations;
 
@@ -32,5 +33,12 @@ namespace chatbot.Core.DTOs.Auth
         public string ConfirmPassword { get; set; }
 
         public IFormFile? ImageFile { get; set; }
+
+        public string DeviceId { get; set; }
+            = string.Empty;
+
+        public DeviceType DeviceType { get; set; }
+
+        public string? DeviceName { get; set; }
     }
 }
