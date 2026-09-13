@@ -3,65 +3,57 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.DTOs;
+using chatbot.Core.Enums;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Models;
+using chatbot.Ef.UnitOfWork;
 
 namespace chatbot.Ef.Services
 {
     public class UserDeviceService(IUnitOfWork unitOfWork) : IUserDeviceService
     {
-        public Task<List<UserDevice>> GetDeviceAsync(Guid userId)
+        public async Task<List<UserDevice>> GetUserDevicesAsync(Guid userId)
         {
-            return unitOfWork.UserDevices.GetUserDevicesAsync(userId);
+           return await unitOfWork.UserDevices.GetActiveDevicesAsync(userId);
         }
 
-        public async Task RegisterDeviceAsync(Guid userId, string deviceToken, string devicaType)
+        public async Task RegisterAsync(Guid userId, RegisterDeviceDto dto)
         {
-            var device=await unitOfWork.UserDevices.GetByUserAsync(userId, deviceToken);
-            if (device==null)
+            var device = await unitOfWork.UserDevices.GetAsync(userId, dto.PushToken,dto.Provider);
+            if(device == null)
             {
-                return;
+                device = new UserDevice
+                {
+                    UserId = userId,
+                    PushToken = dto.PushToken,
+                    DeviceType = dto.DeviceType,
+                    Provider=dto.Provider,
+                    DeviceName = dto.DeviceName,
+                    IsActive = true,
+                    LastUsedAt = DateTime.UtcNow
+                };
+                await unitOfWork.UserDevices.AddAsync(device);
             }
-            await unitOfWork.UserDevices.AddAsync(new UserDevice
+            else
             {
-                UserId=userId,
-                DeviceToken=deviceToken,
-                DeviceType = devicaType,
-            });
+                device.IsActive = true;
+                device.DeviceType = dto.DeviceType;
+                device.DeviceName = dto.DeviceName;
+                device.LastUsedAt = DateTime.UtcNow;
+
+                unitOfWork.UserDevices.Update(device);
+            }
+
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task SetOfflineAsync(string connectionId)
+        public async Task RemoveAsync(Guid userId,string pushToken,PushProvider provider)
         {
-            var devices = await unitOfWork.UserDevices.GetUserDevicesAsync(Guid.Empty); 
-            var device = devices.FirstOrDefault(d => d.ConnectionId == connectionId);
-            if (device == null)
-            {
-                return;
-            }
-            device.IsOnline = false;
-            device.ConnectionId = null;
-            device.DisconnectedAt = DateTime.UtcNow;
-            unitOfWork.UserDevices.Update(device);
+            await unitOfWork.UserDevices.DeactivateAsync(userId,pushToken, provider);
+
             await unitOfWork.SaveChangesAsync();
         }
-
-
-        public async Task SetOnlineAsync(Guid userId, string deviceToken, string connectionId)
-        {
-            var device=await unitOfWork.UserDevices.GetByUserAsync(userId, deviceToken);
-            if(device== null)
-            {
-                return;
-            }
-            device.ConnectionId = connectionId;
-            device.IsOnline = true;
-            device.ConnectedAt = DateTime.UtcNow;
-            unitOfWork.UserDevices.Update(device);
-            await unitOfWork.SaveChangesAsync();
-        }
-
-        
     }
 }

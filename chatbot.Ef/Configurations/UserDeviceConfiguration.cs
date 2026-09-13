@@ -13,26 +13,28 @@ namespace chatbot.Ef.Configurations
     {
         public void Configure(EntityTypeBuilder<UserDevice> builder)
         {
-            builder.HasKey(x => x.Id);
 
-            builder.Property(x => x.DeviceType)
-                .HasMaxLength(100);
-
-            builder.Property(x => x.DeviceToken)
+            builder.Property(x => x.PushToken)
             .IsRequired()
-            .HasMaxLength(500);
+            .HasMaxLength(1000);
 
+            builder.Property(x => x.Provider)
+                .HasConversion<int>();
 
-            // Device Type
             builder.Property(x => x.DeviceType)
-                .IsRequired()
-                .HasConversion<string>()
-                .HasMaxLength(20);
+                .HasConversion<int>();
 
-
-            // Device Name
             builder.Property(x => x.DeviceName)
-                .HasMaxLength(100);
+                .HasMaxLength(200);
+
+            builder.Property(x => x.IsActive)
+                .HasDefaultValue(true);
+
+            builder.Property(x => x.CreatedAt)
+                .IsRequired();
+
+            builder.Property(x => x.LastUsedAt)
+                .IsRequired();
 
             //relationships
             builder.HasOne(x => x.User)
@@ -49,8 +51,11 @@ namespace chatbot.Ef.Configurations
             builder.HasIndex(x => new
             {
                 x.UserId,
-                x.DeviceToken
+                x.PushToken,
+                x.Provider
             }).IsUnique();
+
+            builder.HasIndex(x => x.UserId);
         }
     }
 }

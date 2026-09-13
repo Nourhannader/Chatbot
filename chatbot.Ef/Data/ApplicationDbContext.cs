@@ -59,6 +59,7 @@ namespace chatbot.Ef.Data
         public DbSet<ConversationUserSettings> Settings => Set<ConversationUserSettings>();
         public DbSet<MessageDeletion> Deletions => Set<MessageDeletion>();
         public DbSet<DeviceSession> Sessions => Set<DeviceSession>();
+        public DbSet<NotificationPreferences> NotificationPreferences => Set<NotificationPreferences>();
 
         #endregion
 

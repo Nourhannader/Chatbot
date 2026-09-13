@@ -11,34 +11,25 @@ namespace chatbot.Ef.Services
 {
     public class FirebaseNotificationService(IUnitOfWork unitOfWork) : IPushNotificationService
     {
-        public async Task SendAsync(Guid userId, string title, string body, CancellationToken cancellationToken = default)
+        public async Task SendAsync(string pushToken, string title,string body,
+        Dictionary<string, string>? data = null)
         {
-            var devices = await unitOfWork.UserDevices.GetActiveDevicesAsync(userId);
-            var tokens=devices.Select(x => x.DeviceToken).ToList();
-
-            if (tokens.Any())
+            var message = new Message
             {
-                return;
-            }
-            var message =
-            new MulticastMessage
-            {
-                Tokens = tokens,
+                Token = pushToken,
 
-                Notification =
-                    new FirebaseAdmin.Messaging.Notification
-                    {
-                        Title = title,
-                        Body = body
-                    }
+                Notification = new FirebaseAdmin.Messaging.Notification
+                {
+                    Title = title,
+                    Body = body
+                },
+
+                Data = data
             };
-
 
             await FirebaseMessaging
                 .DefaultInstance
-                .SendEachForMulticastAsync(
-                    message,
-                    cancellationToken);
+                .SendAsync(message);
         }
     }
 }

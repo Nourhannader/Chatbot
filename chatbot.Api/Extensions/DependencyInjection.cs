@@ -1,4 +1,6 @@
-﻿using chatbot.Api.Middlewares;
+﻿using chatbot.Api.Hubs;
+using chatbot.Api.Middlewares;
+using chatbot.Api.Services;
 using chatbot.Core.Helper;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
@@ -15,6 +17,7 @@ using chatbot.Ef.ValidatorService;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using ServiceStack;
 using StackExchange.Redis;
@@ -48,7 +51,9 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IReactionService, ReactionService>();
             Services.AddScoped<IUserDeviceService, UserDeviceService>();
             Services.AddScoped<INotificationService,NotificationService>();
-            Services.AddScoped<IPushNotificationService, FirebaseNotificationService>();
+            Services.AddScoped<IPushNotificationFactory, PushNotificationFactory>();
+            Services.AddScoped<FirebaseNotificationService>();
+            Services.AddScoped<OneSignalPushNotificationService>();
             Services.AddScoped<IPresenceService, PresenceService>();
             Services.AddScoped<IMessageStatusService, MessageStatusService>();
             Services.AddScoped<ITypingService, TypingService>();
@@ -67,7 +72,9 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IStickerService, StickerService>();
             Services.AddScoped<ITokenHashService,TokenHashService>();
             Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+            Services.AddScoped<IRealtimeNotificationService, SignalRNotificationService>();
             Services.AddSingleton<TypingRepository>();
+            Services.AddSingleton<IUserIdProvider, UserIdProvider>();
 
 
             //background services

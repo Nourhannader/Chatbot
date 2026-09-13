@@ -2,106 +2,130 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
+using chatbot.Core.DTOs;
 using chatbot.Core.Enums;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Models;
+using Microsoft.AspNetCore.SignalR;
 
 namespace chatbot.Ef.Services
 {
-    public class NotificationService(IUnitOfWork unitOfWork,IPushNotificationService pushNotificationService)
+    public class NotificationService(IUnitOfWork unitOfWork,IPushNotificationFactory pushFactory
+        ,IRealtimeNotificationService realtimeService)
     : INotificationService
     {
-        
-        public async Task CreateAsync(
-            Guid userId,
-            string title,
-            string body,
-            NotificationType type)
+        public Task<List<NotificationDto>> GetAsync(Guid userId, int pageNumber, int pageSize)
         {
-            var notification =
-                new Notification
+            throw new NotImplementedException();
+        }
+
+        public Task<int> GetUnreadCountAsync(Guid userId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task MarkAllAsReadAsync(Guid userId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task MarkAsReadAsync(Guid userId, Guid notificationId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task SendAsync(Guid userId, NotificationType type, string title, string body, NotificationOptions? options = null)
+        {
+            options ??= new NotificationOptions();
+            var preference=await unitOfWork.NotificationPreference.GetByIdAsync(userId);
+            if (preference !=null)
+            {
+                if (type == NotificationType.NewMessage &&
+                     !preference.NewMessages)
                 {
-                    Id = Guid.NewGuid(),
+                    return;
+                }
 
-                    UserId = userId,
+                if (type == NotificationType.MessageReaction &&
+                    !preference.MessageReactions)
+                {
+                    return;
+                }
 
-                    Title = title,
+                if (type == NotificationType.MessageReply &&
+                   !preference.MessageReplies)
+                {
+                    return;
+                }
 
-                    Body = body,
+                if (type == NotificationType.Mention &&
+                    !preference.Mentions)
+                {
+                    return;
+                }
+            }
+            var notification = new Notification
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                Title = title,
+                Body = body,
+                Type = type,
+                IsRead = false,
+                Data = options.Data != null ? JsonSerializer.Serialize(options.Data) : null,
+                CreatedAt = DateTime.UtcNow
 
-                    Type = type,
+            };
+            //save notification
+            if (options.SaveToDatabase)
+            {
+                await unitOfWork.Notifications.AddAsync(notification);
+                await unitOfWork.SaveChangesAsync();
+            }
+            var dto = new NotificationDto
+            {
+                Id = notification.Id,
 
-                    IsRead = false
-                };
+                Type = notification.Type,
 
+                Title = notification.Title,
 
-            await unitOfWork.Notifications.AddAsync(notification);
+                Body = notification.Body,
 
+                Data = notification.Data,
 
-            await unitOfWork.SaveChangesAsync();
+                IsRead = notification.IsRead,
 
-
-            await pushNotificationService
-                .SendAsync(
-                    userId,
-                    title,
-                    body);
-        }
-
-
-        public async Task MarkAsReadAsync(
-            Guid notificationId,
-            Guid userId)
-        {
-            var notification =
-                await unitOfWork.Notifications
-                    .GetByIdAsync(notificationId);
-
-
-            if (notification == null)
-                throw new Exception(
-                    "Notification not found");
-
-
-            if (notification.UserId != userId)
-                throw new UnauthorizedAccessException();
-
-
-            if (notification.IsRead)
-                return;
-
-
-            notification.IsRead = true;
-
-            notification.ReadAt =
-                DateTime.UtcNow;
-
-
-             unitOfWork.Notifications.Update(notification); 
-
-
-            await unitOfWork.SaveChangesAsync();
-        }
-
-
-        public async Task<IEnumerable<Notification>>
-            GetUserNotificationsAsync(
-                Guid userId)
-        {
-            return await unitOfWork.Notifications
-                .GetUserNotificationsAsync(userId);
-        }
+                CreatedAt = notification.CreatedAt
+            };
+            //signalr
+            if (options.SendSignalR)
+            {
+                await realtimeService.SendAsync(userId, dto);
+            }
+            //push
+            if (options.SendPush && preference?.PushNotifications != false)
+            {
+                var devices = await unitOfWork.UserDevices.GetActiveDevicesAsync(userId);
+                foreach (var device in devices)
+                {
+                    try
+                    {
+                        var pushService = pushFactory.Get(device.Provider);
+                        await pushService.SendAsync(device.PushToken, title, body, options.Data);
+                    }
+                    catch(Exception ex) 
+                    {
+                        //log error
 
 
-        public async Task<IEnumerable<Notification>>
-            GetUnreadNotificationsAsync(
-                Guid userId)
-        {
-            return await unitOfWork.Notifications.GetUnreadUserNotificationsAsync(userId);
-                
+                    }
+                }
+            }
         }
     }
 }

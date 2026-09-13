@@ -15,17 +15,18 @@ namespace chatbot.Core.Models
         public ApplicationUser User { get; set; }
             = null!;
 
-        public string DeviceToken { get; set; }
+        public string PushToken { get; set; }
             = string.Empty;
 
         public DeviceType DeviceType { get; set; }
+        public PushProvider Provider { get; set; }
 
         public string? DeviceName { get; set; }
 
         public bool IsActive { get; set; } = true;
 
-        public DateTime LastLogin { get; set; }
-            = DateTime.UtcNow;
+        public DateTime LastUsedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; }
 
         public ICollection<UserConnection> Connections { get; set; }
             = new List<UserConnection>();

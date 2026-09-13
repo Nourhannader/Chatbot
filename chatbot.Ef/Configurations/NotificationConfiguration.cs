@@ -15,10 +15,10 @@ namespace chatbot.Ef.Configurations
         {
             
             builder.Property(x => x.Title)
-                .HasMaxLength(100);
+                .HasMaxLength(200);
 
             builder.Property(x => x.Body)
-                .HasMaxLength(500);
+                .HasMaxLength(1000);
 
             builder.Property(x => x.IsRead)
                 .HasDefaultValue(false);
@@ -26,6 +26,9 @@ namespace chatbot.Ef.Configurations
             builder.Property(x => x.Type)
                 .HasConversion<int>()
                 .IsRequired();
+
+            builder.Property(x => x.Data)
+            .HasColumnType("nvarchar(max)");
 
             // Relationships
             builder.HasOne(x => x.User)
