@@ -4,11 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace chatbot.Core.Enums
+namespace chatbot.Core.DTOs
 {
-    public enum ConversationType
+    public class AddGroupMemberDto
     {
-        Private = 1,
-        Group = 2
+        public Guid UserId { get; set; }
     }
 }

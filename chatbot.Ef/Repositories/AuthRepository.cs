@@ -18,6 +18,10 @@ namespace chatbot.Ef.Repositories
         {
             return await userManager.FindByEmailAsync(email);
         }
+        public async Task<ApplicationUser?> GetByIdAsync(Guid userId)
+        {
+            return await userManager.FindByIdAsync(userId.ToString());
+        }
 
         public async Task<ApplicationUser?> GetByNameAsync(string username)
         {

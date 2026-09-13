@@ -13,6 +13,7 @@ namespace chatbot.Core.Interfaces.Repositories
         Task<ApplicationUser?> GetByEmailAsync(string email);
 
         Task<ApplicationUser?> GetByNameAsync(string username);
+        Task<ApplicationUser?> GetByIdAsync(Guid userId);
 
         Task<ApplicationUser?> GetByTokenAsync(string token);
 

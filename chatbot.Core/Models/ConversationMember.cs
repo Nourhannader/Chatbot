@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.Enums;
 using ServiceStack.DataAnnotations;
 
 namespace chatbot.Core.Models
@@ -16,7 +17,7 @@ namespace chatbot.Core.Models
         public Guid UserId { get; set; } 
         public ApplicationUser User { get; set; } = null!;
 
-        public bool IsAdmin { get; set; } = false;
+        public GroupRole Role { get; set; }
         public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
         public DateTime? LeftAt { get; set; }
 

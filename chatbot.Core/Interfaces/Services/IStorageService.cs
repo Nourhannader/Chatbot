@@ -35,5 +35,6 @@ namespace chatbot.Core.Interfaces.Services
         Task<StoredFile?> GetByIdAsync(Guid fileId,CancellationToken cancellationToken=default);
 
         Task<string?> GetFileUrlAsync(Guid fileId,CancellationToken cancellationToken=default);
+        Task UploadAsync(IFormFile image, string v, Guid userId);
     }
 }

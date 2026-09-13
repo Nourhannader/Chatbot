@@ -32,6 +32,12 @@ namespace chatbot.Ef.Configurations
                 .WithOne(m => m.Conversation)
                 .HasForeignKey(m => m.ConversationId);
 
+            // Created By
+            builder.HasOne(x => x.CreatedBy)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedById)
+                .OnDelete(DeleteBehavior.SetNull);
+
             //index
             builder.HasIndex(c => c.CreatedAt);
             builder.HasIndex(c => c.Type);

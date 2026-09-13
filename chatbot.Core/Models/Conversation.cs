@@ -10,11 +10,13 @@ namespace chatbot.Core.Models
 {
     public class Conversation:BaseEntity
     {
-        public ConversationType Type { get; set; } = ConversationType.OneToOne;
+        public ConversationType Type { get; set; } 
 
         [MaxLength(100)]
         public string? Title { get; set; }
-
+        [MaxLength(500)]
+        public string? Description { get; set; }
+        [MaxLength(1000)]
         public string? GroupPictureUrl { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -22,6 +24,12 @@ namespace chatbot.Core.Models
         public Guid? CreatedById { get; set; }
 
         public ApplicationUser? CreatedBy { get; set; }
+        //delete
+        public bool IsDeleted { get; set; }
+
+        public DateTime? DeletedAt { get; set; }
+
+        public Guid? DeletedById { get; set; }
 
         // Navigation Properties
         public ICollection<ConversationMember> Members { get; set; } = new List<ConversationMember>();

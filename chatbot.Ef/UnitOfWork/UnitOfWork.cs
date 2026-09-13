@@ -44,6 +44,10 @@ namespace chatbot.Ef.UnitOfWork
 
         public INotificationPreferenceRepository NotificationPreference { get; private set; }
 
+        public IConversationMemberRepository ConversationMember { get; private set; }
+
+        public IGroupInviteRepository GroupInvite { get; private set; }
+
         public UnitOfWork(ApplicationDbContext _context, UserManager<ApplicationUser> _userManager)
         {
             this.context = _context;
@@ -66,6 +70,8 @@ namespace chatbot.Ef.UnitOfWork
             this.Sessions = new SessionRepository(context);
             this.Auth = new AuthRepository(context, userManager);
             this.NotificationPreference = new NotificationPreferenceRepository(context);
+            this.ConversationMember = new ConversationMemberRepository(context);
+            this.GroupInvite = new GroupInviteRepository(context);
         }
 
         public void Dispose()

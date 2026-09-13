@@ -10,6 +10,8 @@ namespace chatbot.Core.Interfaces.Repositories
     public interface IConversationRepository :IBaseRepository<Conversation,Guid>
     {
         Task<List<Conversation>> GetUserConversationsAsync(Guid userId);
+        void Delete(Conversation conversation);
+        Task<Conversation?> GetGroupWithMembersAsync(Guid ConversationId);
         Task<bool> ConversationExistsAsync(Guid firstUserId, Guid secondUserId);
         Task<bool> IsMemberAsync(Guid conversationId,Guid userId,CancellationToken cancellationToken = default);
 

@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace chatbot.Core.Enums
 {
-    public enum ConversationType
+    public enum GroupRole
     {
-        Private = 1,
-        Group = 2
+        Owner,
+        Admin,
+       Member
+
     }
 }

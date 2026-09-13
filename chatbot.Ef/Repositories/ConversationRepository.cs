@@ -23,10 +23,15 @@ namespace chatbot.Ef.Repositories
             return await context.Conversations
                 .AnyAsync(
                 c=> 
-                c.Type== ConversationType.OneToOne &&
+                c.Type== ConversationType.Private &&
                 c.Members.Any(m=> m.UserId == firstUserId) &&
                 c.Members.Any(m => m.UserId == secondUserId)
                 );
+        }
+
+        public void Delete(Conversation conversation)
+        {
+            context.Conversations.Remove(conversation);
         }
 
         public Task<Conversation?> GetByIdAsync(Guid id)
@@ -35,6 +40,15 @@ namespace chatbot.Ef.Repositories
                 .Include(c => c.Messages)
                 .Include(c => c.Members)
                 .FirstOrDefaultAsync(c => c.Id == id);
+        }
+
+        public Task<Conversation?> GetGroupWithMembersAsync(Guid ConversationId)
+        {
+            return context.Conversations
+                .Include(c => c.Members)
+                .FirstOrDefaultAsync(x =>
+                x.Id== ConversationId && x.Type == ConversationType.Group
+                );
         }
 
         public Task<List<Conversation>> GetUserConversationsAsync(Guid userId)

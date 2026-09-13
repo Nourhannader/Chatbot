@@ -47,6 +47,9 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IMessageService, MessageService>();
             Services.AddScoped<IMessageEncryptionService, MessageEncryptionService>();  
             Services.AddScoped<IConversationService, ConversationService>();
+            Services.AddScoped<IGroupService, GroupService>();
+            Services.AddScoped<IGroupInviteService, GroupInviteService>();
+            Services.AddScoped<ISystemMessageService, SystemMessageService>();
             Services.AddScoped<IConversationSettingsService, ConversationSettingsService>();
             Services.AddScoped<IReactionService, ReactionService>();
             Services.AddScoped<IUserDeviceService, UserDeviceService>();

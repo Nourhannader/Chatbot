@@ -23,6 +23,10 @@ namespace chatbot.Ef.Configurations
                 .HasConversion<int>()
                 .IsRequired();
 
+            builder.Property(x => x.SystemMessageType)
+                .HasConversion<int>();
+
+
             builder.Property(x => x.IsDeletedForEveryone)
             .HasDefaultValue(false);
 
@@ -42,7 +46,7 @@ namespace chatbot.Ef.Configurations
                 .WithOne(x => x.Message)
                 .HasForeignKey(x => x.MessageId);
 
-            builder.HasMany(x => x.DeletedForUsers)
+            builder.HasMany(x => x.Deletions)
                 .WithOne(x => x.Message)
                 .HasForeignKey(x => x.MessageId);
 

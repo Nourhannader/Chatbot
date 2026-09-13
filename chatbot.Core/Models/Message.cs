@@ -75,6 +75,10 @@ namespace chatbot.Core.Models
 
         public Guid? OriginalMessageId { get; set; }
         public Message? OriginalMessage { get; set; }
+        //
+        public bool IsSystemMessage { get; set; }
+
+        public SystemMessageType? SystemMessageType { get; set; }
 
         //navigation property for message forwardies
         public ICollection<Message> ForwardMessages { get; set; } = new List<Message>();
