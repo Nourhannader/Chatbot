@@ -23,6 +23,16 @@ namespace chatbot.Ef.Repositories
             await context.Deletions.AddAsync(message);
         }
 
+        public async Task<List<Message>> GetAllMessageDeletedOlder(DateTime cutoff)
+        {
+            return await context.Messages
+                .Where(x =>
+                    x.IsDeletedForEveryone &&
+                    x.DeletedForEveryoneAt.HasValue &&
+                    x.DeletedForEveryoneAt < cutoff)
+                .ToListAsync();
+        }
+
         public async Task<Message> GetByIdAsync(Guid id)
         {
             return await context.Messages
@@ -71,6 +81,11 @@ namespace chatbot.Ef.Repositories
         public void Remove(Message message)
         {
             context.Messages.Remove(message);
+        }
+
+        public void RemoveRange(List<Message> messages)
+        {
+            context.Messages.RemoveRange(messages);
         }
 
         public async Task<List<Message>> SearchMessagesAsync(Guid conversationId, string keyword)

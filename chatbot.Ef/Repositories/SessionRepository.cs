@@ -31,11 +31,23 @@ namespace chatbot.Ef.Repositories
                 ).ToListAsync();
         }
 
+        public async Task<List<DeviceSession>> GetAllRevokedSessionOlder(DateTime? cutoff)
+        {
+            return await context.Sessions
+                .Where(s => (!s.IsActive && s.RevokedAt < cutoff)
+                || s.ExpiresAt < cutoff).ToListAsync();
+        }
+
         public async Task<DeviceSession?> GetById(Guid sessionId)
         {
             return await context.Sessions
                 .Include(x => x.User)
                 .FirstOrDefaultAsync(x => x.Id == sessionId);
+        }
+
+        public  void RemoveRange(List<DeviceSession> sessions)
+        {
+             context.Sessions.RemoveRange(sessions);
         }
     }
 }

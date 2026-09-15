@@ -6,17 +6,20 @@ using chatbot.Core.Helper;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
+using chatbot.Core.Mapping;
 using chatbot.Core.Models;
 using chatbot.Ef.Data;
 using chatbot.Ef.Repositories;
 using chatbot.Ef.Services;
 using chatbot.Ef.UnitOfWork;
 using chatbot.Ef.ValidatorService;
+using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 
@@ -31,24 +34,30 @@ namespace chatbot.Api
             // Add services to the container.
             builder.Services.AddApplicationServices(builder.Configuration);
 
-
             builder.Services.AddSignalR();
 
-            
-        
-            builder.Services.AddDbContext<ApplicationDbContext>(options => 
+            builder.Services.AddAutoMapper(cfg => cfg.AddMaps(typeof(MappingProfile).Assembly));
+
+            builder.Services.AddDbContext<ApplicationDbContext>(options =>
               options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
                 b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
+
+            builder.Services.AddHangfire(config =>
+            {
+                config.UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection"));
+            });
+            builder.Services.AddHangfireServer();
+
+            
 
             //add jwtAuthentication
             builder.Services.AddJWTConfiguration(builder.Configuration);
             //firebase
             builder.Services.AddFirebase();
-              
 
             builder.Services.AddControllers();
             // Swagger Services
-            
+
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
@@ -73,12 +82,16 @@ namespace chatbot.Api
             app.UseAuthorization();
 
             app.UseCors("AllowAll");
-           
+
             app.UseDefaultFiles();
 
             app.UseStaticFiles();
 
             app.MapHub<ChatHub>("/chathub");
+
+            app.UseHangfireDashboard("/hangfire");
+
+            JobScheduler.Register();
 
             app.MapControllers();
 

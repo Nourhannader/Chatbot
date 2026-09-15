@@ -52,6 +52,13 @@ namespace chatbot.Ef.Repositories
                 && n.UserId == userId);   
         }
 
+        public async Task<List<Notification>> GetNotificationsReaded(DateTime? cutoff)
+        {
+            return await context.Notifications
+                .Where(n => n.IsRead && n.CreatedAt < cutoff)
+                .ToListAsync();
+        }
+
         public async Task<int> GetUnreadCountAsync(Guid userId)
         {
             return await context.Notifications
@@ -78,6 +85,12 @@ namespace chatbot.Ef.Repositories
                 return;
             notification.IsRead = true;
             notification.ReadAt= DateTime.UtcNow;
+        }
+
+        public async Task RemoveRange(IEnumerable<Notification> notifications)
+        {
+            context.Notifications.RemoveRange(notifications);
+            await Task.CompletedTask;
         }
 
         public void Update(Notification entity)

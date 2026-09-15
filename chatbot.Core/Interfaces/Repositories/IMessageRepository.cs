@@ -20,5 +20,8 @@ namespace chatbot.Core.Interfaces.Repositories
         Task<bool> IsDeletedForUserAsync(Guid messageId,Guid userId);
         Task AddDeletionAsync(MessageDeletion message);
 
+        Task<List<Message>> GetAllMessageDeletedOlder(DateTime cutoff);
+        void RemoveRange(List<Message> messages);
+
     }
 }

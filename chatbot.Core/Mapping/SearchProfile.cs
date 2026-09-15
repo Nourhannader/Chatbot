@@ -7,17 +7,17 @@ using AutoMapper;
 using chatbot.Core.DTOs;
 using chatbot.Core.Models;
 
-namespace chatbot.Ef.Mapping
+namespace chatbot.Core.Mapping
 {
     public class SearchProfile:Profile
     {
         public SearchProfile()
         {
             CreateMap<ApplicationUser, UserSearchDto>();
-            CreateMap<Message,MessageSearchDto>();
+            CreateMap<Message, MessageSearchDto>();
             CreateMap<Conversation, ConversationSearchDto>();
             CreateMap<StoredFile, FileSearchDto>();
-        
+
         }
     }
 }

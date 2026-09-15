@@ -6,9 +6,11 @@ using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Interfaces.Validators;
+using chatbot.Core.Mapping;
 using chatbot.Core.Models;
 using chatbot.Ef.Background;
 using chatbot.Ef.Data;
+using chatbot.Ef.Jobs;
 using chatbot.Ef.Repositories;
 using chatbot.Ef.Services;
 using chatbot.Ef.Services.Providers;
@@ -18,6 +20,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using ServiceStack;
 using StackExchange.Redis;
@@ -80,8 +83,12 @@ namespace chatbot.Api.Extensions
             Services.AddSingleton<IUserIdProvider, UserIdProvider>();
 
 
-            //background services
-            Services.AddHostedService<FileCleanupBackgroundService>();
+            //jobSchedular
+            Services.AddScoped<FileCleanupJob>();
+            Services.AddScoped<NotificationCleanupJob>();
+            Services.AddScoped<SessionCleanupJob>();
+            Services.AddScoped<MessageCleanupJob>();
+
             //Cros
             Services.AddCors(options =>
             {
