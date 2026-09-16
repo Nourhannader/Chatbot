@@ -70,8 +70,7 @@ namespace chatbot.Api
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-
-            app.UseExceptionHandler();
+            app.UseGlobalExceptionHandler();
 
             app.UseHttpsRedirection();
 
