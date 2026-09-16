@@ -87,10 +87,10 @@ namespace chatbot.Ef.Repositories
             notification.ReadAt= DateTime.UtcNow;
         }
 
-        public async Task RemoveRange(IEnumerable<Notification> notifications)
+        public void RemoveRange(IEnumerable<Notification> notifications)
         {
             context.Notifications.RemoveRange(notifications);
-            await Task.CompletedTask;
+            
         }
 
         public void Update(Notification entity)

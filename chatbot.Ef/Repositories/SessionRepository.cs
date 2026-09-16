@@ -16,7 +16,7 @@ namespace chatbot.Ef.Repositories
         {
             return await context.Sessions
                 .Include(x => x.User)
-                .Where(x => !x.IsActive
+                .Where(x => x.IsActive
                  && x.ExpiresAt > DateTime.UtcNow
                 ).ToListAsync();
         }
@@ -34,7 +34,8 @@ namespace chatbot.Ef.Repositories
         public async Task<List<DeviceSession>> GetAllRevokedSessionOlder(DateTime? cutoff)
         {
             return await context.Sessions
-                .Where(s => (!s.IsActive && s.RevokedAt < cutoff)
+                .Where(s => (!s.IsActive && s.RevokedAt.HasValue &&
+                s.RevokedAt.Value < cutoff)
                 || s.ExpiresAt < cutoff).ToListAsync();
         }
 

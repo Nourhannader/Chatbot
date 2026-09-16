@@ -15,11 +15,5 @@ namespace chatbot.Core.DTOs.Auth
         public string Password { get; set; }
             = string.Empty;
 
-        public string DeviceId { get; set; }
-            = string.Empty;
-
-        public DeviceType DeviceType { get; set; }
-
-        public string? DeviceName { get; set; }
     }
 }

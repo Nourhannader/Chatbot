@@ -26,7 +26,7 @@ namespace chatbot.Core.DTOs.Auth
         [DataType(DataType.Password)]
         public string Password { get; set; }
 
-        [Compare("password")]
+        [Compare(nameof(Password))]
         [DataType(DataType.Password)]
 
         [Display(Name = "Confirm Password")]
@@ -34,11 +34,5 @@ namespace chatbot.Core.DTOs.Auth
 
         public IFormFile? ImageFile { get; set; }
 
-        public string DeviceId { get; set; }
-            = string.Empty;
-
-        public DeviceType DeviceType { get; set; }
-
-        public string? DeviceName { get; set; }
     }
 }

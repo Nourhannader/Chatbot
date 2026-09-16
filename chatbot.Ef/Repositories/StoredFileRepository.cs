@@ -23,10 +23,9 @@ namespace chatbot.Ef.Repositories
            await context.StoredFiles.AddRangeAsync(files);
         }
 
-        public  Task DeleteAsync(StoredFile file)
+        public  void Delete(StoredFile file)
         {
            context.StoredFiles.Remove(file);
-            return Task.CompletedTask;
 
         }
 
@@ -35,15 +34,23 @@ namespace chatbot.Ef.Repositories
             return context.StoredFiles.FirstOrDefaultAsync(x => x.Id == id);
         }
 
-        public Task<List<StoredFile>> GetByMessageIdAsync(Guid messageId)
+        public async Task<List<StoredFile>> GetByMessageIdAsync(Guid messageId)
         {
-            return context.StoredFiles
+            return await context.StoredFiles
                 .Where(x => x.MessageId ==messageId && !x.IsDeleted)
                 .OrderByDescending(x => x.CreatedAt)
                 .ToListAsync();
         }
 
-       
+        public async Task<List<StoredFile>> GetAllByMessageIdAsync(Guid messageId)
+        {
+            return await context.StoredFiles
+                .Where(x => x.MessageId == messageId )
+                .OrderByDescending(x => x.CreatedAt)
+                .ToListAsync();
+        }
+
+
         public async Task<List<StoredFile>> GetFilesForCleanupAsync(DateTime olderThan)
         {
             return await context.StoredFiles

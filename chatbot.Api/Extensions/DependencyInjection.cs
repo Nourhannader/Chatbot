@@ -8,7 +8,7 @@ using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Interfaces.Validators;
 using chatbot.Core.Mapping;
 using chatbot.Core.Models;
-using chatbot.Ef.Background;
+using chatbot.Core.Validators.Auth;
 using chatbot.Ef.Data;
 using chatbot.Ef.Jobs;
 using chatbot.Ef.Repositories;
@@ -38,6 +38,7 @@ namespace chatbot.Api.Extensions
                 .AddEntityFrameworkStores<ApplicationDbContext>();
             Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(Configuration.GetConnectionString("Redis"))!);
 
+            Services.AddValidatorsFromAssemblyContaining<RegisterDtoValidator>();
             Services.AddExceptionHandler<GlobalExceptionHandler>();
             Services.AddProblemDetails();
             Services.AddValidatorsFromAssemblyContaining<SendMessageValidator>();

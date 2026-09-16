@@ -4,19 +4,19 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using chatbot.Core.Enums;
-using chatbot.Core.Models;
 using Microsoft.AspNetCore.Http;
 
 namespace chatbot.Core.DTOs
 {
-    public class SendMessageDto
+    public class CreateMessageDto
     {
-        public string ConversationId { get; set; } = string.Empty;
+        public string ConversationId { get; set; }
+        = string.Empty;
 
-        public string? Content { get; set; } = string.Empty;
+        public string Content { get; set; }
+            = string.Empty;
 
         public MessageType Type { get; set; }
-
-        public IFormFile? File { get; set; }
+        public IFormFile File { get; set; }
     }
 }

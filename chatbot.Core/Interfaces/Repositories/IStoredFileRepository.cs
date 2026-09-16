@@ -17,10 +17,12 @@ namespace chatbot.Core.Interfaces.Repositories
 
         Task<List<StoredFile>> GetByMessageIdAsync( Guid messageId);
 
+        Task<List<StoredFile>> GetAllByMessageIdAsync(Guid messageId);
+
         Task<List<StoredFile>> GetFilesForCleanupAsync(DateTime olderThan);
 
         Task UpdateAsync(StoredFile file);
 
-        Task DeleteAsync(StoredFile file);
+        void Delete(StoredFile file);
     }
 }

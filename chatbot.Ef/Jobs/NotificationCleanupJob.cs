@@ -6,21 +6,25 @@ using System.Threading.Tasks;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Ef.Data;
 using chatbot.Ef.UnitOfWork;
+using Microsoft.Extensions.Logging;
 
 namespace chatbot.Ef.Jobs
 {
-    public class NotificationCleanupJob(IUnitOfWork unitOfWork)
+    public class NotificationCleanupJob(IUnitOfWork unitOfWork,ILogger<NotificationCleanupJob> logger)
     {
         public async Task ExecuteAsync()
         {
+            logger.LogInformation("Notification CleanUp Started.");
             var cutoff = DateTime.UtcNow.AddDays(-90);
             var notifications =await unitOfWork.Notifications.GetNotificationsReaded(cutoff);
-            if (notifications.Count == 0)
+            if (!notifications.Any())
             {
+                logger.LogInformation("No old read Notifications found.");
                 return;
             }
-            await unitOfWork.Notifications.RemoveRange(notifications);
+            unitOfWork.Notifications.RemoveRange(notifications);
             await unitOfWork.SaveChangesAsync();
+            logger.LogInformation("Deleted {Count} old read Notifications.",notifications.Count);
         }
        
     }
