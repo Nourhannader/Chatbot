@@ -33,6 +33,11 @@ namespace chatbot.Core.DTOs.Auth
         public string ConfirmPassword { get; set; }
 
         public IFormFile? ImageFile { get; set; }
+        [MinLength(3)]
+        public string DeviceId { get; set; } = string.Empty;
+        public string? DeviceName { get; set; }
+
+        public DeviceType DeviceType { get; set; }
 
     }
 }

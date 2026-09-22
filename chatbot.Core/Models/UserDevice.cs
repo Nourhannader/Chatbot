@@ -12,16 +12,14 @@ namespace chatbot.Core.Models
     {
         public Guid UserId { get; set; }
 
-        public ApplicationUser User { get; set; }
-            = null!;
+        public ApplicationUser User { get; set; }= null!;
 
-        public string PushToken { get; set; }
-            = string.Empty;
+        public string PushToken { get; set; } = string.Empty;
 
         public DeviceType DeviceType { get; set; }
         public PushProvider Provider { get; set; }
 
-        public string? DeviceName { get; set; }
+        public string? DeviceName { get; set; } = string.Empty;
 
         public bool IsActive { get; set; } = true;
 

@@ -20,11 +20,9 @@ namespace chatbot.Core.Models
         public DeviceSession DeviceSession { get; set; }
             = null!;
 
-        public string TokenHash { get; set; }
-            = string.Empty;
+        public string TokenHash { get; set; }= string.Empty;
 
-        public DateTime CreatedAt { get; set; }
-            = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; }= DateTime.UtcNow;
 
         public DateTime ExpiresAt { get; set; }
 

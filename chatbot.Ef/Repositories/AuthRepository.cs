@@ -13,6 +13,7 @@ namespace chatbot.Ef.Repositories
 {
     public class AuthRepository(ApplicationDbContext context, UserManager<ApplicationUser> userManager) : IAuthRepository
     {
+        
         //user
         public async Task<ApplicationUser?> GetByEmailAsync(string email)
         {
@@ -31,48 +32,73 @@ namespace chatbot.Ef.Repositories
         {
             return await userManager.CreateAsync(user, password);
         }
+        public async Task<IdentityResult> AddToRoleAsync(ApplicationUser user, string role)
+        {
+            return await userManager.AddToRoleAsync(user, role);
+        }
+        public async Task<IdentityResult> updateState(ApplicationUser user)
+        {
+           return await userManager.UpdateAsync(user);
+        }
+        public async Task<bool> UsernameExistsAsync(string username,Guid currentUserId)
+        {
+            return await context.Users
+                .AnyAsync(x =>
+                    x.UserName == username &&
+                    x.Id != currentUserId);
+        }
         public async Task<bool> CheckPasswordAsync(ApplicationUser user, string password)
         {
             return await userManager.CheckPasswordAsync(user, password);
         }
         //device session
-        public async Task<DeviceSession> CreateDeviceSessionAsync(DeviceSession session)
+        public async Task<DeviceSession?> GetDeviceSessionAsync(Guid sessionId)
         {
-             await context.Sessions.AddAsync(session);
-            return session;
+            return await context.Sessions.FirstOrDefaultAsync(x => x.Id == sessionId);
         }
-        public async Task<DeviceSession?> GetDeviceSessionAsync(Guid sessionId, Guid userId)
+
+        public async Task<DeviceSession?> GetDeviceSessionWithTokensAsync(Guid sessionId)
         {
-            return await context.Sessions.FirstOrDefaultAsync(s => s.Id==sessionId && s.UserId == userId);
+            return await context.Sessions
+                .Include(x => x.RefreshTokens)
+                .FirstOrDefaultAsync(x => x.Id == sessionId);
         }
-        public async Task RevokeDeviceSessionAsync(DeviceSession session)
+
+        public async Task<DeviceSession?> GetActiveDeviceSessionAsync(Guid userId, string deviceId)
         {
-            session.IsActive = false;
-            session.RevokedAt = DateTime.UtcNow;
-            await Task.CompletedTask;
+            return await context.Sessions
+                .FirstOrDefaultAsync(x => x.IsActive && x.UserId == userId && x.DeviceId == deviceId);
+        }
+
+        public async Task<List<DeviceSession>> GetActiveDeviceSessionsAsync(Guid userId)
+        {
+            return await context.Sessions
+                .Where(x => x.UserId == userId && x.IsActive)
+                .Include(x => x.RefreshTokens)
+                .ToListAsync();
         }
 
         //refresh token
-        public Task<ApplicationUser?> GetByTokenAsync(string token)
-        {
-            throw new NotImplementedException();
-        }
-
         public async Task<RefreshToken?> GetRefreshTokenAsync(string tokenHash)
         {
             return await context.RefreshTokens
-                .Include(r => r.User)
-                .Include(r=> r.DeviceSession)
-                .FirstOrDefaultAsync(r => r.ReplacedByTokenHash==tokenHash);
+                .FirstOrDefaultAsync(x => x.TokenHash == tokenHash);
         }
 
-        public async Task RevokeRefreshTokenAsync(RefreshToken refreshToken)
+        public async Task<List<RefreshToken>> GetActiveRefreshTokensBySessionIdAsync(Guid deviceSessionId)
         {
-            refreshToken.RevokedAt = DateTime.UtcNow;
-            await Task.CompletedTask;
+            return await context.RefreshTokens
+                .Where(x => x.DeviceSessionId == deviceSessionId &&
+                x.RevokedAt == null && x.ExpiresAt > DateTime.UtcNow
+                ).ToListAsync();
+        }
+        //insert
+        public async Task AddDeviceSessionAsync(DeviceSession session)
+        {
+            await context.Sessions.AddAsync(session);
         }
 
-        public async Task SaveRefreshTokenAsync(RefreshToken refreshToken)
+        public async Task AddRefreshTokenAsync(RefreshToken refreshToken)
         {
             await context.RefreshTokens.AddAsync(refreshToken);
         }

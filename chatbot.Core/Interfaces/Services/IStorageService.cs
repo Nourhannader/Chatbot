@@ -12,11 +12,7 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IStorageService
     {
-        public  Task<UploadResultDto> UploadAsync(
-      IFormFile file,
-      string folder,
-      Guid uploadedBy,
-      Guid messageId,
+        public  Task<UploadResultDto> UploadAsync(IFormFile file,string folder,Guid uploadedBy,Guid messageId,
       CancellationToken cancellationToken = default);
 
         Task<List<UploadResultDto>> UploadManyAsync(
@@ -36,5 +32,11 @@ namespace chatbot.Core.Interfaces.Services
 
         Task<string?> GetFileUrlAsync(Guid fileId,CancellationToken cancellationToken=default);
         Task UploadAsync(IFormFile image, string v, Guid userId);
+
+        Task<UploadFileDto> UploadAsync( IFormFile file,string folder);
+
+        Task<bool> DeleteAsync(string fileUrl);
+
+        Task<string?> ReplaceAsync(IFormFile newFile,string? oldFileUrl,string folder);
     }
 }

@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace chatbot.Core.DTOs.Auth
 {
-    public class RefreshTokenDto
+    public class LogoutDto
     {
-        public string Token { get; set; } = string.Empty;
+        [Required]
+        public string RefreshToken { get; set; } = string.Empty;
     }
 }

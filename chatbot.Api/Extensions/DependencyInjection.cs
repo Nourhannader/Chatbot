@@ -39,13 +39,13 @@ namespace chatbot.Api.Extensions
             Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(Configuration.GetConnectionString("Redis"))!);
 
             Services.AddValidatorsFromAssemblyContaining<RegisterDtoValidator>();
-            Services.AddExceptionHandler<GlobalExceptionHandler>();
             Services.AddProblemDetails();
             Services.AddValidatorsFromAssemblyContaining<SendMessageValidator>();
             Services.AddTransient<IUnitOfWork, UnitOfWork>();
             Services.AddScoped<IAuthRepository, AuthRepository>();
             Services.AddScoped<IAuthService, AuthService>();
             Services.AddScoped<IJwtService, JwtService>();
+            Services.AddScoped<IUserService, UserService>();
             Services.AddScoped<IMailService, MailService>();
             Services.AddScoped<IChatService, ChatService>();
             Services.AddScoped<IMessageService, MessageService>();

@@ -10,40 +10,37 @@ namespace chatbot.Core.Interfaces.Repositories
 {
     public interface IAuthRepository
     {
+        //User
         Task<ApplicationUser?> GetByEmailAsync(string email);
 
         Task<ApplicationUser?> GetByNameAsync(string username);
         Task<ApplicationUser?> GetByIdAsync(Guid userId);
 
-        Task<ApplicationUser?> GetByTokenAsync(string token);
+        Task<IdentityResult> CreateUserAsync( ApplicationUser user,string password);
+        Task<IdentityResult> AddToRoleAsync(ApplicationUser user, string role);
+        Task<IdentityResult> updateState(ApplicationUser user);
+        Task<bool> UsernameExistsAsync(string username,Guid currentUserId);
 
-        Task<IdentityResult> CreateUserAsync(
-            ApplicationUser user,
-            string password);
-
-        Task<bool> CheckPasswordAsync(
-            ApplicationUser user,
-            string password);
+        Task<bool> CheckPasswordAsync( ApplicationUser user,string password);
 
         // Device Session
-        Task<DeviceSession> CreateDeviceSessionAsync(
-            DeviceSession session);
 
-        Task<DeviceSession?> GetDeviceSessionAsync(
-            Guid sessionId,
-            Guid userId);
+        Task<DeviceSession?> GetDeviceSessionAsync(Guid sessionId);
 
-        Task RevokeDeviceSessionAsync(
-            DeviceSession session);
+        Task<DeviceSession?> GetDeviceSessionWithTokensAsync( Guid sessionId);
+
+        Task<DeviceSession?> GetActiveDeviceSessionAsync(Guid userId,string deviceId);
+
+        Task<List<DeviceSession>>GetActiveDeviceSessionsAsync(Guid userId);
+
 
         // Refresh Token
-        Task SaveRefreshTokenAsync(
-            RefreshToken refreshToken);
+        Task<RefreshToken?> GetRefreshTokenAsync(string tokenHash);
 
-        Task<RefreshToken?> GetRefreshTokenAsync(
-            string tokenHash);
+        Task<List<RefreshToken>>GetActiveRefreshTokensBySessionIdAsync(Guid deviceSessionId);
+        //insert
+        Task AddDeviceSessionAsync(DeviceSession session);
 
-        Task RevokeRefreshTokenAsync(
-            RefreshToken refreshToken);
+        Task AddRefreshTokenAsync(RefreshToken refreshToken);
     }
 }

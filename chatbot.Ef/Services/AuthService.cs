@@ -6,12 +6,15 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using chatbot.Core.DTOs.Auth;
+using chatbot.Core.Enums;
+using chatbot.Core.Exceptions;
 using chatbot.Core.Helper;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Models;
 using chatbot.Ef.Repositories;
+using FirebaseAdmin.Messaging;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Options;
@@ -24,137 +27,276 @@ namespace chatbot.Ef.Services
         private readonly JwtSettings jwt;
         private readonly IJwtService jwtService;
         private readonly ITokenHashService hashService;
+        private readonly IStorageService storageService;
         public AuthService(IUnitOfWork unitOfWork,
-            IOptions<JwtSettings> jwt,IJwtService jwtService, ITokenHashService hashService)
+            IOptions<JwtSettings> jwt,IJwtService jwtService, ITokenHashService hashService, IStorageService storageService)
         {
             this.unitOfWork = unitOfWork;
             this.jwt = jwt.Value;
             this.jwtService = jwtService;
             this.hashService = hashService;
+            this.storageService = storageService;
         }
-        //login
-        public async Task<AuthResponseDto> GetTokenAsync(LoginDto model)
+        
+        private void RevokeDeviceSession(DeviceSession session, string? ipAddress)
         {
-           
-            var user = await unitOfWork.Auth.GetByEmailAsync(model.Email);
-            if (user is null)
+            var now = DateTime.Now;
+            session.RevokedAt = now;
+            foreach (var token in session.RefreshTokens)
             {
-                throw new UnauthorizedAccessException("Invalid email or password");
+                token.RevokedByIp = ipAddress;
+                token.RevokedAt = now;
             }
-            //check Password
-            var validPassword = await unitOfWork.Auth.CheckPasswordAsync(user, model.Password);
-            if (!validPassword)
-                throw new UnauthorizedAccessException("Invalid email or password");
-            // Create Device Session
-            var session = new DeviceSession
+
+        }
+
+        private async Task<AuthResponseDto>CreateAuthResponseAsync(ApplicationUser user,string deviceId,
+            string? deviceName,DeviceType deviceType,string? ipAddress)
+        {
+            //generate accesstoken
+            var accessToken = await jwtService.GenerateAccessTokenAsync(user);
+            //generate refresh token
+            var refreshToken = jwtService.GenerateRefreshToken();
+            //hash refresh token
+            var refreshTokenHash = hashService.Hash(refreshToken);
+            //create device session
+            var deviceSession = new DeviceSession
             {
+                Id = Guid.NewGuid(),
+
                 UserId = user.Id,
 
-                DeviceId = model.DeviceId,
+                DeviceId = deviceId,
 
-                DeviceType = model.DeviceType,
+                DeviceName =deviceName ?? "Unknown Device",
 
-                DeviceName = model.DeviceName,
+                DeviceType = deviceType,
 
-                CreatedAt = DateTime.UtcNow,
+                IpAddress = ipAddress,
 
-                LastActivityAt = DateTime.UtcNow,
+                CreatedAt =DateTime.UtcNow,
 
-                IsActive = true
+                LastActivityAt =DateTime.UtcNow,
+
+                ExpiresAt =DateTime.UtcNow.AddDays(jwt.RefreshTokenExpirationDays)
             };
-            await unitOfWork.Auth.CreateDeviceSessionAsync(session);
-            var accessToken = await jwtService.GenerateAccessTokenAsync(user);
-
-            var refreshToken =  jwtService.GenerateRefreshToken();
-
-            // Save Refresh Token
+            //create refresh token
             var refreshTokenEntity = new RefreshToken
             {
+                Id = Guid.NewGuid(),
+
                 UserId = user.Id,
 
-                DeviceSessionId = session.Id,
+                DeviceSessionId =deviceSession.Id,
 
-                TokenHash =hashService.Hash(refreshToken),
+                TokenHash =refreshTokenHash,
 
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt =DateTime.UtcNow,
 
-                ExpiresAt =
-                    DateTime.UtcNow.AddDays(7)
+                ExpiresAt =DateTime.UtcNow.AddDays(jwt.RefreshTokenExpirationDays),
+
+                CreatedByIp =ipAddress
             };
+            //save
+           await unitOfWork.Auth.AddDeviceSessionAsync(deviceSession);
+           await unitOfWork.Auth.AddRefreshTokenAsync(refreshTokenEntity);
+           await unitOfWork.SaveChangesAsync();
+            //update user state
+            user.IsOnline = true;
+            user.LastSeenAt = DateTime.UtcNow;
+            await unitOfWork.Auth.updateState(user);
 
-            await unitOfWork.Auth.SaveRefreshTokenAsync(refreshTokenEntity);
-
-            await unitOfWork.SaveChangesAsync();
             return new AuthResponseDto
             {
                 AccessToken = accessToken,
 
-                RefreshToken = refreshToken
+                RefreshToken = refreshToken,
+
+                AccessTokenExpiresAt = DateTime.UtcNow.AddMinutes(jwt.AccessTokenExpirationMinutes),
+
+                RefreshTokenExpiresAt = refreshTokenEntity.ExpiresAt,
+
+                DeviceSessionId = deviceSession.Id
             };
         }
+        //register
+        public async Task<AuthResponseDto> RegisterAsync(RegisterDto dto, string? ipAddress)
+        {
+            if (await unitOfWork.Auth.GetByEmailAsync(dto.Email) is not null)
+                throw new ConflictException("Email is already registered!");
+            if (await unitOfWork.Auth.GetByNameAsync(dto.UserName) is not null)
+                throw new ConflictException("Username is already taken.");
+            var imageUrl = string.Empty;
+            if (dto.ImageFile != null && dto.ImageFile.Length > 0)
+            {
+                var file =await storageService.UploadAsync(dto.ImageFile, "images/users");
+                imageUrl =file.FileUrl ;
+            }
 
-        public async Task<AuthResponseDto> RefreshTokenAsync(string token)
+            //create user
+            var user = new ApplicationUser
+            {
+                FirstName = dto.FirstName,
+                LastName = dto.LastName,
+                UserName = dto.UserName,
+                Email = dto.Email,
+                PhoneNumber = dto.Phone,
+                IsOnline=true,
+                LastSeenAt=DateTime.UtcNow,
+                ReadReceiptsEnabled = true,
+                LastSeenVisible = true,
+                IsTypingVisible = true,
+                ProfileImageUrl = imageUrl
+
+            };
+            //identity create
+            var result = await unitOfWork.Auth.CreateUserAsync(user, dto.Password);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(
+                    ", ",
+                    result.Errors.Select(x => x.Description)
+                    );
+                throw new BadRequestException(errors);
+            }
+            //add default role
+            var roleResult = await unitOfWork.Auth.AddToRoleAsync(user, "User");
+            if (!roleResult.Succeeded)
+            {
+                var errors = string.Join(",", roleResult.Errors.Select(x => x.Description));
+                throw new BadRequestException(errors);
+            }
+
+
+            return await CreateAuthResponseAsync(
+           user,
+           dto.DeviceId,
+           dto.DeviceName,
+           dto.DeviceType,
+           ipAddress);
+        }
+
+        //login
+        public async Task<AuthResponseDto> LoginAsync(LoginDto dto,string? ipAddress)
+        {
+           
+            var user = await unitOfWork.Auth.GetByEmailAsync(dto.Email);
+            if (user is null)
+            {
+                throw new UnauthorizedException("Invalid email or password");
+            }
+            //check Password
+            var validPassword = await unitOfWork.Auth.CheckPasswordAsync(user, dto.Password);
+            if (!validPassword)
+                throw new UnauthorizedException("Invalid email or password");
+            //create authentication response
+
+            return await CreateAuthResponseAsync(user, dto.DeviceId, dto.DeviceName, dto.DeviceType, ipAddress);
+           
+        }
+
+        //refresh token
+        public async Task<AuthResponseDto> RefreshAsync(string token,string? ipAddress)
         {
             if (string.IsNullOrWhiteSpace(token))
-                throw new UnauthorizedAccessException("Refresh token is required");
-
+            {
+                throw new BadRequestException("Refresh token is required.");
+            }
+            //hash incoming token
             var tokenHash = hashService.Hash(token);
+
             //find token
-            var refreshToken = await unitOfWork.Auth.GetRefreshTokenAsync(tokenHash);
+            var oldToken = await unitOfWork.Auth.GetRefreshTokenAsync(tokenHash);
 
 
-
-            if (refreshToken == null)
+            if (oldToken == null)
                 throw new UnauthorizedAccessException("Invalid refresh token");
 
-
-            // Check token status
-            if (!refreshToken.IsActive)
-                throw new UnauthorizedAccessException("Refresh token is expired or revoked");
-            //check device session
-            var session = refreshToken.DeviceSession;
+            //get device session
+            var session = await unitOfWork.Auth.GetDeviceSessionWithTokensAsync(oldToken.DeviceSessionId);
             if (session == null)
-                throw new UnauthorizedAccessException("Device session not found");
+            {
+                throw new UnauthorizedException("Device session not found.");
+            }
 
+            //detect token reuse
+            if (oldToken.IsRevoked)
+            {
+                if (oldToken.IsRevoked)
+                {
+                    if (!string.IsNullOrWhiteSpace(oldToken.ReplacedByTokenHash))
+                    {
+                        RevokeDeviceSession(session, ipAddress);
+
+                        await unitOfWork.SaveChangesAsync();
+
+                        throw new RefreshTokenReuseException();
+                    }
+
+                    throw new UnauthorizedException("Refresh token has been revoked.");
+                }
+            }
+            //check expiration
+            if (oldToken.IsExpired)
+            {
+                throw new UnauthorizedException("Refresh token has expired.");
+            }
+            //check  session
             if (!session.IsActive)
-                throw new UnauthorizedAccessException("Device session is revoked");
+                throw new UnauthorizedException("Device session is no longer active.");
 
+           
             if (session.ExpiresAt.HasValue &&
                 session.ExpiresAt <= DateTime.UtcNow)
             {
-                throw new UnauthorizedAccessException("Device session has expired");
+
+                session.RevokedAt = DateTime.UtcNow;
+
+                await unitOfWork.SaveChangesAsync();
+
+                throw new UnauthorizedException("Device session has expired.");
             }
-            var newAccessToken = await jwtService.GenerateAccessTokenAsync(refreshToken.User);
+            //get user
+            var user = await unitOfWork.Auth.GetByIdAsync(oldToken.UserId);
+            if (user == null)
+            {
+                throw new UnauthorizedException("User not found.");
+            }
+            //generate new tokens
+            var newAccessToken = await jwtService.GenerateAccessTokenAsync(user);
             var newRefreshToken =  jwtService.GenerateRefreshToken();
             var newRefreshTokenHash=hashService.Hash(newRefreshToken);
-            var newRefreshTokenEntity =new RefreshToken
-            {
-                UserId = refreshToken.UserId,
 
-                DeviceSessionId =
-                    refreshToken.DeviceSessionId,
-
-                TokenHash =
-                    newRefreshTokenHash,
-
-                CreatedAt =
-                    DateTime.UtcNow,
-
-                ExpiresAt =
-                    DateTime.UtcNow.AddDays(7)
-            };
             //revoke old token
-            refreshToken.RevokedAt = DateTime.UtcNow;
-            refreshToken.ReplacedByTokenHash = newRefreshTokenHash;
+            oldToken.RevokedAt = DateTime.UtcNow;
+            oldToken.RevokedByIp = ipAddress;
+            oldToken.ReplacedByTokenHash = newRefreshTokenHash;
+            //create new token
+            var newTokenEntity = new RefreshToken
+            {
+                Id = Guid.NewGuid(),
+
+                UserId = user.Id,
+
+                DeviceSessionId =session.Id,
+
+                TokenHash =newRefreshTokenHash,
+
+                CreatedAt =DateTime.UtcNow,
+
+                ExpiresAt =DateTime.UtcNow.AddDays(jwt.RefreshTokenExpirationDays),
+
+                CreatedByIp =ipAddress
+            };
+
+            
             // Update session activity
-            session.LastActivityAt =
-                DateTime.UtcNow;
+            session.LastActivityAt =DateTime.UtcNow;
+            session.ExpiresAt = newTokenEntity.ExpiresAt;
 
 
             // Save new token
-            await unitOfWork.Auth
-                .SaveRefreshTokenAsync(newRefreshTokenEntity);
-
+            await unitOfWork.Auth.AddRefreshTokenAsync(newTokenEntity);
 
             await unitOfWork.SaveChangesAsync();
 
@@ -163,140 +305,58 @@ namespace chatbot.Ef.Services
             {
                 AccessToken = newAccessToken,
 
-                RefreshToken = newRefreshToken
+                RefreshToken = newRefreshToken,
+
+                AccessTokenExpiresAt =DateTime.UtcNow.AddMinutes(jwt.AccessTokenExpirationMinutes),
+
+                RefreshTokenExpiresAt =newTokenEntity.ExpiresAt,
+
+                DeviceSessionId =session.Id
             };
 
         }
 
-        //register
-        public async Task<AuthResponseDto> RegisterAsync(RegisterDto model)
-        {
-            if(await unitOfWork.Auth.GetByEmailAsync(model.Email) is not null)
-                throw new Exception ("Email is already registered!" );
-            if(await unitOfWork.Auth.GetByNameAsync(model.UserName) is not null)
-                throw new Exception ("Username is already registered!" );
-            var imageUrl = string.Empty;
-            if (model.ImageFile != null && model.ImageFile.Length > 0) {
-                imageUrl = await GetImageUrl(model);
-            }
-
-            //create user
-            var user = new ApplicationUser
-            {
-                FirstName = model.FirstName,
-                LastName = model.LastName,
-                UserName = model.UserName,
-                Email = model.Email,
-                PhoneNumber = model.Phone,
-                
-                ProfileImageUrl = imageUrl
-
-            };
-            var result = await unitOfWork.Auth.CreateUserAsync(user, model.Password);
-            if (!result.Succeeded)
-            {
-                var errors = string.Join(
-                    ", ",
-                    result.Errors.Select(x => x.Description)
-                    );
-                throw new Exception(errors);
-            }
-            //create session
-            var session = new DeviceSession
-            {
-                UserId = user.Id,
-                DeviceId=model.DeviceId,
-                DeviceType=model.DeviceType,
-                DeviceName=model.DeviceName,
-                CreatedAt=DateTime.UtcNow,
-                LastActivityAt=DateTime.UtcNow,
-                IsActive=true
-            };
-            await unitOfWork.Auth.CreateDeviceSessionAsync(session);
-            var accessToken = await jwtService.GenerateAccessTokenAsync(user);
-            var refreshToken = jwtService.GenerateRefreshToken();
-
-            //create refreshtoken entity
-            var refreshTokenEntity = new RefreshToken
-            {
-                UserId = user.Id,
-
-                DeviceSessionId = session.Id,
-
-                TokenHash =hashService.Hash(refreshToken),
-
-                CreatedAt = DateTime.UtcNow,
-
-                ExpiresAt =
-                DateTime.UtcNow.AddDays(7)
-            };
-            await unitOfWork.Auth.SaveRefreshTokenAsync(refreshTokenEntity);
-            await unitOfWork.SaveChangesAsync();
-
-
-            return new AuthResponseDto
-            {
-                AccessToken=accessToken,
-                RefreshToken=refreshToken
-            };
-
-        }
-
-        private async  Task<string> GetImageUrl(RegisterDto dto)
-        {
-            string fileName = Guid.NewGuid().ToString() + Path.GetExtension(dto.ImageFile.FileName);
-            string folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
-            if (!Directory.Exists(folderPath))
-            {
-                Directory.CreateDirectory(folderPath);
-            }
-            string filePath = Path.Combine(folderPath, fileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-              await  dto.ImageFile.CopyToAsync(stream);
-            }
-            return filePath;
-
-        }
-
-        //Revoke token , logout
-        public async Task<bool> RevokeTokenAsync(string token)
+        // logout current device
+        public async Task LogoutAsync(string token, string? ipAddress)
         {
             if (string.IsNullOrWhiteSpace(token))
-                return false;
+            {
+                throw new BadRequestException(
+                    "Refresh token is required.");
+            }
 
-
-            var tokenHash =hashService.Hash(token);
-
-
-            var refreshToken =await unitOfWork.Auth
-                    .GetRefreshTokenAsync(tokenHash);
-
+            //hashToken
+            var tokenHash = hashService.Hash(token);
+            //findToken
+            var refreshToken = await unitOfWork.Auth.GetRefreshTokenAsync(tokenHash);
 
             if (refreshToken == null)
-                return false;
-
-
-            if (!refreshToken.IsActive)
-                return false;
-
-
-            // Revoke Refresh Token
-            await unitOfWork.Auth
-                .RevokeRefreshTokenAsync(refreshToken);
-
-
-            // Optionally revoke the whole device session
-            await unitOfWork.Auth
-                .RevokeDeviceSessionAsync(refreshToken.DeviceSession);
-
-
+            {
+                return;
+            }
+            //get session
+            var session
+                = await unitOfWork.Auth.GetDeviceSessionWithTokensAsync(refreshToken.DeviceSessionId);
+            if (session == null)
+            {
+                return;
+            }
+            //revoke session
+            RevokeDeviceSession(session, ipAddress);
+            //save
             await unitOfWork.SaveChangesAsync();
-
-
-            return true;
         }
-        
+
+        //logout all devices
+        public async Task LogoutAllAsync(Guid userId, string? ipAddress)
+        {
+            var sessions = await unitOfWork.Auth.GetActiveDeviceSessionsAsync(userId);
+            foreach(var session in sessions)
+            {
+                RevokeDeviceSession(session, ipAddress);
+            }
+            await unitOfWork.SaveChangesAsync();
+        }
+
     }
 }

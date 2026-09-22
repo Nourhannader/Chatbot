@@ -10,16 +10,23 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IAuthService
     {
-        Task<AuthResponseDto> RegisterAsync(
-        RegisterDto model);
+        // Register
+        Task<AuthResponseDto> RegisterAsync(RegisterDto dto,string? ipAddress);
 
-        Task<AuthResponseDto> GetTokenAsync(
-            LoginDto model);
 
-        Task<AuthResponseDto> RefreshTokenAsync(
-            string token);
+        // Login
+        Task<AuthResponseDto> LoginAsync(LoginDto dto,string? ipAddress);
 
-        Task<bool> RevokeTokenAsync(
-            string token);
+
+        // Refresh
+        Task<AuthResponseDto> RefreshAsync(string token,string? ipAddress);
+
+
+        // Logout current device
+        Task LogoutAsync(string token,string? ipAddress);
+
+
+        // Logout all devices
+        Task LogoutAllAsync(Guid userId,string? ipAddress);
     }
 }

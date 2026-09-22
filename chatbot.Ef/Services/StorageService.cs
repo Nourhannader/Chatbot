@@ -12,6 +12,7 @@ using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Enums;
 using chatbot.Core.Interfaces.Validators;
 using chatbot.Core.Models;
+using chatbot.Core.Exceptions;
 
 namespace chatbot.Ef.Services
 {
@@ -19,9 +20,7 @@ namespace chatbot.Ef.Services
         IFileValidationService validators,IFileProcessorService processor,
         IEnumerable<IStorageProvider> providers) : IStorageService
     {
-        private static string GeneratePath(
-        string folder,
-        string fileName)
+        private static string GeneratePath(string folder,string fileName)
         {
             var extension =
                 Path.GetExtension(fileName)
@@ -52,9 +51,7 @@ namespace chatbot.Ef.Services
             cancellationToken.ThrowIfCancellationRequested();
             return await unitOfWork.StoredFiles.GetByIdAsync(fileId);
         }
-        public async Task SoftDeleteAsync(
-        Guid fileId,
-        CancellationToken cancellationToken = default)
+        public async Task SoftDeleteAsync(Guid fileId,CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var storedFile = await unitOfWork.StoredFiles.GetByIdAsync(fileId);
@@ -195,7 +192,89 @@ namespace chatbot.Ef.Services
             return provider.GetFileUrl(storedFile.Path);
         }
 
-        
+
+        //new
+
+        public async Task<UploadFileDto> UploadAsync(IFormFile file, string folder)
+        {
+            //validation
+            await validators.ValidateFile(file);
+            //select provider
+            var provider = GetProvider(StorageProviderType.Local);
+            //generate unique path
+            var relativePath = GeneratePath(folder, file.FileName);
+
+            return new UploadFileDto
+            {
+                Success = true,
+
+                FileName = file.FileName,
+
+                FileUrl = provider.GetFileUrl(relativePath),
+
+                FileSize = file.Length,
+
+                ContentType = file.ContentType
+            };
+        }
+
+        public Task<bool> DeleteAsync(string fileUrl)
+        {
+            if (string.IsNullOrWhiteSpace(fileUrl))
+            {
+                return Task.FromResult(false);
+            }
+
+
+            var relativePath =
+                fileUrl.TrimStart('/')
+                    .Replace(
+                        '/',
+                        Path.DirectorySeparatorChar);
+
+
+            var filePath =
+                Path.Combine(
+                    environment.WebRootPath,
+                    relativePath);
+
+
+            if (!File.Exists(filePath))
+            {
+                return Task.FromResult(false);
+            }
+
+
+            File.Delete(filePath);
+
+            return Task.FromResult(true);
+        }
+
+        public async Task<string?> ReplaceAsync(IFormFile newFile, string? oldFileUrl, string folder)
+        {
+            // Upload new image first
+            var result =
+                await UploadAsync(
+                    newFile,
+                    folder);
+
+
+            if (!result.Success)
+            {
+                return null;
+            }
+
+
+            // Delete old image
+            if (!string.IsNullOrWhiteSpace(oldFileUrl))
+            {
+                await DeleteAsync(oldFileUrl);
+            }
+
+
+            return result.FileUrl;
+        }
+
     }
     
 }
