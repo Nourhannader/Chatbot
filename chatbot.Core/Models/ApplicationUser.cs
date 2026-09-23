@@ -13,13 +13,17 @@ namespace chatbot.Core.Models
     {
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
-        public string? ProfileImageUrl { get; set; }
+        //public string? ProfileImageUrl { get; set; }
         public string? Bio { get; set; }
         public bool IsOnline { get; set; }
         public DateTime? LastSeenAt { get; set; }
         public bool ReadReceiptsEnabled { get; set; }
         public bool LastSeenVisible { get; set; }
         public bool IsTypingVisible { get; set; }
+        //Profile image
+        public Guid? ProfileImageId { get; set; }
+
+        public StoredFile? ProfileImage { get; set; }
         public ICollection<RefreshToken>? RefreshTokens { get; set; }
         public ICollection<ConversationMember> ConversationMembers { get; set; }
         public ICollection<Message> MessagesSent { get; set; }

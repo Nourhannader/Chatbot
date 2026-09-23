@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.DTOs;
 using chatbot.Core.DTOs.Auth;
 using chatbot.Core.Enums;
 using chatbot.Core.Exceptions;
@@ -126,12 +127,6 @@ namespace chatbot.Ef.Services
                 throw new ConflictException("Email is already registered!");
             if (await unitOfWork.Auth.GetByNameAsync(dto.UserName) is not null)
                 throw new ConflictException("Username is already taken.");
-            var imageUrl = string.Empty;
-            if (dto.ImageFile != null && dto.ImageFile.Length > 0)
-            {
-                var file =await storageService.UploadAsync(dto.ImageFile, "images/users");
-                imageUrl =file.FileUrl ;
-            }
 
             //create user
             var user = new ApplicationUser
@@ -141,13 +136,11 @@ namespace chatbot.Ef.Services
                 UserName = dto.UserName,
                 Email = dto.Email,
                 PhoneNumber = dto.Phone,
-                IsOnline=true,
-                LastSeenAt=DateTime.UtcNow,
+                IsOnline = true,
+                LastSeenAt = DateTime.UtcNow,
                 ReadReceiptsEnabled = true,
                 LastSeenVisible = true,
-                IsTypingVisible = true,
-                ProfileImageUrl = imageUrl
-
+                IsTypingVisible = true
             };
             //identity create
             var result = await unitOfWork.Auth.CreateUserAsync(user, dto.Password);
@@ -159,22 +152,55 @@ namespace chatbot.Ef.Services
                     );
                 throw new BadRequestException(errors);
             }
-            //add default role
-            var roleResult = await unitOfWork.Auth.AddToRoleAsync(user, "User");
-            if (!roleResult.Succeeded)
-            {
-                var errors = string.Join(",", roleResult.Errors.Select(x => x.Description));
-                throw new BadRequestException(errors);
+
+            //add image 
+            Guid? uploadedImageId = null; 
+            try
+            { 
+                if (dto.ImageFile is not null && dto.ImageFile.Length > 0) 
+                {
+                    var image = await storageService.UploadUserProfileImageAsync( dto.ImageFile, user.Id); 
+                    
+                    if (!image.Success) 
+                    {
+                        throw new BadRequestException( "Failed to upload profile image.");
+                    }
+                    uploadedImageId = image.FileId;
+                    
+                    user.ProfileImageId = image.FileId;
+                    
+                    await unitOfWork.Auth.updateState(user); 
+                } 
+                // 6. Add default role
+                var roleResult = await unitOfWork.Auth.AddToRoleAsync( user, "User");
+                await unitOfWork.Auth.AddToRoleAsync(user, "User");
+                
+                if (!roleResult.Succeeded)
+                {
+                    var errors = string.Join(", ", roleResult.Errors.Select(x => x.Description));
+                    throw new BadRequestException(errors);
+                }
+                return
+                    await CreateAuthResponseAsync( user, dto.DeviceId, dto.DeviceName, dto.DeviceType, ipAddress);
             }
+            catch { 
+                
+                // Cleanup uploaded image if registration fails
+                    if (uploadedImageId.HasValue) {
+                    try
+                    {
+                        await storageService.SoftDeleteAsync(uploadedImageId.Value);
+                    }
+                    catch
+                    {
+                        // Do not hide the original exception
 
-
-            return await CreateAuthResponseAsync(
-           user,
-           dto.DeviceId,
-           dto.DeviceName,
-           dto.DeviceType,
-           ipAddress);
+                    } 
+                } throw; 
+            
+            }
         }
+            
 
         //login
         public async Task<AuthResponseDto> LoginAsync(LoginDto dto,string? ipAddress)

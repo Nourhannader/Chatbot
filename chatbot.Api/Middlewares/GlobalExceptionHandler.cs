@@ -37,6 +37,21 @@ namespace chatbot.Api.Middlewares
 
                     response.Message =exception.Message;
                     break;
+                case ValidationException:
+                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
+
+                    response.Message = exception.Message;
+                    break;
+                case RefreshTokenReuseException:
+                    context.Response.StatusCode = StatusCodes.Status511NetworkAuthenticationRequired;
+
+                    response.Message = exception.Message;
+                    break;
+                case BadRequestException:
+                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
+
+                    response.Message = exception.Message;
+                    break;
                 default:
 
                     context.Response.StatusCode =StatusCodes.Status500InternalServerError;

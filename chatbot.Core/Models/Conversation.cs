@@ -16,8 +16,8 @@ namespace chatbot.Core.Models
         public string? Title { get; set; }
         [MaxLength(500)]
         public string? Description { get; set; }
-        [MaxLength(1000)]
-        public string? GroupPictureUrl { get; set; }
+        
+        //public string? GroupPictureUrl { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         //Created by user
@@ -30,6 +30,10 @@ namespace chatbot.Core.Models
         public DateTime? DeletedAt { get; set; }
 
         public Guid? DeletedById { get; set; }
+        //image group
+        public Guid? ImageId { get; set; }
+
+        public StoredFile? Image { get; set; }
 
         // Navigation Properties
         public ICollection<ConversationMember> Members { get; set; } = new List<ConversationMember>();

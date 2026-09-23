@@ -12,31 +12,37 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IStorageService
     {
-        public  Task<UploadResultDto> UploadAsync(IFormFile file,string folder,Guid uploadedBy,Guid messageId,
-      CancellationToken cancellationToken = default);
+        Task<StoredFile?> GetByIdAsync(Guid fileId,
+             CancellationToken cancellationToken = default);
 
-        Task<List<UploadResultDto>> UploadManyAsync(
-            IEnumerable<IFormFile> files,
-            Guid messageId,
-            string folder,
-            Guid uploadedBy,
+        Task<UploadResultDto> UploadUserProfileImageAsync(IFormFile file, Guid userId,
             CancellationToken cancellationToken = default);
 
-        Task<DownloadFileDto?> DownloadAsync(
-            Guid fileId,
+        Task<UploadResultDto> UploadConversationImageAsync(IFormFile file, Guid conversationId, Guid uploadedBy,
             CancellationToken cancellationToken = default);
 
-        Task SoftDeleteAsync(Guid fileId,CancellationToken cancellationToken=default);
+        Task<UploadResultDto> UploadMessageFileAsync(IFormFile file, Guid messageId, Guid uploadedBy,
+            CancellationToken cancellationToken = default);
 
-        Task<StoredFile?> GetByIdAsync(Guid fileId,CancellationToken cancellationToken=default);
+        Task<List<UploadResultDto>> UploadMessageFilesAsync(IEnumerable<IFormFile> files, Guid messageId, Guid uploadedBy,
+            CancellationToken cancellationToken = default);
 
-        Task<string?> GetFileUrlAsync(Guid fileId,CancellationToken cancellationToken=default);
-        Task UploadAsync(IFormFile image, string v, Guid userId);
+        Task<UploadResultDto> ReplaceUserProfileImageAsync(IFormFile newFile, Guid userId, Guid? oldFileId,
+            CancellationToken cancellationToken = default);
 
-        Task<UploadFileDto> UploadAsync( IFormFile file,string folder);
+        Task<UploadResultDto> ReplaceConversationImageAsync(IFormFile newFile, Guid conversationId, Guid uploadedBy, Guid? oldFileId,
+            CancellationToken cancellationToken = default);
 
-        Task<bool> DeleteAsync(string fileUrl);
+        Task<DownloadFileDto?> DownloadAsync(Guid fileId,
+            CancellationToken cancellationToken = default);
 
-        Task<string?> ReplaceAsync(IFormFile newFile,string? oldFileUrl,string folder);
+        Task<string?> GetFileUrlAsync(Guid fileId,
+            CancellationToken cancellationToken = default);
+
+        Task SoftDeleteAsync(Guid fileId,
+            CancellationToken cancellationToken = default);
+
+        Task<bool> DeletePhysicallyAsync(Guid fileId,
+            CancellationToken cancellationToken = default);
     }
 }

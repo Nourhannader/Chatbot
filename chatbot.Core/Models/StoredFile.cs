@@ -10,7 +10,7 @@ namespace chatbot.Core.Models
     public class StoredFile: BaseEntity
     {
 
-        public Guid MessageId { get; set; }
+        public Guid? MessageId { get; set; }
 
         public Message Message { get; set; }
             = null!;
@@ -32,7 +32,7 @@ namespace chatbot.Core.Models
 
 
         public long Size { get; set; }
-
+        public FileCategory Category { get; set; }
 
         public StorageProviderType Provider { get; set; }
 
@@ -58,7 +58,8 @@ namespace chatbot.Core.Models
         public DateTime CreatedAt { get; set; }
             = DateTime.UtcNow;
 
-        public Guid UploadedByUser { get; set; }
+        public Guid? UploadedByUserId { get; set; }
+        public ApplicationUser UploadedByUser { get; set; }
         public string? Hash { get; set; }
         public string? CDNUrl { get; set; }
 

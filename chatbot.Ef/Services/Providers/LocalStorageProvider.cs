@@ -13,14 +13,24 @@ namespace chatbot.Ef.Services.Providers
     {
         public StorageProviderType ProviderType => StorageProviderType.Local;
 
+        private string GetRootPath()
+        {
+            if (!string.IsNullOrWhiteSpace(environment.WebRootPath))
+            {
+                return environment.WebRootPath;
+            }
+            return Path.Combine(environment.ContentRootPath, "wwwroot");
+        }
+        private string GetFullPath(string path)
+        {
+            var root = GetRootPath();
+            return Path.Combine(root,"uploads", path);
+        }
+
         public Task DeleteAsync(string path, CancellationToken cancellationToken = default)
         {
-            var rootPath = environment.WebRootPath;
-            if (string.IsNullOrEmpty(rootPath))
-            {
-                rootPath = Path.Combine(environment.ContentRootPath, "wwwroot");
-            }
-            var fullPath = Path.Combine(rootPath, "uploads", path);
+            cancellationToken.ThrowIfCancellationRequested();
+            var fullPath = GetFullPath(path);
             if (File.Exists(fullPath))
             {
                 File.Delete(fullPath);
@@ -30,12 +40,8 @@ namespace chatbot.Ef.Services.Providers
 
         public Task<Stream?> DownloadAsync(string path, CancellationToken cancellationToken = default)
         {
-            var rootPath = environment.WebRootPath;
-            if (string.IsNullOrEmpty(rootPath))
-            {
-                rootPath = Path.Combine(environment.ContentRootPath, "wwwroot");
-            }
-            var fullPath = Path.Combine(rootPath, "uploads", path);
+            cancellationToken.ThrowIfCancellationRequested();
+            var fullPath = GetFullPath(path);
             if (!File.Exists(fullPath))
             {
                 return Task.FromResult<Stream?>(null);
@@ -46,12 +52,8 @@ namespace chatbot.Ef.Services.Providers
 
         public Task<bool> ExistsAsync(string path, CancellationToken cancellationToken = default)
         {
-            var rootPath = environment.WebRootPath;
-            if (string.IsNullOrEmpty(rootPath))
-            {
-                rootPath = Path.Combine(environment.ContentRootPath, "wwwroot");
-            }
-            var fullPath = Path.Combine(rootPath, "uploads", path);
+            cancellationToken.ThrowIfCancellationRequested();
+            var fullPath = GetFullPath(path);
             return Task.FromResult(File.Exists(fullPath));
         }
 
@@ -62,12 +64,8 @@ namespace chatbot.Ef.Services.Providers
 
         public async Task UploadAsync(Stream stream, string path, string contentType, CancellationToken cancellationToken = default)
         {
-            var rootPath = environment.WebRootPath;
-            if (string.IsNullOrEmpty(rootPath))
-            {
-                rootPath=Path.Combine(environment.ContentRootPath, "wwwroot");
-            }
-            var FullPath=Path.Combine(rootPath, "uploads", path);
+            cancellationToken.ThrowIfCancellationRequested();
+            var FullPath=GetFullPath(path);
             var directory = Path.GetDirectoryName(FullPath);
             if (!Directory.Exists(directory))
             {

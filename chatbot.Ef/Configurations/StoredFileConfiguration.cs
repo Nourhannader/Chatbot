@@ -31,19 +31,24 @@ namespace chatbot.Ef.Configurations
                 .HasDefaultValue(false);
             builder.Property(x => x.CreatedAt)
                 .HasDefaultValueSql("GETDATE()");
+            // UploadedByUser
             builder.HasOne(x => x.UploadedByUser)
-                .WithMany(x => x.UploadedFiles)
+                .WithMany()
                 .HasForeignKey(x => x.UploadedByUserId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Message
             builder.HasOne(x => x.Message)
-                .WithMany(x=> x.StoredFiles)
+                .WithMany(x => x.Files)
                 .HasForeignKey(x => x.MessageId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
 
             //indexes
             builder.HasIndex(x => x.MessageId);
 
             builder.HasIndex(x => x.UploadedByUserId);
+
+            builder.HasIndex(x => x.Category);
         }
     }
 }

@@ -40,6 +40,11 @@ namespace chatbot.Ef.Configurations
                 .WithOne(rt => rt.User)
                 .HasForeignKey(rt => rt.UserId);
 
+            builder.HasOne(x => x.ProfileImage)
+              .WithMany()
+              .HasForeignKey(x => x.ProfileImageId)
+              .OnDelete(DeleteBehavior.SetNull);
+
         }
     }
 }

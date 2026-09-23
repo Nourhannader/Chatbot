@@ -42,8 +42,14 @@ namespace chatbot.Api.Controllers
             setRefreshTokenInCookie(result.RefreshToken, result.RefreshTokenExpiresAt);
             return StatusCode(
                  StatusCodes.Status201Created,
-                 ApiResponse<AuthResponseDto>.Ok(
-                  result,
+                 ApiResponse<object>.Ok(
+                     new
+                     {
+                         result.AccessToken,
+                         result.AccessTokenExpiresAt,
+                         result.DeviceSessionId
+
+                     },
                  "Registration successful."));
         }
 
@@ -67,22 +73,39 @@ namespace chatbot.Api.Controllers
             if(!string.IsNullOrEmpty(result.RefreshToken))
                 setRefreshTokenInCookie(result.RefreshToken, result.RefreshTokenExpiresAt);
             return Ok(
-           ApiResponse<AuthResponseDto>.Ok(
-                   result,
+           ApiResponse<object>.Ok(
+                     new
+                     {
+                         result.AccessToken,
+                         result.AccessTokenExpiresAt,
+                         result.DeviceSessionId
+
+                     },
                    "Login successful."));
         }
 
         [HttpPost("refresh")]
         [AllowAnonymous]
-        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenDto dto)
+        public async Task<IActionResult> RefreshToken()
         {
-            var result = await _authService.RefreshAsync(dto.Token,GetIpAddress());
+            var refreshToken = Request.Cookies["refreshToken"];
+
+            if (string.IsNullOrWhiteSpace(refreshToken))
+            {
+                throw new UnauthorizedException("Refresh token cookie not found.");
+            }
+            var result = await _authService.RefreshAsync(refreshToken,GetIpAddress());
             
             setRefreshTokenInCookie(result.RefreshToken, result.RefreshTokenExpiresAt);
             return Ok(
-            ApiResponse<AuthResponseDto>.Ok(
-                    result,
-                    "Token refreshed successfully."));
+            ApiResponse<object>.Ok(
+                new
+                {
+                    result.AccessToken,
+                    result.AccessTokenExpiresAt,
+                    result.DeviceSessionId
+                },
+                "Token refreshed successfully."));
         }
         [HttpPost("Logout")]
         [AllowAnonymous]
@@ -112,7 +135,7 @@ namespace chatbot.Api.Controllers
             return Ok(
             ApiResponse<object>.Ok(
                     null!,
-                    "Logged out from all devices."));
+                    "Logged out from all devices successfully."));
         }
 
         //Me
@@ -144,11 +167,11 @@ namespace chatbot.Api.Controllers
             var cookieOptions = new CookieOptions
             {
                 HttpOnly = true,
-                Expires = expireOn.ToLocalTime(),
+                Expires = expireOn,
                 IsEssential = true,
                 SameSite = SameSiteMode.None,
-                Secure = true
-
+                Secure = true,
+                Path="api/auth"
             };
             Response.Cookies.Append("refreshToken", refreshToken, cookieOptions);
         }

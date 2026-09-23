@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.DTOs;
 using chatbot.Core.DTOs.Auth;
 using chatbot.Core.Exceptions;
 using chatbot.Core.Interfaces.Services;
@@ -15,7 +16,7 @@ namespace chatbot.Ef.Services
     {
         //mapping
         private static UserProfileDto MapToDto(
-       ApplicationUser user)
+       ApplicationUser user,string fileUrl)
         {
             return new UserProfileDto
             {
@@ -40,7 +41,7 @@ namespace chatbot.Ef.Services
                     user.Bio,
 
                 ProfileImageUrl =
-                    user.ProfileImageUrl,
+                    fileUrl,
 
                 IsOnline =
                     user.IsOnline,
@@ -51,17 +52,20 @@ namespace chatbot.Ef.Services
         }
         public async Task<UserProfileDto> GetProfileAsync(Guid userId)
         {
-            var user =
-            await unitOfWork.Auth.GetByIdAsync(userId);
+            var user = await unitOfWork.Auth.GetByIdAsync(userId);
 
             if (user == null)
             {
-                throw new NotFoundException(
-                    "User not found.");
+                throw new NotFoundException("User not found.");
+            }
+            string fileUrl = string.Empty;
+
+            if (user.ProfileImageId.HasValue)
+            {
+                fileUrl = await storageService.GetFileUrlAsync(user.ProfileImageId.Value) ?? string.Empty;
             }
 
-
-            return MapToDto(user);
+            return MapToDto(user, fileUrl);
         }
 
         public async Task<UserProfileDto> UpdateProfileAsync(Guid userId, UpdateUserDto dto)
@@ -109,20 +113,21 @@ namespace chatbot.Ef.Services
             {
                 user.Bio = dto.Bio.Trim();
             }
-
+            var newImage = new UploadResultDto();
             //update image
             if (dto.ImageFile != null)
             {
-                var newImageUrl =
-                    await storageService.ReplaceAsync(dto.ImageFile,user.ProfileImageUrl,"images/users");
+                var oldImageId = user.ProfileImageId;
+                newImage =
+                    await storageService.ReplaceUserProfileImageAsync(dto.ImageFile,userId,oldImageId);
 
-                user.ProfileImageUrl = newImageUrl;
+                user.ProfileImageId = newImage.FileId;
             }
-
+            var fileUrl = newImage.FileUrl;
             await unitOfWork.Auth.updateState(user);
 
             await unitOfWork.SaveChangesAsync();
-            return MapToDto(user);
+            return MapToDto(user,fileUrl);
         }
     }
 }

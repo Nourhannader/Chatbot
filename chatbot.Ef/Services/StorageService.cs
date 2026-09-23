@@ -17,19 +17,15 @@ using chatbot.Core.Exceptions;
 namespace chatbot.Ef.Services
 {
     public class StorageService(IWebHostEnvironment environment,IUnitOfWork unitOfWork,
-        IFileValidationService validators,IFileProcessorService processor,
-        IEnumerable<IStorageProvider> providers) : IStorageService
+        IFileValidationService validators,IEnumerable<IStorageProvider> providers) : IStorageService
     {
         private static string GeneratePath(string folder,string fileName)
         {
-            var extension =
-                Path.GetExtension(fileName)
-                    .ToLowerInvariant();
+            var extension =Path.GetExtension(fileName).ToLowerInvariant();
 
             var now = DateTime.UtcNow;
 
-            var uniqueFileName =
-                $"{Guid.NewGuid()}{extension}";
+            var uniqueFileName =$"{Guid.NewGuid()}{extension}";
 
             return Path.Combine(
                 folder,
@@ -45,122 +41,184 @@ namespace chatbot.Ef.Services
                 x.ProviderType == providerType)??
                 throw new InvalidOperationException($"Storage provider '{providerType}' is not registered.");
         }
+        private static string GetFolder(FileCategory category,Guid ownerId)
+        {
+            return category switch
+            {
+                FileCategory.UserProfileImage =>
+                    $"images/users/{ownerId}",
 
+                FileCategory.ConversationImage =>
+                    $"images/conversations/{ownerId}",
+
+                FileCategory.MessageFile =>
+                    $"messages/{ownerId}",
+
+                _ => throw new ArgumentOutOfRangeException(
+                    nameof(category))
+            };
+        }
+
+        private async Task<UploadResultDto> UploadInternalAsync(IFormFile file, FileCategory category,
+            Guid ownerId, Guid? uploadedBy, Guid? messageId, CancellationToken cancellationToken)
+        {
+            // Validation
+            if (category == FileCategory.UserProfileImage ||
+                category == FileCategory.ConversationImage)
+            {
+                await validators.ValidateImageAsync(file);
+            }
+            else
+            {
+                await validators.ValidateFileAsync(file);
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            var provider = GetProvider(StorageProviderType.Local);
+            var folder = GetFolder(category, ownerId);
+            var relativePath = GeneratePath(folder, file.FileName);
+
+
+            try
+            {
+                // Physical upload
+                await using var stream = file.OpenReadStream();
+
+                await provider.UploadAsync(stream, relativePath, file.ContentType, cancellationToken);
+
+                // DB entity
+                var storedFile =
+                    new StoredFile
+                    {
+                        Id = Guid.NewGuid(),
+
+                        OriginalName = Path.GetFileName(file.FileName),
+
+                        StoredName = Path.GetFileName(relativePath),
+
+                        Path = relativePath,
+
+                        ContentType = file.ContentType,
+
+                        Size = file.Length,
+
+                        Category = category,
+
+                        Provider = provider.ProviderType,
+
+                        UploadedByUserId = uploadedBy,
+
+                        MessageId = messageId,
+
+                        IsDeleted = false,
+
+                        IsPhysicallyDeleted = false,
+
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                await unitOfWork.StoredFiles.AddAsync(storedFile);
+
+                await unitOfWork.SaveChangesAsync();
+
+                return new UploadResultDto
+                {
+                    Success = true,
+
+                    FileId = storedFile.Id,
+
+                    FileName = storedFile.OriginalName,
+
+                    FileUrl = provider.GetFileUrl(storedFile.Path),
+
+                    ContentType = storedFile.ContentType,
+
+                    Size = storedFile.Size
+                };
+            }
+            catch
+            {
+                // If DB failed after physical upload,
+                // try deleting the physical file.
+                try
+                {
+                    await provider.DeleteAsync(relativePath, CancellationToken.None);
+                }
+                catch
+                {
+                    // Don't hide original exception.
+                }
+
+                throw;
+            }
+        }
         public async Task<StoredFile?> GetByIdAsync(Guid fileId, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return await unitOfWork.StoredFiles.GetByIdAsync(fileId);
-        }
-        public async Task SoftDeleteAsync(Guid fileId,CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var storedFile = await unitOfWork.StoredFiles.GetByIdAsync(fileId);
 
-            if (storedFile == null)
+            return await unitOfWork.StoredFiles
+                .GetByIdAsync(fileId);
+        }
+        // ============================
+        // USER PROFILE IMAGE
+        // ============================
+
+        public async Task<UploadResultDto> UploadUserProfileImageAsync(IFormFile file, Guid userId,
+                CancellationToken cancellationToken = default)
+        {
+            return await UploadInternalAsync(file, FileCategory.UserProfileImage, userId, userId, null, cancellationToken);
+        }
+
+        public async Task<UploadResultDto> ReplaceUserProfileImageAsync(IFormFile newFile, Guid userId, Guid? oldFileId,
+                CancellationToken cancellationToken = default)
+        {
+            // Upload new file first
+            var result =
+                await UploadUserProfileImageAsync(newFile, userId, cancellationToken);
+
+            // Delete old file after successful upload
+            if (oldFileId.HasValue)
             {
-                throw new KeyNotFoundException(
-                    "File not found.");
+                await DeletePhysicallyAsync(oldFileId.Value, cancellationToken);
             }
-            if (storedFile.IsDeleted)
-                return;
 
-            storedFile.IsDeleted = true;
-            storedFile.DeletedAt = DateTime.UtcNow;
-            unitOfWork.StoredFiles.UpdateAsync(storedFile);
+            return result;
         }
 
-        public async Task<DownloadFileDto?> DownloadAsync(Guid fileId,CancellationToken cancellationToken=default)
+        // ============================
+        // CONVERSATION IMAGE
+        // ============================
+
+        public async Task<UploadResultDto> UploadConversationImageAsync(IFormFile file, Guid conversationId, Guid uploadedBy,
+                CancellationToken cancellationToken = default)
         {
-            var storedFile=await unitOfWork.StoredFiles.GetByIdAsync(fileId);
-            if (storedFile == null || storedFile.IsDeleted || storedFile.IsPhysicallyDeleted)
-                return null;
-
-            cancellationToken.ThrowIfCancellationRequested();
-            var provider = GetProvider(storedFile.StorageProvider);
-
-            var stream = await provider.DownloadAsync(storedFile.Path,cancellationToken);
-            if (stream == null)
-                return null;
-            return new DownloadFileDto
-            {
-                stream = stream,
-                FileName = storedFile.OriginalName,
-                ContentType = string.IsNullOrWhiteSpace(
-                    storedFile.ContentType)
-                ? "application/octet-stream"
-                : storedFile.ContentType
-            };
-
+            return await UploadInternalAsync(file, FileCategory.ConversationImage, conversationId, uploadedBy, null, cancellationToken);
         }
 
-        public async Task<UploadResultDto> UploadAsync(
-       IFormFile file,
-       string folder,
-       Guid uploadedBy,
-       Guid messageId,
-       CancellationToken cancellationToken = default)
+        public async Task<UploadResultDto> ReplaceConversationImageAsync(IFormFile newFile, Guid conversationId, Guid uploadedBy, Guid? oldFileId,
+                CancellationToken cancellationToken = default)
         {
-            //validation
-            await validators.ValidateFile(file);
-            cancellationToken.ThrowIfCancellationRequested();
-            //select provider
-            var provider=GetProvider(StorageProviderType.Local);
-            //generate unique path
-            var relativePath = GeneratePath(folder, file.FileName);
+            var result = await UploadConversationImageAsync(newFile, conversationId, uploadedBy, cancellationToken);
 
-            //upload physical file
-            await using var stream=file.OpenReadStream();
-
-            var storedFile = new StoredFile
+            if (oldFileId.HasValue)
             {
-                Id = Guid.NewGuid(),
+                await DeletePhysicallyAsync(oldFileId.Value, cancellationToken);
+            }
 
-                OriginalName = Path.GetFileName(
-                file.FileName),
-
-                StoredName = Path.GetFileName(
-                relativePath),
-
-                Path = relativePath,
-
-                ContentType = file.ContentType,
-
-                Size = file.Length,
-
-                MessageId = messageId,
-
-                UploadedByUserId =uploadedBy,
-
-                StorageProvider = provider.ProviderType,
-
-                IsDeleted = false,
-
-                CreatedAt = DateTime.UtcNow
-            };
-
-            await unitOfWork.StoredFiles.AddAsync(storedFile);
-
-            return new UploadResultDto
-            {
-                Success = true,
-
-                FileId = storedFile.Id,
-
-                FileUrl = provider.GetFileUrl(
-                 storedFile.Path),
-
-                ContentType = storedFile.ContentType,
-
-                Size = storedFile.Size
-            };
+            return result;
         }
 
-        public async Task<List<UploadResultDto>> UploadManyAsync(
-        IEnumerable<IFormFile> files,
-        Guid messageId,
-        string folder,
-        Guid uploadedBy,
-        CancellationToken cancellationToken = default)
+        // ============================
+        // MESSAGE FILE
+        // ============================
+
+        public async Task<UploadResultDto> UploadMessageFileAsync(IFormFile file, Guid messageId, Guid uploadedBy,
+                CancellationToken cancellationToken = default)
+        {
+            return await UploadInternalAsync(file, FileCategory.MessageFile, messageId, uploadedBy, messageId, cancellationToken);
+        }
+
+        public async Task<List<UploadResultDto>> UploadMessageFilesAsync(IEnumerable<IFormFile> files, Guid messageId, Guid uploadedBy,
+                CancellationToken cancellationToken = default)
         {
             var results = new List<UploadResultDto>();
 
@@ -168,12 +226,8 @@ namespace chatbot.Ef.Services
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var result = await UploadAsync(
-                    file,
-                    folder,
-                    uploadedBy,
-                    messageId,
-                    cancellationToken);
+                var result =
+                    await UploadMessageFileAsync(file, messageId, uploadedBy, cancellationToken);
 
                 results.Add(result);
             }
@@ -181,98 +235,113 @@ namespace chatbot.Ef.Services
             return results;
         }
 
-        public async Task<string?> GetFileUrlAsync(Guid fileId,CancellationToken cancellationToken=default)
+        // ============================
+        // DOWNLOAD
+        // ============================
+
+        public async Task<DownloadFileDto?> DownloadAsync(Guid fileId, CancellationToken cancellationToken = default)
         {
-            cancellationToken.ThrowIfCancellationRequested();
             var storedFile = await unitOfWork.StoredFiles.GetByIdAsync(fileId);
-            if (storedFile == null || storedFile.IsDeleted || storedFile.IsPhysicallyDeleted)
+
+            if (storedFile == null ||
+                storedFile.IsDeleted ||
+                storedFile.IsPhysicallyDeleted)
+            {
+                return null;
+            }
+
+            var provider = GetProvider(storedFile.Provider);
+
+            var stream = await provider.DownloadAsync(storedFile.Path, cancellationToken);
+
+            if (stream == null)
                 return null;
 
-            var provider = GetProvider(storedFile.StorageProvider);
-            return provider.GetFileUrl(storedFile.Path);
-        }
-
-
-        //new
-
-        public async Task<UploadFileDto> UploadAsync(IFormFile file, string folder)
-        {
-            //validation
-            await validators.ValidateFile(file);
-            //select provider
-            var provider = GetProvider(StorageProviderType.Local);
-            //generate unique path
-            var relativePath = GeneratePath(folder, file.FileName);
-
-            return new UploadFileDto
+            return new DownloadFileDto
             {
-                Success = true,
+                stream = stream,
 
-                FileName = file.FileName,
+                FileName = storedFile.OriginalName,
 
-                FileUrl = provider.GetFileUrl(relativePath),
-
-                FileSize = file.Length,
-
-                ContentType = file.ContentType
+                ContentType =
+                    string.IsNullOrWhiteSpace(
+                        storedFile.ContentType)
+                    ? "application/octet-stream"
+                    : storedFile.ContentType
             };
         }
 
-        public Task<bool> DeleteAsync(string fileUrl)
+        // ============================
+        // URL
+        // ============================
+
+        public async Task<string?> GetFileUrlAsync(Guid fileId, CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrWhiteSpace(fileUrl))
-            {
-                return Task.FromResult(false);
-            }
+            var storedFile = await unitOfWork.StoredFiles.GetByIdAsync(fileId);
 
-
-            var relativePath =
-                fileUrl.TrimStart('/')
-                    .Replace(
-                        '/',
-                        Path.DirectorySeparatorChar);
-
-
-            var filePath =
-                Path.Combine(
-                    environment.WebRootPath,
-                    relativePath);
-
-
-            if (!File.Exists(filePath))
-            {
-                return Task.FromResult(false);
-            }
-
-
-            File.Delete(filePath);
-
-            return Task.FromResult(true);
-        }
-
-        public async Task<string?> ReplaceAsync(IFormFile newFile, string? oldFileUrl, string folder)
-        {
-            // Upload new image first
-            var result =
-                await UploadAsync(
-                    newFile,
-                    folder);
-
-
-            if (!result.Success)
+            if (storedFile == null ||
+                storedFile.IsDeleted ||
+                storedFile.IsPhysicallyDeleted)
             {
                 return null;
             }
 
+            var provider = GetProvider(storedFile.Provider);
 
-            // Delete old image
-            if (!string.IsNullOrWhiteSpace(oldFileUrl))
-            {
-                await DeleteAsync(oldFileUrl);
-            }
+            return provider.GetFileUrl(storedFile.Path);
+        }
+        // ============================
+        // SOFT DELETE
+        // ============================
 
+        public async Task SoftDeleteAsync(Guid fileId, CancellationToken cancellationToken = default)
+        {
+            var storedFile = await unitOfWork.StoredFiles.GetByIdAsync(fileId);
 
-            return result.FileUrl;
+            if (storedFile == null)
+                throw new KeyNotFoundException("File not found.");
+
+            if (storedFile.IsDeleted)
+                return;
+
+            storedFile.IsDeleted = true;
+
+            storedFile.DeletedAt = DateTime.UtcNow;
+
+           await unitOfWork.StoredFiles.UpdateAsync(storedFile);
+
+            await unitOfWork.SaveChangesAsync();
+        }
+
+        // ============================
+        // PHYSICAL DELETE
+        // ============================
+
+        public async Task<bool> DeletePhysicallyAsync(Guid fileId, CancellationToken cancellationToken = default)
+        {
+            var storedFile = await unitOfWork.StoredFiles.GetByIdAsync(fileId);
+
+            if (storedFile == null)
+                return false;
+
+            if (storedFile.IsPhysicallyDeleted)
+                return true;
+
+            var provider = GetProvider(storedFile.Provider);
+
+            await provider.DeleteAsync(storedFile.Path, cancellationToken);
+
+            storedFile.IsDeleted = true;
+
+            storedFile.IsPhysicallyDeleted = true;
+
+            storedFile.DeletedAt = DateTime.UtcNow;
+
+            await unitOfWork.StoredFiles.UpdateAsync(storedFile);
+
+            await unitOfWork.SaveChangesAsync();
+
+            return true;
         }
 
     }
