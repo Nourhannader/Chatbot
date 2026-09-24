@@ -3,15 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace chatbot.Core.Enums
 {
-    public enum GroupRole
+    public enum SystemRole
     {
-        Owner,
-        Admin,
-       Member
-
+        User = 1,
+        Admin = 2,
+        SuperAdmin = 3
     }
 }

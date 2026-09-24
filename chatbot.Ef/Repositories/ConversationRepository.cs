@@ -61,14 +61,7 @@ namespace chatbot.Ef.Repositories
                  .AsNoTracking()
                  .ToListAsync();
         }
-        public async Task<bool> IsMemberAsync(Guid conversationId,Guid userId,CancellationToken cancellationToken = default)
-        {
-            return await context.ConversationMembers
-                .AnyAsync(x =>
-                    x.ConversationId == conversationId &&
-                    x.UserId == userId,
-                    cancellationToken);
-        }
+        
 
         public void Update(Conversation entity)
         {

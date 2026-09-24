@@ -52,6 +52,8 @@ namespace chatbot.Api
 
             //add jwtAuthentication
             builder.Services.AddJWTConfiguration(builder.Configuration);
+
+            builder.Services.AddApplicationPolices();
             //firebase
             builder.Services.AddFirebase();
 

@@ -17,7 +17,7 @@ namespace chatbot.Core.Models
         public Guid UserId { get; set; } 
         public ApplicationUser User { get; set; } = null!;
 
-        public GroupRole Role { get; set; }
+        public ConversationRole Role { get; set; }
         public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
         public DateTime? LeftAt { get; set; }
 
@@ -26,6 +26,8 @@ namespace chatbot.Core.Models
 
         // Mute Feature
         public DateTime? MutedUntil { get; set; }
+
+        public bool IsBanned { get; set; }
 
         // Pinning Feature
         public bool IsPinned { get; set; } = false;

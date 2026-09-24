@@ -1,6 +1,8 @@
 ﻿using chatbot.Api.Hubs;
 using chatbot.Api.Middlewares;
 using chatbot.Api.Services;
+using chatbot.Core.Authorization;
+using chatbot.Core.Authorization.Conversation;
 using chatbot.Core.Helper;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
@@ -9,6 +11,7 @@ using chatbot.Core.Interfaces.Validators;
 using chatbot.Core.Mapping;
 using chatbot.Core.Models;
 using chatbot.Core.Validators.Auth;
+using chatbot.Ef.Authorization;
 using chatbot.Ef.Data;
 using chatbot.Ef.Jobs;
 using chatbot.Ef.Repositories;
@@ -17,6 +20,7 @@ using chatbot.Ef.Services.Providers;
 using chatbot.Ef.UnitOfWork;
 using chatbot.Ef.ValidatorService;
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
@@ -51,6 +55,10 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IMessageService, MessageService>();
             Services.AddScoped<IMessageEncryptionService, MessageEncryptionService>();  
             Services.AddScoped<IConversationService, ConversationService>();
+            Services.AddScoped<IRolePermissionService,RolePermissionService>();
+            Services.AddScoped<IConversationAuthorizationService,ConversationAuthorizationService>();
+            Services.AddScoped<IAuthorizationHandler, SystemPermissionHandler>();
+            Services.AddScoped<IAuthorizationHandler,ConversationPermissionHandler>();
             Services.AddScoped<IGroupService, GroupService>();
             Services.AddScoped<IGroupInviteService, GroupInviteService>();
             Services.AddScoped<ISystemMessageService, SystemMessageService>();
@@ -90,34 +98,7 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<SessionCleanupJob>();
             Services.AddScoped<MessageCleanupJob>();
 
-            //Cros
-            Services.AddCors(options =>
-            {
-                options.AddPolicy("AllowAll", policy =>
-                {
-                    policy.SetIsOriginAllowed(origin => true)
-                          .AllowAnyMethod()
-                          .AllowAnyHeader()
-                          .AllowCredentials();
-                });
-            });
-
-            //policies
-            Services.AddAuthorization(
-                options =>
-                {
-                    options.AddPolicy("ChatUser",
-                    policy =>
-                    {
-                        policy.RequireAuthenticatedUser();
-                    });
-                    options.AddPolicy("AdminOnly",
-                    policy =>
-                    {
-                       policy.RequireRole("Admin");
-                   });
-
-                });
+            
             //rate limiting
             Services.AddRateLimiter( options =>
             {

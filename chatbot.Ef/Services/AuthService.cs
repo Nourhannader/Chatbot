@@ -172,8 +172,7 @@ namespace chatbot.Ef.Services
                     await unitOfWork.Auth.updateState(user); 
                 } 
                 // 6. Add default role
-                var roleResult = await unitOfWork.Auth.AddToRoleAsync( user, "User");
-                await unitOfWork.Auth.AddToRoleAsync(user, "User");
+                var roleResult = await unitOfWork.Auth.AddToRoleAsync( user, SystemRole.User);
                 
                 if (!roleResult.Succeeded)
                 {
