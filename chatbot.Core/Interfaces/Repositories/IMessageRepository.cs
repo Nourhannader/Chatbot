@@ -15,6 +15,7 @@ namespace chatbot.Core.Interfaces.Repositories
         int page,
         int pageSize);
         Task<List<Message>> SearchMessagesAsync(Guid conversationId, string keyword);
+        Task<Message?> GetMessageByConversationIdAsync(Guid messageId, Guid conversationId);
         void Remove(Message message);
         Task<Message?> GetWithFilesAsync(Guid id);
         Task<bool> IsDeletedForUserAsync(Guid messageId,Guid userId);

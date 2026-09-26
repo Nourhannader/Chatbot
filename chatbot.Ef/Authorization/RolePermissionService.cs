@@ -32,6 +32,8 @@ namespace chatbot.Ef.Authorization
                 || permission == ConversationPermissions.Reply
                 || permission == ConversationPermissions.React
                 || permission == ConversationPermissions.UploadFile;
+              
+
         }
 
         private static bool IsAdminPermission(string permission)
@@ -41,7 +43,12 @@ namespace chatbot.Ef.Authorization
                 || permission == ConversationPermissions.DeleteMessage
                 || permission == ConversationPermissions.AddMember
                 || permission == ConversationPermissions.RemoveMember
-                || permission == ConversationPermissions.ManageGroup;
+                || permission == ConversationPermissions.ManageGroup
+                || permission == ConversationPermissions.BanMember
+                || permission == ConversationPermissions.UnbanMember
+                || permission == ConversationPermissions.MuteMember
+                || permission == ConversationPermissions.UnmuteMember
+                ;
         }
 
         private static bool IsOwnerPermission(string permission)
@@ -57,6 +64,14 @@ namespace chatbot.Ef.Authorization
         {
             var member = await unitOfWork.ConversationMember.GetAsync(conversationId, userId);
             if (member == null)
+            {
+                return false;
+            }
+            if (member.IsBanned)
+                return false;
+
+            if (member.IsMuted &&
+                permission ==ConversationPermissions.SendMessage)
             {
                 return false;
             }

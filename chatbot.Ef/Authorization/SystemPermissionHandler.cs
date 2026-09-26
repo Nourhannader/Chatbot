@@ -16,15 +16,20 @@ namespace chatbot.Ef.Authorization
         protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, SystemPermissionRequirement requirement)
         {
             {
-                if (context.User.Identity?.IsAuthenticated != true)
+                if (!context.User.Identity?.IsAuthenticated ?? true)
                     return;
 
-                var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var userIdClaim = context.User.FindFirst(ClaimTypes.NameIdentifier);
 
-                if (!Guid.TryParse(userId, out var id))
+                if (userIdClaim == null)
                     return;
 
-                var user = await userManager.FindByIdAsync(id.ToString());
+                if (!Guid.TryParse(userIdClaim.Value, out var userId))
+                {
+                    return;
+                }
+
+                var user = await userManager.FindByIdAsync(userId.ToString());
 
                 if (user == null)
                     return;
@@ -33,11 +38,12 @@ namespace chatbot.Ef.Authorization
 
                 foreach (var role in roles)
                 {
-                    if (SystemRolePermissions.Permissions
-                        .TryGetValue(role, out var permissions)
-                        &&
-                        permissions.Contains(
-                            requirement.Permission))
+                    if (!SystemRolePermissions.Permissions.TryGetValue(role, out var permissions))
+                    {
+                        continue;
+                    }
+
+                    if (permissions.Contains(requirement.Permission))
                     {
                         context.Succeed(requirement);
                         return;

@@ -24,17 +24,19 @@ namespace chatbot.Core.Models
         // Real-Time Unread Count Tracking
         public DateTime? LastReadAt { get; set; }
 
-        // Mute Feature
-        public DateTime? MutedUntil { get; set; }
+        //// Mute Feature
+        //public DateTime? MutedUntil { get; set; }
 
         public bool IsBanned { get; set; }
 
-        // Pinning Feature
-        public bool IsPinned { get; set; } = false;
-        public DateTime? PinnedAt { get; set; }
-        //Archive Feature
-        public bool IsArchived { get; set; }
+        public bool IsMuted { get; set; }
 
-        public DateTime? ArchivedAt { get; set; }
+        //// Pinning Feature
+        //public bool IsPinned { get; set; } = false;
+        //public DateTime? PinnedAt { get; set; }
+        ////Archive Feature
+        //public bool IsArchived { get; set; }
+
+        //public DateTime? ArchivedAt { get; set; }
     }
 }

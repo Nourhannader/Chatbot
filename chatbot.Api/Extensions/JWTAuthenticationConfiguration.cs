@@ -1,6 +1,9 @@
 ﻿using System.Text;
 using chatbot.Core.Helper;
+using chatbot.Core.Models;
+using chatbot.Ef.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 
 namespace chatbot.Api.Extensions
@@ -9,6 +12,11 @@ namespace chatbot.Api.Extensions
     {
         public static IServiceCollection AddJWTConfiguration(this IServiceCollection Services, IConfiguration Configuration)
         {
+            //seeder
+            Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
+                .AddEntityFrameworkStores<ApplicationDbContext>()
+                .AddDefaultTokenProviders();
+
             Services.Configure<JwtSettings>(Configuration.GetSection("JWT"));
             Services.AddAuthentication(options =>
             {
@@ -47,6 +55,7 @@ namespace chatbot.Api.Extensions
                     }
                 };
             });
+            
 
             return Services;
         }

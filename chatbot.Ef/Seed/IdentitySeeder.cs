@@ -23,7 +23,15 @@ namespace chatbot.Ef.Seed
             {
                 if (!await roleManager.RoleExistsAsync(role))
                 {
-                    await roleManager.CreateAsync(new IdentityRole<Guid>(role));
+                    var result =
+                        await roleManager.CreateAsync(
+                            new IdentityRole<Guid>(role));
+
+                    if (!result.Succeeded)
+                    {
+                        throw new Exception(
+                            $"Failed to create role: {role}");
+                    }
                 }
             }
         }

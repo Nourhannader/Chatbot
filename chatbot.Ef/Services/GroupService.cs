@@ -314,5 +314,67 @@ namespace chatbot.Ef.Services
 
             await unitOfWork.SaveChangesAsync();
         }
+  
+        public async Task BanMemberAsync(ClaimsPrincipal user,Guid conversationId, Guid userId)
+        {
+            await authorizationService.AuthorizeAsync(user, conversationId, ConversationPermissions.BanMember);
+            var member = await unitOfWork.ConversationMember.GetAsync(conversationId, userId);
+            if (member == null)
+            {
+                throw new NotFoundException("Member not found.");
+            }
+
+            if (member.Role == ConversationRole.Owner)
+            {
+                throw new ForbiddenException("Owner cannot be banned.");
+            }
+
+            member.IsBanned = true;
+            await unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task UnBanMemberAsync(ClaimsPrincipal user,Guid conversationId, Guid userId)
+        {
+            await authorizationService.AuthorizeAsync(user, conversationId, ConversationPermissions.BanMember);
+            var member = await unitOfWork.ConversationMember.GetAsync(conversationId, userId);
+            if (member == null)
+            {
+                throw new NotFoundException("Member not found.");
+            }
+
+
+            member.IsBanned = false;
+            await unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task MuteMemberAsync(ClaimsPrincipal user,Guid conversationId,Guid userId)
+        {
+            await authorizationService.AuthorizeAsync(user, conversationId, ConversationPermissions.MuteMember);
+            var member = await unitOfWork.ConversationMember.GetAsync(conversationId, userId);
+            if (member == null)
+            {
+                throw new NotFoundException("Member not found.");
+            }
+            if (member.Role == ConversationRole.Owner)
+            {
+                throw new ForbiddenException("Owner cannot be muted.");
+            }
+
+            member.IsMuted = true;
+           await unitOfWork.SaveChangesAsync();
+        }
+        public async Task UnMuteMemberAsync(ClaimsPrincipal user, Guid conversationId, Guid userId)
+        {
+            await authorizationService.AuthorizeAsync(user, conversationId, ConversationPermissions.UnmuteMember);
+            var member = await unitOfWork.ConversationMember.GetAsync(conversationId, userId);
+            if (member == null)
+            {
+                throw new NotFoundException("Member not found.");
+            }
+            
+
+            member.IsMuted = false;
+            await unitOfWork.SaveChangesAsync();
+        }
     }
 }

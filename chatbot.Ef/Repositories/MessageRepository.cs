@@ -43,6 +43,15 @@ namespace chatbot.Ef.Repositories
                 ;
         }
 
+        public async Task<Message?> GetMessageByConversationIdAsync(Guid messageId,Guid conversationId)
+        {
+            return await context.Messages
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x =>
+                        x.Id == messageId &&
+                        x.ConversationId == conversationId);
+        } 
+
         public async Task<PagedResultDto<Message>> GetConversationMessagesAsync(Guid conversationId, int page, int pageSize)
         {
             var items = await context.Messages

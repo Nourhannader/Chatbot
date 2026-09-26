@@ -77,31 +77,85 @@ namespace chatbot.Api.Extensions
                 });
 
             //systempolicy
-            Services.AddAuthorization(options =>
+           Services.AddAuthorization(options =>
             {
                 options.AddPolicy(
-                    "Users.View",
+                    "UsersView",
                     policy =>
                     {
                         policy.RequireAuthenticatedUser();
 
-                        policy.AddRequirements(
+                        policy.Requirements.Add(
                             new SystemPermissionRequirement(
                                 SystemPermissions.UsersView));
                     });
 
                 options.AddPolicy(
-                    "Users.Manage",
+                    "UsersManage",
                     policy =>
                     {
                         policy.RequireAuthenticatedUser();
 
-                        policy.AddRequirements(
+                        policy.Requirements.Add(
                             new SystemPermissionRequirement(
                                 SystemPermissions.UsersManage));
                     });
-            });
 
+                options.AddPolicy(
+                    "UsersBlock",
+                    policy =>
+                    {
+                        policy.RequireAuthenticatedUser();
+
+                        policy.Requirements.Add(
+                            new SystemPermissionRequirement(
+                                SystemPermissions.UsersBlock));
+                    });
+
+                options.AddPolicy(
+                    "ReportsView",
+                    policy =>
+                    {
+                        policy.RequireAuthenticatedUser();
+
+                        policy.Requirements.Add(
+                            new SystemPermissionRequirement(
+                                SystemPermissions.ReportsView));
+                    });
+
+                options.AddPolicy(
+                    "ReportsManage",
+                    policy =>
+                    {
+                        policy.RequireAuthenticatedUser();
+
+                        policy.Requirements.Add(
+                            new SystemPermissionRequirement(
+                                SystemPermissions.ReportsManage));
+                    });
+
+                options.AddPolicy(
+                    "RolesManage",
+                    policy =>
+                    {
+                        policy.RequireAuthenticatedUser();
+
+                        policy.Requirements.Add(
+                            new SystemPermissionRequirement(
+                                SystemPermissions.RolesManage));
+                    });
+
+                options.AddPolicy(
+                    "SettingsManage",
+                    policy =>
+                    {
+                        policy.RequireAuthenticatedUser();
+
+                        policy.Requirements.Add(
+                            new SystemPermissionRequirement(
+                                SystemPermissions.SettingsManage));
+                    });
+            });
             return Services;
         }
     }

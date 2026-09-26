@@ -34,7 +34,6 @@ namespace chatbot.Ef.Repositories
         public async Task<ConversationMember?> GetAsync(Guid conversationId, Guid userId)
         {
             return await context.ConversationMembers
-                .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.ConversationId == conversationId && x.UserId == userId && !x.IsBanned);
         }
 

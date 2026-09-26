@@ -1,5 +1,6 @@
 
 using System.Text;
+using System.Threading.Tasks;
 using chatbot.Api.Extensions;
 using chatbot.Api.Hubs;
 using chatbot.Core.Helper;
@@ -10,6 +11,7 @@ using chatbot.Core.Mapping;
 using chatbot.Core.Models;
 using chatbot.Ef.Data;
 using chatbot.Ef.Repositories;
+using chatbot.Ef.Seed;
 using chatbot.Ef.Services;
 using chatbot.Ef.UnitOfWork;
 using chatbot.Ef.ValidatorService;
@@ -27,12 +29,11 @@ namespace chatbot.Api
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-            builder.Services.AddApplicationServices(builder.Configuration);
+           
 
             builder.Services.AddSignalR();
 
@@ -54,6 +55,9 @@ namespace chatbot.Api
             builder.Services.AddJWTConfiguration(builder.Configuration);
 
             builder.Services.AddApplicationPolices();
+
+            // Add services to the container.
+            builder.Services.AddApplicationServices(builder.Configuration);
             //firebase
             builder.Services.AddFirebase();
 
@@ -64,6 +68,16 @@ namespace chatbot.Api
             builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
+
+            using( var scope= app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+
+                var roleManager =
+                    services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+
+                await IdentitySeeder.SeedRolesAsync(roleManager);
+            }
 
             // Configure the HTTP request pipeline.
             //enable swagger only in development environment

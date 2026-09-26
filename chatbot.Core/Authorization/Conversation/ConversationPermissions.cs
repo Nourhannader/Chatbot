@@ -33,5 +33,13 @@ namespace chatbot.Core.Authorization.Conversation
         public const string DeleteGroup = "conversation.group.delete";
 
         public const string TransferOwnership = "conversation.group.transferOwnership";
+
+        public const string MuteMember = "conversation.member.mute";
+
+        public const string UnmuteMember = "conversation.member.unmute";
+
+        public const string BanMember = "conversation.member.ban";
+
+        public const string UnbanMember = "conversation.member.unban";
     }
 }
