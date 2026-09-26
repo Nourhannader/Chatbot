@@ -12,6 +12,5 @@ namespace chatbot.Core.DTOs
 
         public string? Description { get; set; }
 
-        public List<Guid> MemberIds { get; set; } = [];
     }
 }

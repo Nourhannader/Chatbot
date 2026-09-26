@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.Authorization.Conversation;
 using chatbot.Core.DTOs;
 using chatbot.Core.Enums;
+using chatbot.Core.Exceptions;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Models;
@@ -17,103 +20,85 @@ namespace chatbot.Ef.Services
     {
         private readonly IStorageService storageService;
         private readonly IUnitOfWork unitOfWork;
-        private readonly PermissionService permissionService ;
-        public GroupService(IUnitOfWork unitOfWork,IStorageService storageService)
+        private readonly IConversationAuthorizationService authorizationService ;
+        public GroupService(IUnitOfWork unitOfWork,IStorageService storageService,IConversationAuthorizationService authorizationService)
         {
             this.unitOfWork = unitOfWork;
             this.storageService = storageService;
-            this.permissionService = new PermissionService(unitOfWork);
+            this.authorizationService = authorizationService;
         }
-        public async Task AddMemberAsync(Guid conversationId, Guid currentUserId, Guid newUserId)
+        public async Task AddMemberAsync(ClaimsPrincipal User,Guid conversationId, Guid userId)
         {
-            await permissionService.RequireAdminAsync(conversationId,currentUserId);
-            var conversation =await unitOfWork.Conversations.GetByIdAsync(conversationId);
+            await authorizationService.AuthorizeAsync(User, conversationId, ConversationPermissions.AddMember);
+            var conversation = await unitOfWork.Conversations.GetByIdAsync(conversationId);
 
-            if (conversation == null ||
-                conversation.Type != ConversationType.Group)
+            if (conversation == null || conversation.Type != ConversationType.Group)
             {
-                throw new KeyNotFoundException( "Group not found.");
+                throw new KeyNotFoundException("Group not found.");
             }
-            var existing = await unitOfWork.ConversationMember.GetAsync(conversationId,newUserId);
-
-            if (existing != null)
+            var exists = await unitOfWork.ConversationMember.ExistsAsync(conversationId, userId);
+            if (exists)
             {
-                if (existing.LeftAt == null)
-                    throw new InvalidOperationException("User is already a member.");
-
-                // User was member before and left
-                existing.LeftAt = null;
-                existing.JoinedAt = DateTime.UtcNow;
-                existing.Role = GroupRole.Member;
-
-                unitOfWork.ConversationMember.Update(existing);
+                throw new ConflictException("User is already a member.");
             }
-            else
+              
+            var member = new ConversationMember
             {
-                await unitOfWork.ConversationMember.AddAsync(
-                    new ConversationMember
-                    {
-                        ConversationId = conversationId,
-                        UserId = newUserId,
-                        Role = GroupRole.Member
-                    });
-            }
+                Id = Guid.NewGuid(),
+                ConversationId = conversationId,
+                Role = ConversationRole.Member,
+                JoinedAt = DateTime.UtcNow,
+                UserId = userId
+            };
+            conversation.Members.Add(member);
 
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task<GroupDto> CreateAsync(Guid ownerId, CreateGroupDto dto)
+        public async Task<Guid> CreateAsync(Guid ownerId, CreateGroupDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.Title))
-                throw new ArgumentException(
-                    "Group title is required.");
+                throw new ArgumentException("Group title is required.");
 
             var conversation = new Conversation
             {
+                Id = Guid.NewGuid(),
                 Type = ConversationType.Group,
                 Title = dto.Title.Trim(),
                 Description = dto.Description?.Trim(),
-                CreatedById = ownerId
+                CreatedById = ownerId,
+                CreatedAt = DateTime.UtcNow
             };
-            conversation.Members.Add(
-                new ConversationMember
+            
+            var member= new ConversationMember
                 {
+                    Id=Guid.NewGuid(),
+                    ConversationId=conversation.Id,
                     UserId=ownerId,
-                    Role=GroupRole.Owner
-                });
-            foreach(var userId in dto.MemberIds.Where(x => x != ownerId).Distinct())
-            {
-                conversation.Members.Add(
-                  new ConversationMember
-                 {
-                  UserId = userId,
-                  Role = GroupRole.Member
-                 });
-            }
+                    Role=ConversationRole.Owner,
+                    JoinedAt=DateTime.UtcNow
+                };
+            conversation.Members.Add(member);
+            
             await unitOfWork.Conversations.AddAsync(conversation);
             await unitOfWork.SaveChangesAsync();
-            return new GroupDto { 
-                Title=dto.Title,
-                Description=dto.Description,
-                Id=conversation.Id,
-                GroupPictureUrl=conversation.GroupPictureUrl,
-                
-                CreatedById = ownerId
-            };
+            return conversation.Id;
         }
        
-        public async Task DeleteAsync(Guid conversationId, Guid userId)
+        public async Task DeleteAsync(ClaimsPrincipal user, Guid conversationId)
         {
-            await permissionService.RequireOwnerAsync(conversationId, userId);
+            await authorizationService.AuthorizeAsync(user, conversationId, ConversationPermissions.DeleteGroup);
 
             var conversation =
                 await unitOfWork.Conversations.GetByIdAsync(conversationId);
 
-            if (conversation == null)
+            if (conversation == null || conversation.Type != ConversationType.Group)
                 throw new KeyNotFoundException("Group not found.");
 
             conversation.IsDeleted = true;
             conversation.DeletedAt = DateTime.UtcNow;
+
+            var userId = Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
             conversation.DeletedById = userId;
 
             unitOfWork.Conversations.Update(conversation);
@@ -121,34 +106,49 @@ namespace chatbot.Ef.Services
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task DemoteAsync(Guid conversationId, Guid currentUserId, Guid memberId)
+        public async Task DemoteAsync(ClaimsPrincipal User, Guid conversationId, Guid memberId)
         {
-            await permissionService.RequireOwnerAsync(conversationId, currentUserId);
+            await authorizationService.AuthorizeAsync(User, conversationId, ConversationPermissions.DemoteMember);
 
-            var member = await permissionService.GetActiveMemberAsync(conversationId, memberId);
+            var member = await unitOfWork.ConversationMember.GetAsync(conversationId, memberId);
+            if (member == null)
+            {
+                throw new NotFoundException("Member not found.");
+            }
+            if (member.Role == ConversationRole.Owner)
+            {
+                throw new ForbiddenException("Owner cannot be demoted.");
+            }
 
-            if (member.Role != GroupRole.Admin)
-                throw new InvalidOperationException("Only admins can be demoted.");
+            if (member.Role == ConversationRole.Member)
+            {
+                throw new BadRequestException("User is already a member.");
+            }
 
-            member.Role = GroupRole.Member;
+            member.Role = ConversationRole.Member;
 
-           unitOfWork.ConversationMember.Update(member);
+            unitOfWork.ConversationMember.Update(member);
 
             await unitOfWork.SaveChangesAsync();
         }
 
         public async Task LeaveAsync(Guid conversationId, Guid userId)
         {
-            var member = await permissionService.GetActiveMemberAsync(conversationId, userId);
+            var member = await unitOfWork.ConversationMember.GetAsync(conversationId, userId);
 
-            if (member.Role == GroupRole.Owner)
+            if (member == null)
+            {
+                throw new NotFoundException("You are not a member of this group.");
+            }
+
+            if (member.Role == ConversationRole.Owner)
             {
                 var members =
                     await unitOfWork.ConversationMember.GetActiveMembersAsync(conversationId);
 
                 var newOwner = members
                     .Where(x => x.UserId != userId)
-                    .OrderByDescending(x => x.Role == GroupRole.Admin)
+                    .OrderByDescending(x => x.Role == ConversationRole.Admin)
                     .ThenBy(x => x.JoinedAt)
                     .FirstOrDefault();
 
@@ -163,7 +163,7 @@ namespace chatbot.Ef.Services
                     return;
                 }
 
-                newOwner.Role = GroupRole.Owner;
+                newOwner.Role = ConversationRole.Owner;
                 member.LeftAt = DateTime.UtcNow;
 
                 unitOfWork.ConversationMember.Update(newOwner);
@@ -179,39 +179,58 @@ namespace chatbot.Ef.Services
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task PromoteAsync(Guid conversationId, Guid currentUserId, Guid memberId)
+        public async Task PromoteAsync(ClaimsPrincipal User, Guid conversationId, Guid memberId)
         {
-            await permissionService.RequireOwnerAsync(conversationId, currentUserId);
+            await authorizationService.AuthorizeAsync(User, conversationId, ConversationPermissions.PromoteMember);
 
-            var member = await permissionService.GetActiveMemberAsync(conversationId, memberId);
+            var member = await unitOfWork.ConversationMember.GetAsync(conversationId, memberId);
+            if (member == null)
+            {
+                throw new NotFoundException("Member not found.");
+            }
+            if (member.Role == ConversationRole.Owner)
+            {
+                throw new BadRequestException("Owner cannot be promoted.");
+            }
+            if (member.Role == ConversationRole.Admin)
+            {
+                throw new BadRequestException("User is already an admin.");
+            }
 
-            if (member.Role != GroupRole.Member)
-                throw new InvalidOperationException(
-                    "Only members can be promoted.");
-
-            member.Role = GroupRole.Admin;
+            member.Role = ConversationRole.Admin;
 
             unitOfWork.ConversationMember.Update(member);
 
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task RemoveMemberAsync(Guid conversationId, Guid currentUserId, Guid memberId)
+        public async Task RemoveMemberAsync(ClaimsPrincipal User, Guid conversationId, Guid memberId)
         {
-            var currentUser = await permissionService.GetActiveMemberAsync(conversationId, currentUserId);
+            await authorizationService.AuthorizeAsync(User, conversationId, ConversationPermissions.RemoveMember);
 
-            var target = await permissionService.GetActiveMemberAsync(conversationId, memberId);
-
-            if (target.Role == GroupRole.Owner)
-                throw new InvalidOperationException("Owner cannot be removed.");
-
-            if (currentUser.Role == GroupRole.Member)
-                throw new UnauthorizedAccessException();
-
-            if (currentUser.Role == GroupRole.Admin &&
-                target.Role == GroupRole.Admin)
+            var target = await unitOfWork.ConversationMember.GetAsync(conversationId, memberId);
+            if (target == null)
             {
-                throw new UnauthorizedAccessException("Admin cannot remove another admin.");
+                throw new NotFoundException("Member not found.");
+            }
+
+            if (target.Role == ConversationRole.Owner)
+            {
+                throw new ForbiddenException("Owner cannot be removed.");
+            }
+            var currentUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var currentUser = await unitOfWork.ConversationMember.GetAsync(conversationId, currentUserId);
+
+
+            if (currentUser == null)
+            {
+                throw new ForbiddenException("You are not a member of this conversation.");
+            }
+
+            if (currentUser.Role == ConversationRole.Admin &&
+                target.Role == ConversationRole.Admin)
+            {
+                throw new ForbiddenException("Admin cannot remove another admin.");
             }
 
             target.LeftAt = DateTime.UtcNow;
@@ -221,17 +240,35 @@ namespace chatbot.Ef.Services
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task TransferOwnershipAsync(Guid conversationId, Guid ownerId, Guid newOwnerId)
+        public async Task TransferOwnershipAsync(ClaimsPrincipal user, Guid conversationId, Guid ownerId, Guid newOwnerId)
         {
-            var owner = await permissionService.RequireOwnerAsync(conversationId, ownerId);
+            await authorizationService.AuthorizeAsync(user, conversationId, ConversationPermissions.TransferOwnership);
 
-            var newOwner = await permissionService.GetActiveMemberAsync(conversationId, newOwnerId);
+            var currentOwnerId =Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            var owner = await unitOfWork.ConversationMember.GetAsync(conversationId, currentOwnerId);
+            if (owner == null || owner.Role != ConversationRole.Owner)
+                throw new ForbiddenException("Only the owner can transfer ownership.");
+
+            var newOwner = await unitOfWork.ConversationMember.GetAsync(conversationId, newOwnerId);
+
+            if (newOwner == null)
+            {
+                throw new NotFoundException("New owner is not a member.");
+            }
 
             if (newOwner.UserId == owner.UserId)
-                throw new InvalidOperationException("User is already the owner.");
+            {
+                throw new BadRequestException("User is already the owner.");
+            }
 
-            owner.Role = GroupRole.Admin;
-            newOwner.Role = GroupRole.Owner;
+            if (newOwner.LeftAt != null)
+            {
+                throw new BadRequestException("User is no longer an active member.");
+            }
+
+            owner.Role = ConversationRole.Admin;
+            newOwner.Role = ConversationRole.Owner;
 
             unitOfWork.ConversationMember.Update(owner);
             unitOfWork.ConversationMember.Update(newOwner);
@@ -239,31 +276,38 @@ namespace chatbot.Ef.Services
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task UpdateAsync(Guid conversationId, Guid userId, UpdateGroupDto dto)
+        public async Task UpdateAsync(ClaimsPrincipal User,Guid conversationId, UpdateGroupDto dto)
         {
-            await permissionService.RequireAdminAsync(conversationId, userId);
-
+            await authorizationService.AuthorizeAsync(User, conversationId, ConversationPermissions.ManageGroup);
             var conversation = await unitOfWork.Conversations.GetByIdAsync(conversationId);
 
             if (conversation == null ||
                 conversation.Type != ConversationType.Group)
             {
-                throw new KeyNotFoundException(
-                    "Group not found.");
+                throw new KeyNotFoundException("Group not found.");
             }
 
             if (dto.Title != null)
+            {
+                if (string.IsNullOrWhiteSpace(dto.Title))
+                {
+                    throw new BadRequestException("Group title cannot be empty.");
+                }
+
                 conversation.Title = dto.Title.Trim();
+            }
 
             if (dto.Description != null)
+            {
                 conversation.Description = dto.Description.Trim();
-
+            }
+            var uploadedBy = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             if (dto.Image != null)
             {
                 var result =
-                    await storageService.UploadAsync(dto.Image, "groups", userId,conversationId);//return here
+                    await storageService.UploadConversationImageAsync(dto.Image,conversationId,uploadedBy);//return here
 
-                conversation.GroupPictureUrl = result.FileUrl;
+                conversation.ImageId = result.FileId;
             }
 
             unitOfWork.Conversations.Update(conversation);

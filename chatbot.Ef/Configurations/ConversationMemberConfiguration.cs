@@ -13,6 +13,7 @@ namespace chatbot.Ef.Configurations
     {
         public void Configure(EntityTypeBuilder<ConversationMember> builder)
         {
+
             builder.HasOne(x => x.Conversation)
                 .WithMany(x => x.Members)
                 .HasForeignKey(x => x.ConversationId)

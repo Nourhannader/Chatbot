@@ -16,9 +16,15 @@ namespace chatbot.Ef.Authorization
     {
         public async Task AuthorizeAsync(ClaimsPrincipal user, Guid conversationId, string permission)
         {
-            var requirement = new PermissionRequirement(permission);
+            
             var resource = new ConversationResource(conversationId);
+           await AuthorizeAsync(user, resource, permission);
+            
+        }
 
+        public async Task AuthorizeAsync(ClaimsPrincipal user, ConversationResource resource, string permission)
+        {
+            var requirement = new PermissionRequirement(permission);
             var result = await authorizationService.AuthorizeAsync(
                 user, resource, requirement);
 
@@ -26,6 +32,11 @@ namespace chatbot.Ef.Authorization
             {
                 throw new ForbiddenException("You are not authorized to perform this action.");
             }
+        }
+
+        public Task AuthorizeMessageAsync(ClaimsPrincipal user, Guid conversationId, Guid messageId, string permission)
+        {
+            throw new NotImplementedException();
         }
     }
 }

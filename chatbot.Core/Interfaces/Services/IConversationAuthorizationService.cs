@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.Authorization.Conversation;
 
 namespace chatbot.Core.Interfaces.Services
 {
@@ -11,12 +12,8 @@ namespace chatbot.Core.Interfaces.Services
     {
         Task AuthorizeAsync(ClaimsPrincipal user, Guid conversationId, string permission);
 
-        //Task<bool> HasPermissionAsync(Guid conversationId, Guid userId, string permission);
+        Task AuthorizeAsync(ClaimsPrincipal user, ConversationResource resource, string permission);
 
-        //Task<bool> IsOwnerAsync(Guid conversationId, Guid userId);
-
-        //Task<bool> IsAdminAsync(Guid conversationId, Guid userId);
-
-        //Task<bool> IsMemberAsync(Guid conversationId, Guid userId);
+        Task AuthorizeMessageAsync(ClaimsPrincipal user,Guid conversationId,Guid messageId,string permission);
     }
 }

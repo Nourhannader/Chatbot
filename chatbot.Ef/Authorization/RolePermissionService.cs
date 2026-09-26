@@ -49,6 +49,7 @@ namespace chatbot.Ef.Authorization
             return IsAdminPermission(permission)
                 || permission == ConversationPermissions.PromoteMember
                 || permission == ConversationPermissions.DemoteMember
+                || permission == ConversationPermissions.TransferOwnership
                 || permission == ConversationPermissions.DeleteGroup;
         }
       

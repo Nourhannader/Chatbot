@@ -31,5 +31,7 @@ namespace chatbot.Core.Authorization.Conversation
         public const string ManageGroup = "conversation.group.manage";
 
         public const string DeleteGroup = "conversation.group.delete";
+
+        public const string TransferOwnership = "conversation.group.transferOwnership";
     }
 }

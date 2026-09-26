@@ -12,24 +12,7 @@ namespace chatbot.Ef.Services
 {
     public class ConversationService(IUnitOfWork unitOfWork) : IConversationService
     {
-        public async Task AddMemberAsync(Guid conversationId, Guid userId)
-        {
-            var conversation = await unitOfWork.Conversations.GetByIdAsync(conversationId);
-            if(conversation == null)
-                throw new Exception("Conversation not found.");
-            
-            if (conversation.Members.Any(m => m.UserId == userId)) return;
-
-            conversation.Members.Add(new ConversationMember
-            {
-                UserId = userId,
-                ConversationId = conversationId
-            });
-
-             unitOfWork.Conversations.Update(conversation);
-            await unitOfWork.SaveChangesAsync();
-        }
-
+     //private conversation   
         public async Task<Conversation> CreateConversationAsync(Guid creatorId, Guid secondUserId)
         {
             bool exists = await unitOfWork.Conversations.ConversationExistsAsync(creatorId, secondUserId);
@@ -40,17 +23,25 @@ namespace chatbot.Ef.Services
             var conversation = new Conversation
             {
                 Id = Guid.NewGuid(),
-                Type = ConversationType.OneToOne
+                Type = ConversationType.Private,
+                CreatedById=creatorId,
+                CreatedAt=DateTime.UtcNow
             };
             conversation.Members.Add(new ConversationMember
             {
+                Id = Guid.NewGuid(),
                 UserId = creatorId,
-                ConversationId = conversation.Id
+                ConversationId = conversation.Id,
+                Role = ConversationRole.Member,
+                JoinedAt = DateTime.UtcNow
             });
             conversation.Members.Add(new ConversationMember
             {
+                Id = Guid.NewGuid(),
                 UserId = secondUserId,
-                ConversationId = conversation.Id
+                ConversationId = conversation.Id,
+                Role = ConversationRole.Member,
+                JoinedAt = DateTime.UtcNow
             });
             await unitOfWork.Conversations.AddAsync(conversation);
             await unitOfWork.SaveChangesAsync();
@@ -58,56 +49,11 @@ namespace chatbot.Ef.Services
 
         }
 
-        public async Task<Conversation> CreateGroupAsync(Guid creatorId, string title, List<string> members)
-        {
-            var group = new Conversation
-            {
-                Id = Guid.NewGuid(),
-                Type = ConversationType.Group,
-                Title = title
-            };
-            group.Members.Add(new ConversationMember
-            {
-                UserId = creatorId,
-                ConversationId = group.Id,
-                IsAdmin = true
-            });
-
-            foreach (var member in members.Distinct())
-            {
-                if (Guid.TryParse(member, out Guid memberGuid) && memberGuid == creatorId) continue;
-                group.Members.Add(new ConversationMember
-                {
-                    UserId = memberGuid, 
-                    ConversationId = group.Id
-                });
-            }
-
-            await unitOfWork.Conversations.AddAsync(group);
-            await unitOfWork.SaveChangesAsync();
-
-            return group;
-        }
-
         public async Task<List<Conversation>> GetUserConversationsAsync(Guid userId)
         {
             return await unitOfWork.Conversations.GetUserConversationsAsync(userId);
         }
 
-        public async Task RemoveMemberAsync(Guid conversationId, Guid userId)
-        {
-            var conversation = await unitOfWork.Conversations.GetByIdAsync(conversationId);
-            if(conversation == null)
-                throw new Exception("Conversation not found.");
-
-            var member = conversation.Members.FirstOrDefault(m => m.UserId == userId);
-
-            if (member == null)
-                return;
-
-            conversation.Members.Remove(member);
-            unitOfWork.Conversations.Update(conversation);
-            await unitOfWork.SaveChangesAsync();
-        }
+       
     }
 }
