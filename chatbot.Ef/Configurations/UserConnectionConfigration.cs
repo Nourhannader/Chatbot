@@ -27,13 +27,19 @@ namespace chatbot.Ef.Configurations
             builder.HasOne(x => x.UserDevice)
            .WithMany(x => x.Connections)
            .HasForeignKey(x => x.UserDeviceId)
-           .OnDelete(DeleteBehavior.Cascade);
+           .OnDelete(DeleteBehavior.SetNull);
 
             // Indexes
             builder.HasIndex(x => x.UserId);
             
             builder.HasIndex(x => x.ConnectionId) 
                 .IsUnique();
+
+            builder.HasIndex(x => new
+            {
+                x.UserId,
+                x.IsOnline
+            });
         }
     }
 }

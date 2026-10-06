@@ -90,6 +90,7 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IRealtimeNotificationService, SignalRNotificationService>();
             Services.AddSingleton<TypingRepository>();
             Services.AddSingleton<IUserIdProvider, UserIdProvider>();
+            Services.AddScoped<IUserConnectionService, UserConnectionService>();
 
 
             //jobSchedular

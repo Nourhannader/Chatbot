@@ -14,36 +14,56 @@ namespace chatbot.Ef.Repositories
     {
         public async Task AddAsync(UserConnection entity)
         {
-           await context.UserConnections.AddAsync(entity);
+            await context.UserConnections.AddAsync(entity);
+        }
+
+        public void Delete(UserConnection connection)
+        {
+            context.UserConnections.Remove(connection); ;
+        }
+
+        public Task<int> GetActiveConnectionCountAsync(Guid userId)
+        {
+            return context.UserConnections.CountAsync(x => x.UserId == userId && x.IsOnline);
+        }
+
+        public async Task<IEnumerable<UserConnection>> GetActiveConnectionsAsync(Guid userId)
+        {
+            return await context.UserConnections.Where(x => x.UserId == userId && x.IsOnline)
+                .OrderByDescending(x => x.ConnectedAt)
+                .ToListAsync();
+        }
+
+        public async Task<UserConnection?> GetByConnectionIdAsync(string connectionId)
+        {
+            return await context.UserConnections.FirstOrDefaultAsync(x => x.ConnectionId == connectionId);
         }
 
         public async Task<UserConnection?> GetByIdAsync(Guid id)
         {
-            return await context.UserConnections
-                .FirstOrDefaultAsync(uc => uc.ConnectionId == id);
+            return await context.UserConnections.FirstOrDefaultAsync(x => x.Id == id);
         }
 
-        public async Task<List<UserConnection>> GetUserConnectionsAsync(Guid userId)
+        public async Task<IEnumerable<UserConnection>> GetByUserIdAsync(Guid userId)
         {
-            return await context.UserConnections
-                .Where(uc => uc.UserId == userId)
+            return await context.UserConnections.Where(x => x.UserId == userId)
+                .OrderByDescending(x => x.ConnectedAt)
                 .ToListAsync();
         }
 
-        public async Task<bool> HasConnectionsAsync(Guid userId)
+        public async Task<bool> HasActiveConnectionAsync(Guid userId)
         {
-            return await context.UserConnections
-                .AnyAsync(us => us.UserId == userId);
+            return await context.UserConnections.AnyAsync(x => x.UserId == userId && x.IsOnline);
         }
 
-        public async Task RemoveAsync(Guid connectionId)
+        public async Task RemoveAsync(string connectionId)
         {
-            var connection =await context.UserConnections
-                .FirstOrDefaultAsync(uc => uc.ConnectionId == connectionId);
-            if(connection != null)
-            {
-                context.UserConnections.Remove(connection);
-            }
+            var connection = await GetByConnectionIdAsync(connectionId);
+
+            if (connection == null)
+                return;
+
+            context.UserConnections.Remove(connection);
         }
 
         public void Update(UserConnection entity)

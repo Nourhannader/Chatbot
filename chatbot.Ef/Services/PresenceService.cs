@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.DTOs.User;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
@@ -16,40 +17,46 @@ namespace chatbot.Ef.Services
     {
         private readonly ConcurrentDictionary<string,ConcurrentDictionary<string, byte>>users = new();
 
-        public Task<int> GetConnectionCountAsync(Guid userId)
+        public async Task<int> GetConnectionCountAsync(Guid userId)
         {
-            if(users.TryGetValue(userId.ToString(),out var connections))
+            return await unitOfWork.UserConnections.GetActiveConnectionCountAsync(userId);
+        }
+
+        public async Task<UserPresenceDto> GetPresenceAsync(Guid userId)
+        {
+            var isOline= await unitOfWork.UserConnections.HasActiveConnectionAsync(userId);
+
+            var user = await unitOfWork.Auth.GetByIdAsync(userId);
+            
+
+            var connectionCount = await unitOfWork.UserConnections.GetActiveConnectionCountAsync(userId);
+
+            return new UserPresenceDto
             {
-                return Task.FromResult(connections.Count);
-            }
-            return Task.FromResult(0);
+                UserId = userId,
+                IsOnline = isOline,
+                ConnectionCount = connectionCount,
+                LastSeenAt = user?.LastSeenAt
+            };
         }
 
-        public async Task<bool> IsOnlineAsync(Guid userId)
+        public  async Task UserDisconnectedAsync(Guid userId)
         {
-            return await Task.FromResult(users.ContainsKey(userId.ToString()));
-        }
+            var isOnline = await unitOfWork.UserConnections.HasActiveConnectionAsync(userId);
+                 
 
-        public  Task UserConnectedAsync(Guid userId, string connectionId)
-        {
-            var connections=users.GetOrAdd(userId.ToString(), _ => new ConcurrentDictionary<string, byte>());
-            connections.TryAdd(connectionId, 0);
-            return Task.CompletedTask;
+            // Still connected from another device
+            if (isOnline)
+                return;
 
-        }
+            var user = await unitOfWork.Auth.GetByIdAsync(userId);
 
-        public  Task UserDisconnectedAsync(Guid userId,string connectionId)
-        {
-           if(users.TryGetValue(userId.ToString(),out var connections))
-           {
-                connections.TryRemove(connectionId, out _);
-                if (connections.IsEmpty)
-                {
-                    users.TryRemove(userId.ToString(), out _);
-                }
-           }
+            if (user == null)
+                return;
 
-           return Task.CompletedTask;
+            user.LastSeenAt =DateTime.UtcNow;
+
+            await unitOfWork.Auth.updateState(user);
         }
     }
 }
