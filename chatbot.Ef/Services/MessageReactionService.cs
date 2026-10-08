@@ -2,11 +2,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using chatbot.Core.DTOs.Reactions;
 using chatbot.Core.Enums;
+using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Models;
+using chatbot.Ef.Repositories;
+using chatbot.Ef.UnitOfWork;
 using Google;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,54 +19,118 @@ namespace chatbot.Ef.Services
 {
     public class MessageReactionService(IUnitOfWork unitOfWork) : IMessageReactionService
     {
-        public async Task<MessageReaction> AddReactionAsync(Guid messageId, Guid userId, ReactionType type)
+        public async Task<List<MessageReactionDto>> GetByMessageIdAsync(Guid userId, Guid messageId)
         {
-            if (type == ReactionType.None)
-                throw new ArgumentException("Reaction type cannot be None", nameof(type));
-
-
             var message = await unitOfWork.Messages.GetByIdAsync(messageId);
-            if (message == null)
-                throw new KeyNotFoundException("Message not found");
-            var reaction =  await unitOfWork.Reactions.GetReactionByMessageIdAndUserIdAsync(messageId, userId);
-            if (reaction == null)
+
+            if (message is null || message.IsDeleted)
             {
-                reaction = new MessageReaction
-                {
-                    MessageId = messageId,
-
-                    UserId = userId,
-
-                    ReactionType=type,
-
-                    CreatedAt = DateTime.UtcNow
-                };
-
-               await unitOfWork.Reactions.AddAsync(reaction);
+                throw new KeyNotFoundException("Message not found.");
             }
-            else
+
+            var isMember = await unitOfWork.ConversationMember
+                .IsMemberAsync(message.ConversationId, userId);
+
+            if (!isMember)
             {
-                reaction.ReactionType=type;
-
-                reaction.CreatedAt =
-                    DateTime.UtcNow;
-                unitOfWork.Reactions.Update(reaction);
+                throw new UnauthorizedAccessException("You are not a member of this conversation.");
             }
-            await unitOfWork.SaveChangesAsync();
 
-            return reaction;
+            var reactions = await unitOfWork.Reactions.GetByMessageIdAsync(messageId);
 
+            return reactions.Select(r => new MessageReactionDto
+            {
+                Id = r.Id,
+                MessageId = r.MessageId,
+                UserId = r.UserId,
+                ReactionType = r.ReactionType,
+                CreatedAt = r.CreatedAt
+            }).ToList();
         }
 
-        public async Task RemoveReactionAsync(Guid messageId, Guid userId)
+        public async Task<ReactionResultDto> ToggleReactionAsync(Guid userId, AddReactionDto dto)
         {
-            var reaction= await unitOfWork.Reactions.GetReactionByMessageIdAndUserIdAsync(messageId, userId);
-            if (reaction == null)
-                return;
+            // 1. Validate the reaction type.
+            if (!Enum.IsDefined(typeof(ReactionType), dto.ReactionType))
+            {
+                throw new ArgumentException("Invalid reaction type.");
+            }
 
-            unitOfWork.Reactions.RemoveMessageReaction(reaction);
+            // 2. Get the message.
+            var message = await unitOfWork.Messages.GetByIdAsync(dto.MessageId);
+
+            if (message is null || message.IsDeleted)
+            {
+                throw new KeyNotFoundException("Message not found.");
+            }
+
+            // 3. Check conversation membership.
+            var isMember = await unitOfWork.ConversationMember.IsMemberAsync(
+                    message.ConversationId, userId);
+
+            if (!isMember)
+            {
+                throw new UnauthorizedAccessException("You are not a member of this conversation.");
+            }
+
+            // 4. Get the user's existing reaction.
+            var existing = await unitOfWork.Reactions
+                .GetByMessageAndUserAsync(dto.MessageId, userId);
+
+            // 5. If the same reaction exists, remove it.
+            if (existing is not null && existing.ReactionType == dto.ReactionType)
+            {
+               unitOfWork.Reactions.Remove(existing);
+
+                await unitOfWork.SaveChangesAsync();
+
+                return new ReactionResultDto
+                {
+                    MessageId = dto.MessageId,
+                    UserId = userId,
+                    ReactionType = null,
+                    IsRemoved = true
+                };
+            }
+
+            // 6. If another reaction exists, update it.
+            if (existing is not null)
+            {
+                existing.ReactionType = dto.ReactionType;
+
+                unitOfWork.Reactions.Update(existing);
+
+                await unitOfWork.SaveChangesAsync();
+
+                return new ReactionResultDto
+                {
+                    MessageId = dto.MessageId,
+                    UserId = userId,
+                    ReactionType = existing.ReactionType,
+                    IsRemoved = false
+                };
+            }
+
+            // 7. Create a new reaction.
+            var reaction = new MessageReaction
+            {
+                MessageId = dto.MessageId,
+                UserId = userId,
+                ReactionType = dto.ReactionType,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await unitOfWork.Reactions.AddAsync(reaction);
+
             await unitOfWork.SaveChangesAsync();
 
+            return new ReactionResultDto
+            {
+                MessageId = dto.MessageId,
+                UserId = userId,
+                ReactionType = reaction.ReactionType,
+                IsRemoved = false
+            };
         }
     }
 }

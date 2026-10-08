@@ -9,8 +9,10 @@ namespace chatbot.Core.Interfaces.Repositories
 {
     public interface IReactionRepository :IBaseRepository<MessageReaction,Guid>
     {
-        Task<MessageReaction?> GetReactionByMessageIdAndUserIdAsync(Guid messageId, Guid userId);
-        Task<List<MessageReaction>> GetMessageReactionsAsync(Guid messageId);
-        Task RemoveMessageReaction(MessageReaction reaction);
+        Task<MessageReaction?> GetByMessageAndUserAsync( Guid messageId, Guid userId);
+
+        Task<List<MessageReaction>> GetByMessageIdAsync(Guid messageId);
+
+        void Remove(MessageReaction reaction);
     }
 }

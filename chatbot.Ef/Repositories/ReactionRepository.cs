@@ -19,30 +19,22 @@ namespace chatbot.Ef.Repositories
 
         public async Task<MessageReaction?> GetByIdAsync(Guid id)
         {
-            return await context.MessageReactions.FirstOrDefaultAsync(mr => mr.Id == id);
+            return await context.MessageReactions.FirstOrDefaultAsync(r => r.Id == id);
         }
 
-        public async Task<List<MessageReaction>> GetMessageReactionsAsync(Guid messageId)
+        public async Task<MessageReaction?> GetByMessageAndUserAsync(Guid messageId, Guid userId)
         {
-            return await context.MessageReactions
-                .Where(mr => mr.MessageId == messageId)
-                .Include(mr => mr.User)
-                .ToListAsync();
+            return await context.MessageReactions.FirstOrDefaultAsync(r => r.MessageId == messageId && r.UserId == userId);
         }
 
-        public async Task<MessageReaction?> GetReactionByMessageIdAndUserIdAsync(Guid messageId, Guid userId)
+        public async Task<List<MessageReaction>> GetByMessageIdAsync(Guid messageId)
         {
-            return await context.MessageReactions
-                .FirstOrDefaultAsync(mr => mr.MessageId == messageId && mr.UserId == userId);
-
+            return await context.MessageReactions.Where(r => r.MessageId == messageId).ToListAsync();
         }
 
-        public Task RemoveMessageReaction(MessageReaction reaction)
+        public void Remove(MessageReaction reaction)
         {
-             context.MessageReactions.Remove(reaction);
-
-              return Task.CompletedTask;
-
+            context.MessageReactions.Remove(reaction);
         }
 
         public void Update(MessageReaction entity)

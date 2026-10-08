@@ -88,6 +88,7 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<ITokenHashService,TokenHashService>();
             Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
             Services.AddScoped<IRealtimeNotificationService, SignalRNotificationService>();
+            Services.AddScoped<IMessageReadService, MessageReadService>();
             Services.AddSingleton<TypingRepository>();
             Services.AddSingleton<IUserIdProvider, UserIdProvider>();
             Services.AddScoped<IUserConnectionService, UserConnectionService>();
