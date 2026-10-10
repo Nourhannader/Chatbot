@@ -11,13 +11,10 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IMessageService
     {
-        public Task SendMessageAsync(Guid conversationId,Guid senderId,string? content,
-           IEnumerable<IFormFile>? files,
+        public Task<MessageDto> SendMessageAsync(Guid senderId,SendMessageDto dto,
            CancellationToken cancellationToken = default);
-        Task<PagedResultDto<Message>> GetMessagesAsyns(Guid conversationId, int page, int pageSize);
-        
-        Task MarkDeliveredAsync(Guid messageId, Guid userId);
-        Task MarkReadAsync(Guid conversationId, Guid userId);
+        Task<PagedResultDto<MessageDto>> GetMessagesAsyns(Guid userId,Guid conversationId, int page=1, int pageSize=20);
+
         Task<Message> ReplyAsync(Guid senderId, ReplyMessageDto dto);
         Task<MessageDto> SendFileAsync(SendFileDto filedto);
         Task DeleteForMeAsync(Guid messageId,Guid userId);

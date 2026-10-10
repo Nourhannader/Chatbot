@@ -37,7 +37,7 @@ namespace chatbot.Core.Models
         public StorageProviderType Provider { get; set; }
 
 
-        public string? ThumbnailPath { get; set; }
+        public string? ThumbnailUrl { get; set; }
 
 
         public int? Width { get; set; }

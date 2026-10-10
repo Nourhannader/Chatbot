@@ -10,11 +10,11 @@ namespace chatbot.Core.DTOs
 {
     public class MessageDto
     {
-        public string Id { get; set; }
+        public Guid Id { get; set; }
 
-        public string ConversationId { get; set; }
+        public Guid ConversationId { get; set; }
 
-        public string SenderId { get; set; }
+        public Guid SenderId { get; set; }
 
         public string? SenderName { get; set; }
 

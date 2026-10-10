@@ -14,9 +14,15 @@ namespace chatbot.Ef.Configurations
         public void Configure(EntityTypeBuilder<MessageRecipientStatus> builder)
         {
             builder.Property(x => x.Status)
+                .HasConversion<int>()
                 .IsRequired();
 
             // Relationships
+
+            builder.HasOne(x => x.Message)
+                .WithMany(x => x.RecipientStatuses)
+                .HasForeignKey(x => x.MessageId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasOne(x => x.Recipient)
                 .WithMany(x => x.MessageRecipientStatuses)

@@ -17,6 +17,9 @@ namespace chatbot.Core.DTOs
         public int TotalCount { get; set; }
 
         public int TotalPages =>
-            (int)Math.Ceiling((double)TotalCount / PageSize);
+        PageSize <= 0
+            ? 0
+            : (int)Math.Ceiling(
+                TotalCount / (double)PageSize);
     }
 }

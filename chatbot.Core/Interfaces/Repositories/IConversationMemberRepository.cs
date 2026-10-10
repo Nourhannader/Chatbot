@@ -19,5 +19,7 @@ namespace chatbot.Core.Interfaces.Repositories
 
         Task<bool> ExistsAsync(Guid conversationId,Guid userId);
         void Remove(ConversationMember member);
+
+        Task<List<Guid>> GetOtherMemberIdsAsync(Guid conversationId, Guid senderId);
     }
 }

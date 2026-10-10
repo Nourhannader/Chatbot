@@ -36,5 +36,6 @@ namespace chatbot.Core.Models
         public ICollection<BlockList> BlockedByUsers { get; set; }
         public ICollection<DeletedMessageForUser> DeletedMessages { get; set; }
         public ICollection<StoredFile> UploadedFiles { get; set; }
+        public ICollection<MessageRead> MessageReads { get; set; }
     }
 }

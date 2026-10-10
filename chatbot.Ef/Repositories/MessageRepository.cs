@@ -33,14 +33,13 @@ namespace chatbot.Ef.Repositories
                 .ToListAsync();
         }
 
-        public async Task<Message> GetByIdAsync(Guid id)
+        public async Task<Message?> GetByIdAsync(Guid id)
         {
             return await context.Messages
-                .Include(m=> m.Sender)
-                .Include(m=>m.Reactions)
-                .Include(m=> m.RecipientStatuses)
-                .FirstOrDefaultAsync(m => m.Id == id)
-                ;
+                .Include(m => m.Sender)
+                .Include(m => m.Reactions)
+                .Include(m => m.RecipientStatuses)
+                .FirstOrDefaultAsync(m => m.Id == id);
         }
 
         public async Task<Message?> GetMessageByConversationIdAsync(Guid messageId,Guid conversationId)
@@ -52,24 +51,21 @@ namespace chatbot.Ef.Repositories
                         x.ConversationId == conversationId);
         } 
 
-        public async Task<PagedResultDto<Message>> GetConversationMessagesAsync(Guid conversationId, int page, int pageSize)
+        public async Task<List<Message>> GetConversationMessagesAsync(Guid conversationId, int page, int pageSize)
         {
-            var items = await context.Messages
+           return await context.Messages
                 .Where(m => m.ConversationId == conversationId)
+                .Include(m => m.Reactions)
+                .Include(m => m.Sender)
+                .Include(m => m.Files)
+                .Include(m => m.RecipientStatuses)
+                .ThenInclude(rs => rs.Recipient)
                 .OrderByDescending(m => m.SendAt)
+                .ThenByDescending(m => m.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Include(m => m.Reactions)
-                .Include(m => m.RecipientStatuses)
                 .ToListAsync();
-            var PagedResult = new PagedResultDto<Message>
-            {
-                Items = items,
-                PageNumber = page,
-                PageSize = pageSize,
-                TotalCount = await context.Messages.CountAsync(m => m.ConversationId == conversationId)
-            };
-            return PagedResult;
+            
         }
 
         public async Task<Message?> GetWithFilesAsync(Guid id)
@@ -108,6 +104,23 @@ namespace chatbot.Ef.Repositories
         public void Update(Message entity)
         {
             context.Messages.Update(entity);
+        }
+
+        public async Task<Message?> GetWithDetailsAsync(Guid messageId)
+        {
+            return await context.Messages
+                .Include(m => m.SenderId)
+                .Include(m => m.Files)
+                .Include(m => m.VoiceNote)
+                .Include(m => m.Reactions)
+                .Include(m => m.RecipientStatuses)
+                .ThenInclude(rs => rs.Recipient)
+                .FirstOrDefaultAsync(m => m.Id == messageId);
+        }
+
+        public async Task<int> CountByConversationAsync(Guid conversationId)
+        {
+            return await context.Messages.CountAsync(m => m.ConversationId == conversationId);
         }
     }
 }

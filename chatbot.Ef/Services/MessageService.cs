@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using chatbot.Core.DTOs;
+using chatbot.Core.Enums;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Interfaces.Validators;
@@ -13,7 +14,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace chatbot.Ef.Services
 {
-    public class MessageService(IUnitOfWork unitOfWork,IStorageService storage,IFileValidationService validator) : IMessageService
+    public class MessageService(IUnitOfWork unitOfWork,IStorageService storage,IMessageStatusService messageStatusService,IFileValidationService validator) : IMessageService
     {
         public async Task DeleteForEveryoneAsync(Guid messageId, Guid userId)
         {
@@ -73,20 +74,55 @@ namespace chatbot.Ef.Services
                 .SaveChangesAsync();
         }
 
-        public async Task<PagedResultDto<Message>> GetMessagesAsyns(Guid conversationId, int page, int pageSize)
+        public async Task<PagedResultDto<MessageDto>> GetMessagesAsyns(Guid userId, Guid conversationId, int page = 1, int pageSize = 20)
         {
-            return await unitOfWork.Messages
+            if (page < 1)
+                throw new ArgumentOutOfRangeException(nameof(page), "Page must be greater than zero.");
+
+            if (pageSize < 1 || pageSize > 100)
+                throw new ArgumentOutOfRangeException(nameof(pageSize), "PageSize must be between 1 and 100.");
+
+            var isMember = await unitOfWork.ConversationMember.ExistsAsync(conversationId, userId);
+            if (!isMember)
+                throw new UnauthorizedAccessException("You are not a member of this conversation.");
+
+            var messages = await unitOfWork.Messages
                 .GetConversationMessagesAsync(conversationId, page, pageSize);
-        }
 
-        public Task MarkDeliveredAsync(Guid messageId, Guid userId)
-        {
-            throw new NotImplementedException();
-        }
+            var totalCount = await unitOfWork.Messages.CountByConversationAsync(conversationId);
 
-        public Task MarkReadAsync(Guid conversationId, Guid userId)
-        {
-            throw new NotImplementedException();
+            var items = messages.Select(message => new MessageDto
+            {
+                Id = message.Id,
+                ConversationId = message.ConversationId,
+                SenderId = message.SenderId,
+                SenderName = message.Sender.UserName ?? string.Empty,
+                Content = message.Content,
+                CreatedAt = message.SendAt,
+
+                Files = message.Files.Select(file => new FileMetadataDto
+                {
+                    Id = file.Id,
+                    OriginalName = file.OriginalName,
+                    ContentType = file.ContentType,
+                    Size = file.Size,
+                    FileUrl = file.CDNUrl,
+                    ThumbnailUrl = file.ThumbnailUrl,
+                    Width = file.Width,
+                    Height = file.Height,
+                    DurationSeconds = file.DurationSeconds
+
+
+                }).ToList()
+            }).ToList();
+
+            return new PagedResultDto<MessageDto>
+            {
+                Items = items,
+                PageNumber = page,
+                PageSize = pageSize,
+                TotalCount = totalCount
+            };
         }
 
         public async Task<Message> ReplyAsync(Guid senderId, ReplyMessageDto dto)
@@ -118,37 +154,58 @@ namespace chatbot.Ef.Services
            throw new NotImplementedException();
         }
 
-        public async Task SendMessageAsync(
-           Guid conversationId,
-           Guid senderId,
-          string? content,
-          IEnumerable<IFormFile>? files,
+        public async Task<MessageDto> SendMessageAsync(Guid senderId, SendMessageDto dto,
           CancellationToken cancellationToken = default)
         {
+            if (dto.ConversationId == Guid.Empty)
+                throw new ArgumentException("ConversationId is required.");
+
+            if (string.IsNullOrWhiteSpace(dto.Content))
+                throw new ArgumentException("Message content cannot be empty.");
+
+            var isMember = await unitOfWork.ConversationMember.ExistsAsync(dto.ConversationId, senderId);
+
+            if (!isMember)
+                throw new UnauthorizedAccessException("You are not a member of this conversation.");
+
             var message = new Message
             {
                 Id = Guid.NewGuid(),
-                ConversationId = conversationId,
+                ConversationId = dto.ConversationId,
                 SenderId = senderId,
-                Content = content,
+                Content = dto.Content.Trim(),
+                MessageType = MessageType.Text,
                 SendAt = DateTime.UtcNow
             };
 
             
             await unitOfWork.Messages.AddAsync(message);
+            await unitOfWork.SaveChangesAsync();
+            var recipientIds =
+            await unitOfWork.ConversationMember.GetOtherMemberIdsAsync(dto.ConversationId,senderId);
 
-            if (files != null && files.Any())
+            foreach (var recipientId in recipientIds)
             {
-                await storage.UploadManyAsync(
-                    files,
-                    message.Id,
-                    "messages",
-                    senderId,
-                    cancellationToken);
+                await messageStatusService.MarkAsSentAsync(message.Id,recipientId);
             }
 
+            var senderName = await GetSenderNameAsync(senderId);
 
-            await unitOfWork.SaveChangesAsync();
+            return new MessageDto
+            {
+                Id = message.Id,
+                ConversationId = message.ConversationId,
+                SenderId = message.SenderId,
+                SenderName = senderName,
+                Content = message.Content,
+                CreatedAt = message.SendAt
+            };
+        }
+        private async Task<string> GetSenderNameAsync( Guid senderId)
+        {
+            var user = await unitOfWork.Auth.GetByIdAsync(senderId);
+
+            return user?.UserName ?? string.Empty;
         }
 
     }

@@ -13,6 +13,7 @@ namespace chatbot.Core.Interfaces.Repositories
         Task<MessageRecipientStatus?> GetAsync(Guid messageId, Guid recipientId);
         Task<List<MessageRecipientStatus>> GetByMessageAsync(Guid messageId);
         Task<MessageStatus?> GetStatusAsync(Guid messageId, Guid recipientId);
+        Task<List<MessageRecipientStatus>> GetReadersAsync(Guid messageId);
 
     }
 }

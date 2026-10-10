@@ -32,8 +32,21 @@ namespace chatbot.Ef.Repositories
         public async Task<List<MessageRecipientStatus>> GetByMessageAsync(Guid messageId)
         {
             return await context.MessageRecipientStatuses
+                .AsNoTracking()
                 .Where(mrs => mrs.MessageId==messageId)
                 .ToListAsync();
+        }
+
+        public async Task<List<MessageRecipientStatus>> GetReadersAsync(Guid messageId)
+        {
+            return await context.MessageRecipientStatuses
+            .AsNoTracking()
+            .Include(x => x.Recipient)
+            .Where(x =>
+                x.MessageId == messageId &&
+                x.ReadAt != null)
+            .OrderBy(x => x.ReadAt)
+            .ToListAsync();
         }
 
         public async Task<MessageStatus?> GetStatusAsync(Guid messageId, Guid recipientId)

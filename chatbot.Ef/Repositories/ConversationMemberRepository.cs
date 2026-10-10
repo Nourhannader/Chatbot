@@ -42,6 +42,14 @@ namespace chatbot.Ef.Repositories
             return await context.ConversationMembers.FirstOrDefaultAsync(x => x.Id == id);
         }
 
+        public async Task<List<Guid>> GetOtherMemberIdsAsync(Guid conversationId, Guid senderId)
+        {
+            return await context.ConversationMembers
+                .Where(x => x.ConversationId == conversationId && x.UserId != senderId && !x.IsBanned)
+                .Select(x => x.UserId)
+                .ToListAsync();
+        }
+
         public async Task<bool> IsAdminAsync(Guid conversationId, Guid userId)
         {
             return await context.ConversationMembers

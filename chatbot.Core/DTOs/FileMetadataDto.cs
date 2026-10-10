@@ -8,7 +8,7 @@ namespace chatbot.Core.DTOs
 {
     public class FileMetadataDto
     {
-        public string Id { get; set; }
+        public Guid Id { get; set; }
 
         public string OriginalName { get; set; }
             = string.Empty;

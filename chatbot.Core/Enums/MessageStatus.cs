@@ -12,6 +12,6 @@ namespace chatbot.Core.Enums
 
         Delivered=2,
 
-        Seen=3
+        Read=3
     }
 }

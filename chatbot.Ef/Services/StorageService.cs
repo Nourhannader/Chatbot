@@ -13,10 +13,11 @@ using chatbot.Core.Enums;
 using chatbot.Core.Interfaces.Validators;
 using chatbot.Core.Models;
 using chatbot.Core.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace chatbot.Ef.Services
 {
-    public class StorageService(IWebHostEnvironment environment,IUnitOfWork unitOfWork,
+    public class StorageService(IWebHostEnvironment environment,IUnitOfWork unitOfWork,ILogger<StorageService> logger,
         IFileValidationService validators,IEnumerable<IStorageProvider> providers) : IStorageService
     {
         private static string GeneratePath(string folder,string fileName)
@@ -37,9 +38,11 @@ namespace chatbot.Ef.Services
         }
         private IStorageProvider GetProvider(StorageProviderType providerType)
         {
-            return providers.First(x =>
-                x.ProviderType == providerType)??
-                throw new InvalidOperationException($"Storage provider '{providerType}' is not registered.");
+            var provider = providers.SingleOrDefault(
+                x => x.ProviderType == providerType);
+
+            return provider ?? throw new InvalidOperationException(
+                $"Storage provider '{providerType}' is not registered.");
         }
         private static string GetFolder(FileCategory category,Guid ownerId)
         {
@@ -143,9 +146,12 @@ namespace chatbot.Ef.Services
                 {
                     await provider.DeleteAsync(relativePath, CancellationToken.None);
                 }
-                catch
+                catch (Exception cleanupException)
                 {
-                    // Don't hide original exception.
+                    logger.LogError(
+                        cleanupException,
+                        "Failed to clean up uploaded file {FilePath}",
+                        relativePath);
                 }
 
                 throw;
@@ -220,11 +226,22 @@ namespace chatbot.Ef.Services
         public async Task<List<UploadResultDto>> UploadMessageFilesAsync(IEnumerable<IFormFile> files, Guid messageId, Guid uploadedBy,
                 CancellationToken cancellationToken = default)
         {
-            var results = new List<UploadResultDto>();
+            ArgumentNullException.ThrowIfNull(files);
 
-            foreach (var file in files)
+            var filesList = files.ToList();
+
+            if (filesList.Count == 0)
+                throw new ArgumentException( "At least one file is required.", nameof(files));
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var results = new List<UploadResultDto>(filesList.Count);
+
+            foreach (var file in filesList)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (file == null || file.Length == 0)
+                    throw new ArgumentException("Files cannot be null or empty.",nameof(files));
 
                 var result =
                     await UploadMessageFileAsync(file, messageId, uploadedBy, cancellationToken);

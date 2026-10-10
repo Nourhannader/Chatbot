@@ -14,7 +14,8 @@ namespace chatbot.Core.Enums
         Video = 4,
         File = 5,
         VoiceNote = 6,
-        Sticker = 7
+        Sticker = 7,
+        Document = 8
     }
 }
 

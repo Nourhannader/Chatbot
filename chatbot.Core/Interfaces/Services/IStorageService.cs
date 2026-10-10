@@ -17,20 +17,18 @@ namespace chatbot.Core.Interfaces.Services
 
         Task<UploadResultDto> UploadUserProfileImageAsync(IFormFile file, Guid userId,
             CancellationToken cancellationToken = default);
+        Task<UploadResultDto> ReplaceUserProfileImageAsync(IFormFile newFile, Guid userId, Guid? oldFileId,
+            CancellationToken cancellationToken = default);
 
         Task<UploadResultDto> UploadConversationImageAsync(IFormFile file, Guid conversationId, Guid uploadedBy,
+            CancellationToken cancellationToken = default);
+        Task<UploadResultDto> ReplaceConversationImageAsync(IFormFile newFile, Guid conversationId, Guid uploadedBy, Guid? oldFileId,
             CancellationToken cancellationToken = default);
 
         Task<UploadResultDto> UploadMessageFileAsync(IFormFile file, Guid messageId, Guid uploadedBy,
             CancellationToken cancellationToken = default);
 
         Task<List<UploadResultDto>> UploadMessageFilesAsync(IEnumerable<IFormFile> files, Guid messageId, Guid uploadedBy,
-            CancellationToken cancellationToken = default);
-
-        Task<UploadResultDto> ReplaceUserProfileImageAsync(IFormFile newFile, Guid userId, Guid? oldFileId,
-            CancellationToken cancellationToken = default);
-
-        Task<UploadResultDto> ReplaceConversationImageAsync(IFormFile newFile, Guid conversationId, Guid uploadedBy, Guid? oldFileId,
             CancellationToken cancellationToken = default);
 
         Task<DownloadFileDto?> DownloadAsync(Guid fileId,
