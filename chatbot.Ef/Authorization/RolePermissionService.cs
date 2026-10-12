@@ -7,75 +7,55 @@ using chatbot.Core.Authorization.Conversation;
 using chatbot.Core.Enums;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
+using chatbot.Core.Models;
 
 namespace chatbot.Ef.Authorization
 {
     public class RolePermissionService(IUnitOfWork unitOfWork) : IRolePermissionService
     {
-        private static bool HasPermission(ConversationRole role,string permission)
+        
+        private static bool IsMessagingPermission(string permission)
         {
-            return role switch
-            {
-                ConversationRole.Member => IsMemberPermission(permission),
-
-                ConversationRole.Admin => IsAdminPermission(permission),
-
-                ConversationRole.Owner => IsOwnerPermission(permission),
-
-                _ => false
-            };
+            return permission is ConversationPermissions.SendMessage
+                   or  ConversationPermissions.Reply
+                   or  ConversationPermissions.UploadFile;
         }
 
-        private static bool IsMemberPermission(string permission)
+        private static bool IsAdminMuted(ConversationMember member)
         {
-            return permission == ConversationPermissions.SendMessage
-                || permission == ConversationPermissions.Reply
-                || permission == ConversationPermissions.React
-                || permission == ConversationPermissions.UploadFile;
-              
+            if (!member.IsMutedByAdmin)
+                return false;
 
-        }
+            // Indefinite mute
+            if (!member.MutedUntil.HasValue)
+                return true;
 
-        private static bool IsAdminPermission(string permission)
-        {
-            return IsMemberPermission(permission)
-                || permission == ConversationPermissions.ManageMessages
-                || permission == ConversationPermissions.DeleteMessage
-                || permission == ConversationPermissions.AddMember
-                || permission == ConversationPermissions.RemoveMember
-                || permission == ConversationPermissions.ManageGroup
-                || permission == ConversationPermissions.BanMember
-                || permission == ConversationPermissions.UnbanMember
-                || permission == ConversationPermissions.MuteMember
-                || permission == ConversationPermissions.UnmuteMember
-                ;
+            return member.MutedUntil.Value >
+                   DateTime.UtcNow;
         }
+        public async Task<bool> HasPermissionAsync(ConversationMember member, string permission)
+        {
 
-        private static bool IsOwnerPermission(string permission)
-        {
-            return IsAdminPermission(permission)
-                || permission == ConversationPermissions.PromoteMember
-                || permission == ConversationPermissions.DemoteMember
-                || permission == ConversationPermissions.TransferOwnership
-                || permission == ConversationPermissions.DeleteGroup;
-        }
-      
-        public async Task<bool> HasPermissionAsync(Guid userId, Guid conversationId, string permission)
-        {
-            var member = await unitOfWork.ConversationMember.GetAsync(conversationId, userId);
             if (member == null)
+                return false;
+            if (member.LeftAt != null || member.IsBanned)
             {
                 return false;
             }
-            if (member.IsBanned)
-                return false;
 
-            if (member.IsMuted &&
-                permission ==ConversationPermissions.SendMessage)
+            // Admin muted user
+            if (IsMessagingPermission(permission) &&
+                IsAdminMuted(member))
             {
                 return false;
             }
-            return HasPermission(member.Role, permission);
+
+            if (!ConversationRolePermissions.Permissions.TryGetValue(member.Role, out var permissions))
+            {
+                return false;
+            }
+
+            return permissions.Contains(permission);
         }
     }
 }

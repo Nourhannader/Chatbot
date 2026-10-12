@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.Models;
 
 namespace chatbot.Core.Interfaces.Services
 {
     public interface IRolePermissionService
     {
-        Task<bool> HasPermissionAsync(Guid userId, Guid conversationId, string permission);
+        Task<bool> HasPermissionAsync(ConversationMember member, string permission);
     }
 }

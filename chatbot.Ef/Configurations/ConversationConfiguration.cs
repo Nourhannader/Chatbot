@@ -22,30 +22,53 @@ namespace chatbot.Ef.Configurations
                 .HasConversion<int>()
                 .IsRequired();
 
-
-            // Relationships
-            builder.HasMany(c => c.Members)
-                .WithOne(cm => cm.Conversation)
-                .HasForeignKey(cm=> cm.ConversationId);
-
-            builder.HasMany(c => c.Messages)
-                .WithOne(m => m.Conversation)
-                .HasForeignKey(m => m.ConversationId);
-
-            builder.HasOne(x => x.Image)
-             .WithMany()
-             .HasForeignKey(x => x.ImageId)
-            .OnDelete(DeleteBehavior.SetNull);
+            builder.Property(x => x.IsDeleted)
+            .HasDefaultValue(false);
 
             // Created By
             builder.HasOne(x => x.CreatedBy)
-                .WithMany()
+                .WithMany(u=> u.Conversations)
                 .HasForeignKey(x => x.CreatedById)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Deleted By
+            builder.HasOne(x => x.DeletedBy)
+                .WithMany(u=> u.Conversations)
+                .HasForeignKey(x => x.DeletedById)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Group Image
+            builder.HasOne(x => x.Image)
+                .WithMany()
+                .HasForeignKey(x => x.ImageId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            // Members
+            builder.HasMany(x => x.Members)
+                .WithOne(x => x.Conversation)
+                .HasForeignKey(x => x.ConversationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Settings
+            builder.HasMany(x => x.UserSettings)
+                .WithOne(x => x.Conversation)
+                .HasForeignKey(x => x.ConversationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Messages
+            builder.HasMany(x => x.Messages)
+                .WithOne(x => x.Conversation)
+                .HasForeignKey(x => x.ConversationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             //index
-            builder.HasIndex(c => c.CreatedAt);
-            builder.HasIndex(c => c.Type);
+            builder.HasIndex(x => x.CreatedById);
+
+            builder.HasIndex(x => new
+            {
+                x.Type,
+                x.IsDeleted
+            });
         }
     }
 }

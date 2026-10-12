@@ -13,8 +13,12 @@ namespace chatbot.Core.DTOs
 
         public string UserName { get; set; } = string.Empty;
 
-        public GroupRole Role { get; set; }
+        public string? DisplayName { get; set; } = string.Empty;
+        public string? ProfileImageUrl { get; set; }
+        public ConversationRole Role { get; set; }
 
         public DateTime JoinedAt { get; set; }
+        public bool IsMutedByAdmin { get; set; }
+        public DateTime? MutedUntil { get; set; }
     }
 }

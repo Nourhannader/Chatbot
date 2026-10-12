@@ -30,6 +30,8 @@ namespace chatbot.Core.Models
         public DateTime? DeletedAt { get; set; }
 
         public Guid? DeletedById { get; set; }
+
+        public ApplicationUser? DeletedBy { get; set; }
         //image group
         public Guid? ImageId { get; set; }
 
@@ -37,6 +39,8 @@ namespace chatbot.Core.Models
 
         // Navigation Properties
         public ICollection<ConversationMember> Members { get; set; } = new List<ConversationMember>();
+
+        public ICollection<ConversationUserSettings> UserSettings { get; set; } = new List<ConversationUserSettings>();
         public ICollection<Message> Messages { get; set; } = new List<Message>();
     }
 }

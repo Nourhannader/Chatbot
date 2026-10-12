@@ -22,14 +22,14 @@ namespace chatbot.Core.Interfaces.Services
 
         Task LeaveAsync(Guid conversationId,Guid userId);
 
-        Task TransferOwnershipAsync(ClaimsPrincipal user, Guid conversationId,Guid ownerId,Guid newOwnerId);
+        Task TransferOwnershipAsync(ClaimsPrincipal user, Guid conversationId,Guid newOwnerId);
 
         Task UpdateAsync(ClaimsPrincipal user,Guid conversationId,UpdateGroupDto dto);
 
         Task DeleteAsync(ClaimsPrincipal user, Guid conversationId);
         Task BanMemberAsync(ClaimsPrincipal user,Guid conversationId, Guid userId);
         Task UnBanMemberAsync(ClaimsPrincipal user,Guid conversationId, Guid userId);
-        Task MuteMemberAsync(ClaimsPrincipal user, Guid conversationId, Guid userId);
+        Task MuteMemberAsync(ClaimsPrincipal user, Guid conversationId, Guid userId, DateTime? until = null);
         Task UnMuteMemberAsync(ClaimsPrincipal user, Guid conversationId, Guid userId);
     }
 }

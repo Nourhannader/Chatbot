@@ -18,12 +18,19 @@ namespace chatbot.Core.Models
         public ApplicationUser User { get; set; }
             = null!;
 
+        // Mute
         public bool IsMuted { get; set; }
 
         public DateTime? MuteUntil { get; set; }
 
+        // Archive
         public bool IsArchived { get; set; }
 
         public DateTime? ArchivedAt { get; set; }
+
+        // Pin
+        public bool IsPinned { get; set; }
+
+        public DateTime? PinnedAt { get; set; }
     }
 }

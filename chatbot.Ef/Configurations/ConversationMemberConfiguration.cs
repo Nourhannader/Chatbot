@@ -14,38 +14,40 @@ namespace chatbot.Ef.Configurations
         public void Configure(EntityTypeBuilder<ConversationMember> builder)
         {
 
+            builder.Property(x => x.IsBanned)
+             .HasDefaultValue(false);
+
             builder.HasOne(x => x.Conversation)
                 .WithMany(x => x.Members)
                 .HasForeignKey(x => x.ConversationId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            builder.HasOne(x=> x.User)
-                .WithMany(c=> c.ConversationMembers)
+            builder.HasOne(x => x.User)
+                .WithMany(x => x.ConversationMembers)
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Role
-            builder.Property(x => x.Role)
-                .HasConversion<int>()
-                .IsRequired();
+            builder.HasOne(x => x.BannedBy)
+                .WithMany(x => x.ConversationMembers)
+                .HasForeignKey(x => x.BannedById)
+                .OnDelete(DeleteBehavior.Restrict);
 
 
+
+            // Prevent duplicate membership
             builder.HasIndex(x => new
             {
                 x.ConversationId,
                 x.UserId
             })
-         .IsUnique();
-
-            // Useful indexes
-            builder.HasIndex(x => x.ConversationId);
+            .IsUnique();
 
             builder.HasIndex(x => x.UserId);
 
             builder.HasIndex(x => new
             {
                 x.ConversationId,
-                x.LeftAt
+                x.IsBanned
             });
         }
     }

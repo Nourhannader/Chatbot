@@ -25,17 +25,19 @@ namespace chatbot.Core.Models
 
         public StoredFile? ProfileImage { get; set; }
         public ICollection<RefreshToken>? RefreshTokens { get; set; }
-        public ICollection<ConversationMember> ConversationMembers { get; set; }
-        public ICollection<Message> MessagesSent { get; set; }
-        public ICollection<UserDevice> Devices { get; set; }
-        public ICollection<Notification> Notifications { get; set; }
-        public ICollection<UserConnection> Connections { get; set; }
-        public ICollection<MessageReaction> MessageReactions { get; set; }
-        public ICollection<MessageRecipientStatus> MessageRecipientStatuses { get; set; }
-        public ICollection<BlockList> BlockedUsers { get; set; }
-        public ICollection<BlockList> BlockedByUsers { get; set; }
-        public ICollection<DeletedMessageForUser> DeletedMessages { get; set; }
-        public ICollection<StoredFile> UploadedFiles { get; set; }
-        public ICollection<MessageRead> MessageReads { get; set; }
+        public ICollection<Conversation>? Conversations { get; set; }
+        public ICollection<ConversationMember>? ConversationMembers { get; set; }
+
+        public ICollection<ConversationUserSettings>? ConversationUserSettings { get; set; }
+        public ICollection<Message>? MessagesSent { get; set; }
+        public ICollection<UserDevice>? Devices { get; set; }
+        public ICollection<Notification>? Notifications { get; set; }
+        public ICollection<UserConnection>? Connections { get; set; }
+        public ICollection<MessageReaction>? MessageReactions { get; set; }
+        public ICollection<MessageRecipientStatus>? MessageRecipientStatuses { get; set; }
+        public ICollection<BlockList>? BlockedUsers { get; set; }
+        public ICollection<BlockList>? BlockedByUsers { get; set; }
+        public ICollection<DeletedMessageForUser>? DeletedMessages { get; set; }
+        public ICollection<StoredFile>? UploadedFiles { get; set; }
     }
 }

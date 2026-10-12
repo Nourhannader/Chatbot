@@ -12,10 +12,9 @@ namespace chatbot.Core.Interfaces.Repositories
         Task<ConversationMember?> GetAsync(Guid conversationId,Guid userId);
 
         Task<List<ConversationMember>> GetActiveMembersAsync(Guid conversationId);
+        Task<ConversationMember?> GetActiveMemberAsync(Guid conversationId,Guid userId);
 
-        Task<bool> IsMemberAsync(Guid conversationId, Guid userId);
-        Task<bool> IsAdminAsync(Guid conversationId, Guid userId);
-        Task<bool> IsOwnerAsync(Guid conversationId, Guid userId);
+        Task<bool> IsActiveMemberAsync(Guid conversationId, Guid userId);
 
         Task<bool> ExistsAsync(Guid conversationId,Guid userId);
         void Remove(ConversationMember member);

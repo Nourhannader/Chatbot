@@ -9,6 +9,8 @@ namespace chatbot.Core.Interfaces.Repositories
 {
     public interface IConversationSettingRepository
     {
+        Task<ConversationUserSettings?> GetAsync(Guid userId, Guid conversationId);
+        Task AddAsync(ConversationUserSettings settings);
         Task<ConversationUserSettings> GetOrCreateSettingsAsync(Guid userId, Guid conversationId);
     }
 }

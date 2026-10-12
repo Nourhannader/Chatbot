@@ -24,8 +24,10 @@ namespace chatbot.Ef.Repositories
                 .AnyAsync(
                 c=> 
                 c.Type== ConversationType.Private &&
-                c.Members.Any(m=> m.UserId == firstUserId) &&
-                c.Members.Any(m => m.UserId == secondUserId)
+                !c.IsDeleted &&
+                c.Members.Count(m => m.LeftAt == null) == 2 &&
+                c.Members.Any(m=> m.UserId == firstUserId && m.LeftAt == null) &&
+                c.Members.Any(m => m.UserId == secondUserId && m.LeftAt == null)
                 );
         }
 
@@ -37,9 +39,8 @@ namespace chatbot.Ef.Repositories
         public Task<Conversation?> GetByIdAsync(Guid id)
         {
             return context.Conversations
-                .Include(c => c.Messages)
                 .Include(c => c.Members)
-                .FirstOrDefaultAsync(c => c.Id == id);
+                .FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted);
         }
 
         public Task<Conversation?> GetGroupWithMembersAsync(Guid ConversationId)
@@ -48,15 +49,17 @@ namespace chatbot.Ef.Repositories
                 .Include(c => c.Members)
                 .FirstOrDefaultAsync(x =>
                 x.Id== ConversationId && x.Type == ConversationType.Group
+                && !x.IsDeleted
                 );
         }
 
         public Task<List<Conversation>> GetUserConversationsAsync(Guid userId)
         {
             return context.Conversations
-                 .Include(c => c.Messages)
-                 .Include(c => c.Members)
-                 .Where(c => c.Members.Any(m => m.UserId == userId))
+                 .Where(c =>
+                   !c.IsDeleted &&
+                   c.Members.Any(m => m.UserId == userId && m.LeftAt == null && !m.IsBanned))
+                 .Include(c => c.Members.Where(m => m.LeftAt == null))
                  .OrderByDescending(c => c.Messages.Max(m => (DateTime?)m.SendAt))
                  .AsNoTracking()
                  .ToListAsync();

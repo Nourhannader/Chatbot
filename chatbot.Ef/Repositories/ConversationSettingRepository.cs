@@ -12,16 +12,26 @@ namespace chatbot.Ef.Repositories
 {
     public class ConversationSettingRepository(ApplicationDbContext context) : IConversationSettingRepository
     {
+        public Task AddAsync(ConversationUserSettings settings)
+        {
+            return context.Settings.AddAsync(settings).AsTask();
+        }
+
+        public Task<ConversationUserSettings?> GetAsync(Guid userId, Guid conversationId)
+        {
+            return context.Settings.FirstOrDefaultAsync(x => x.UserId == userId && x.ConversationId == conversationId);
+        }
+
         public async Task<ConversationUserSettings> GetOrCreateSettingsAsync(Guid userId, Guid conversationId)
         {
-            var settings= await context.Settings
-                .FirstOrDefaultAsync(s => s.UserId==userId && s.ConversationId==conversationId);
+            var settings = await GetAsync(userId, conversationId);
 
             if (settings != null)
                 return settings;
 
             settings = new ConversationUserSettings
             {
+                Id=Guid.NewGuid(),
                 UserId = userId,
                 ConversationId = conversationId
             };

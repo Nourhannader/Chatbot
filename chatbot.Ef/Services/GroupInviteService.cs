@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -14,17 +15,11 @@ using chatbot.Ef.UnitOfWork;
 
 namespace chatbot.Ef.Services
 {
-    public class GroupInviteService : IGroupInviteService
+    public class GroupInviteService(IUnitOfWork unitOfWork,IConversationAuthorizationService authorizationService) : IGroupInviteService
     {
-        private readonly IUnitOfWork unitOfWork;
-        private readonly PermissionService permissionService;
-        public GroupInviteService(IUnitOfWork unitOfWork)
+        public async Task<string> GenerateAsync(ClaimsPrincipal user,Guid conversationId)
         {
-            this.unitOfWork = unitOfWork;
-            this.permissionService = new PermissionService(unitOfWork);
-        }
-        public async Task<string> GenerateAsync(Guid conversationId, Guid userId)
-        {
+
             var member = await permissionService.GetActiveMemberAsync(conversationId, userId);
 
             if (member.Role == GroupRole.Member)
@@ -61,7 +56,7 @@ namespace chatbot.Ef.Services
 
             var existing =await unitOfWork.ConversationMember.GetAsync(invite.ConversationId, userId);
 
-            if (existing != null &&existing.LeftAt == null)
+            if (existing != null && existing.LeftAt == null)
             {
                 throw new InvalidOperationException("User is already a member.");
             }
@@ -70,7 +65,7 @@ namespace chatbot.Ef.Services
             {
                 existing.LeftAt = null;
                 existing.JoinedAt = DateTime.UtcNow;
-                existing.Role = GroupRole.Member;
+                existing.Role = ConversationRole.Member;
 
                 unitOfWork.ConversationMember.Update(existing);
             }
@@ -81,7 +76,7 @@ namespace chatbot.Ef.Services
                     {
                         ConversationId = invite.ConversationId,
                         UserId = userId,
-                        Role = GroupRole.Member
+                        Role = ConversationRole.Member
                     });
             }
 

@@ -11,9 +11,8 @@ namespace chatbot.Core.Interfaces.Services
     public interface IConversationAuthorizationService
     {
         Task AuthorizeAsync(ClaimsPrincipal user, Guid conversationId, string permission);
+        Task AuthorizeMemberAsync(ClaimsPrincipal user, Guid conversationId, Guid targetUserId, string permission);
 
-        Task AuthorizeAsync(ClaimsPrincipal user, ConversationResource resource, string permission);
-
-        Task AuthorizeMessageAsync(ClaimsPrincipal user,Guid conversationId,Guid messageId,string permission);
+        Task AuthorizeMessageAsync(ClaimsPrincipal user, Guid conversationId, Guid messageId, string permission);
     }
 }

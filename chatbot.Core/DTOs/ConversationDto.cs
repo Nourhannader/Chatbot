@@ -15,14 +15,15 @@ namespace chatbot.Core.DTOs
         public ConversationType Type { get; set; }
 
         public string? Title { get; set; }
-
-        public string? ImageUrl { get; set; }
-
         public string? Description { get; set; }
 
         public DateTime CreatedAt { get; set; }
+        public ConversationMemberDto? OtherUser { get; set; }
+        public LastMessageDto? LastMessage { get; set; }
 
-        public List<ConversationMemberDto> Members { get; set; }
-            = [];
+        public int UnreadCount { get; set; }
+        public bool IsMuted { get; set; }
+        public bool IsArchived { get; set; }
+        public bool IsPinned { get; set; }
     }
 }

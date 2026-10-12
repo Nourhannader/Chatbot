@@ -17,26 +17,28 @@ namespace chatbot.Core.Models
         public Guid UserId { get; set; } 
         public ApplicationUser User { get; set; } = null!;
 
-        public ConversationRole Role { get; set; }
+        public ConversationRole Role { get; set; } = ConversationRole.Member;
         public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
         public DateTime? LeftAt { get; set; }
 
         // Real-Time Unread Count Tracking
         public DateTime? LastReadAt { get; set; }
 
-        //// Mute Feature
-        //public DateTime? MutedUntil { get; set; }
-
+        //Moderation Feature
         public bool IsBanned { get; set; }
+        public DateTime? BannedAt { get; set; }
 
-        public bool IsMuted { get; set; }
+        public Guid? BannedById { get; set; }
 
-        //// Pinning Feature
-        //public bool IsPinned { get; set; } = false;
-        //public DateTime? PinnedAt { get; set; }
-        ////Archive Feature
-        //public bool IsArchived { get; set; }
+        public ApplicationUser? BannedBy { get; set; }
 
-        //public DateTime? ArchivedAt { get; set; }
+        public bool IsMutedByAdmin { get; set; }
+
+        public DateTime? MutedUntil { get; set; }
+
+        public Guid? MutedById { get; set; }
+
+        public ApplicationUser? MutedBy { get; set; }
+
     }
 }

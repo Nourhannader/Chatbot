@@ -31,10 +31,18 @@ namespace chatbot.Ef.Repositories
                 .ToListAsync();
         }
 
+        public async Task<ConversationMember?> GetActiveMemberAsync(Guid conversationId,Guid userId)
+        {
+            return await context.ConversationMembers
+                .FirstOrDefaultAsync(x => x.ConversationId == conversationId 
+                && x.UserId == userId
+                && x.LeftAt == null && !x.IsBanned);
+        }
+
         public async Task<ConversationMember?> GetAsync(Guid conversationId, Guid userId)
         {
             return await context.ConversationMembers
-                .FirstOrDefaultAsync(x => x.ConversationId == conversationId && x.UserId == userId && !x.IsBanned);
+                .FirstOrDefaultAsync(x => x.ConversationId == conversationId && x.UserId == userId );
         }
 
         public async Task<ConversationMember?> GetByIdAsync(Guid id)
@@ -45,38 +53,21 @@ namespace chatbot.Ef.Repositories
         public async Task<List<Guid>> GetOtherMemberIdsAsync(Guid conversationId, Guid senderId)
         {
             return await context.ConversationMembers
-                .Where(x => x.ConversationId == conversationId && x.UserId != senderId && !x.IsBanned)
+                .Where(x => x.ConversationId == conversationId && x.UserId != senderId && x.LeftAt == null && !x.IsBanned)
                 .Select(x => x.UserId)
                 .ToListAsync();
         }
 
-        public async Task<bool> IsAdminAsync(Guid conversationId, Guid userId)
+        public async Task<bool> IsActiveMemberAsync(Guid conversationId, Guid userId)
         {
             return await context.ConversationMembers
                 .AnyAsync(x => x.ConversationId == conversationId &&
-                x.UserId== userId && ( x.Role== ConversationRole.Admin ||
-                x.Role == ConversationRole.Owner)
+                x.LeftAt == null &&
+                x.UserId == userId
                 &&!x.IsBanned
                 );
         }
 
-        public async Task<bool> IsMemberAsync(Guid conversationId, Guid userId)
-        {
-            return await context.ConversationMembers
-                .AnyAsync(x => x.ConversationId == conversationId &&
-                x.UserId == userId && x.Role == ConversationRole.Member
-                &&!x.IsBanned
-                );
-        }
-
-        public async Task<bool> IsOwnerAsync(Guid conversationId, Guid userId)
-        {
-            return await context.ConversationMembers
-                .AnyAsync(x => x.ConversationId == conversationId &&
-                x.UserId == userId && x.Role == ConversationRole.Owner
-                &&!x.IsBanned
-                );
-        }
 
         public void Remove(ConversationMember member)
         {

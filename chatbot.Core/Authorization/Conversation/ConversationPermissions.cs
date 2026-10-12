@@ -8,6 +8,8 @@ namespace chatbot.Core.Authorization.Conversation
 {
     public static class ConversationPermissions
     {
+        public const string View = "conversation.view";
+
         public const string SendMessage = "conversation.message.send";
 
         public const string Reply = "conversation.message.reply";
