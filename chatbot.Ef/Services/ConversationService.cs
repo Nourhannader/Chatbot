@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using AutoMapper;
+using chatbot.Core.DTOs;
 using chatbot.Core.Enums;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
@@ -10,10 +13,10 @@ using chatbot.Core.Models;
 
 namespace chatbot.Ef.Services
 {
-    public class ConversationService(IUnitOfWork unitOfWork) : IConversationService
+    public class ConversationService(IUnitOfWork unitOfWork,IMapper mapper) : IConversationService
     {
      //private conversation   
-        public async Task<Conversation> CreateConversationAsync(Guid creatorId, Guid secondUserId)
+        public async Task<ConversationDetailsDto> CreateConversationAsync(Guid creatorId, Guid secondUserId)
         {
             bool exists = await unitOfWork.Conversations.ConversationExistsAsync(creatorId, secondUserId);
             if (exists)
@@ -45,13 +48,19 @@ namespace chatbot.Ef.Services
             });
             await unitOfWork.Conversations.AddAsync(conversation);
             await unitOfWork.SaveChangesAsync();
-            return conversation;
+            return mapper.Map<ConversationDetailsDto>(conversation);
 
         }
 
-        public async Task<List<Conversation>> GetUserConversationsAsync(Guid userId)
+        public Task<ConversationDetailsDto> GetDetailsAsync(ClaimsPrincipal user, Guid conversationId)
         {
-            return await unitOfWork.Conversations.GetUserConversationsAsync(userId);
+            throw new NotImplementedException();
+        }
+
+        public async Task<List<ConversationDto>> GetUserConversationsAsync(Guid userId)
+        {
+           var result= await unitOfWork.Conversations.GetUserConversationsAsync(userId);
+            return mapper.Map<List<ConversationDto>>(result);
         }
 
        

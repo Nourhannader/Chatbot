@@ -4,13 +4,14 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.DTOs;
 using chatbot.Core.Models;
 
 namespace chatbot.Core.Interfaces.Services
 {
     public interface IConversationSettingsService
     {
-        Task<ConversationSettingDto> GetAsync(ClaimsPrincipal user, Guid conversationId);
+        Task<ConversationSettingsDto> GetAsync(ClaimsPrincipal user, Guid conversationId);
         Task MuteAsync(ClaimsPrincipal user,Guid conversationId,DateTime? muteUntil);
 
         Task UnmuteAsync(ClaimsPrincipal user,Guid conversationId);

@@ -21,7 +21,7 @@ namespace chatbot.Core.DTOs
         public Guid? CreateById { get; set; }
 
         public int MembersCount { get; set; }
-        public ConversationRole? CurrentUserRolr { get; set; }
+        public ConversationRole? CurrentUserRole { get; set; }
         public bool IsMuted { get; set; }
         public bool IsArchived { get; set; }
         public bool IsPinned { get; set; }

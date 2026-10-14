@@ -20,5 +20,7 @@ namespace chatbot.Core.Interfaces.Repositories
         void Remove(ConversationMember member);
 
         Task<List<Guid>> GetOtherMemberIdsAsync(Guid conversationId, Guid senderId);
+
+        Task<int> CountActiveAsync(Guid conversationId);
     }
 }

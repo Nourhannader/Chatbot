@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace chatbot.Ef.Repositories
 {
-    public class GroupInviteRepository(ApplicationDbContext context) : IGroupInviteRepository
+    public sealed class GroupInviteRepository(ApplicationDbContext context) : IGroupInviteRepository
     {
         public async Task AddAsync(GroupInvite entity)
         {
@@ -20,14 +20,21 @@ namespace chatbot.Ef.Repositories
         public async Task<List<GroupInvite>> GetActiveInvitesAsync(Guid conversationId)
         {
             return await context.GroupInvites
-                .Where(x => x.ConversationId == conversationId && x.IsActive)
-                .ToListAsync();
+             .Where(x =>
+                 x.ConversationId == conversationId &&
+                 x.IsActive)
+             .OrderByDescending(x => x.CreatedAt)
+             .AsNoTracking()
+             .ToListAsync();
         }
 
         public async Task<GroupInvite?> GetByCodeAsync(string code)
         {
-            return await context
-                .GroupInvites.FirstOrDefaultAsync(x => x.Code == code);
+            return await context.GroupInvites
+            .Include(x => x.Conversation)
+                .ThenInclude(x => x.Image)
+            .FirstOrDefaultAsync(x =>
+                x.Code == code);
         }
 
         public async Task<GroupInvite?> GetByIdAsync(Guid id)

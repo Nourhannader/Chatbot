@@ -43,5 +43,8 @@ namespace chatbot.Core.Authorization.Conversation
         public const string BanMember = "conversation.member.ban";
 
         public const string UnbanMember = "conversation.member.unban";
+
+        public const string ManageInvites = "conversation.invite.manage";
+
     }
 }

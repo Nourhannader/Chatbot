@@ -13,6 +13,7 @@ using AutoMapper;
 using chatbot.Core.Common;
 using System.Runtime.CompilerServices;
 using chatbot.Core.Authorization.Conversation;
+using chatbot.Core.DTOs;
 
 namespace chatbot.Ef.Services
 {
@@ -63,17 +64,8 @@ namespace chatbot.Ef.Services
             settings.MuteUntil = null;
            await unitOfWork.SaveChangesAsync();
         }
-   
-         private async Task EnsureMemberAsync(Guid userId, Guid conversationId)
-          {
-            var exists = await unitOfWork.ConversationMember.ExistsAsync(conversationId, userId);
-            if (!exists)
-            {
-                throw new ForbiddenException("You are not a member of this conversation.");
-            }
-         }
-
-        public async Task<ConversationSettingDto> GetAsync(ClaimsPrincipal user, Guid conversationId)
+       
+        public async Task<ConversationSettingsDto> GetAsync(ClaimsPrincipal user, Guid conversationId)
         {
             await AuthorizeAsync(user, conversationId);
             var userId = user.GetUserId();
@@ -81,7 +73,7 @@ namespace chatbot.Ef.Services
 
             if (settings is null)
             {
-                return new ConversationSettingDto
+                return new ConversationSettingsDto
                 {
                     IsMuted = false,
                     MuteUntil = null,
@@ -90,8 +82,9 @@ namespace chatbot.Ef.Services
                     IsPinned = false,
                     PinnedAt = null
                 };
-                return mapper.Map<ConversationSettingDto>(settings);
+                
             }
+            return mapper.Map<ConversationSettingsDto>(settings);
         }
 
         public async Task PinAsync(ClaimsPrincipal user, Guid conversationId)

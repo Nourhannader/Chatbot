@@ -1,17 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.DTOs.InviteGroup;
+using chatbot.Core.DTOs;
 
 namespace chatbot.Core.Interfaces.Services
 {
     public interface IGroupInviteService
     {
-        Task<string> GenerateAsync(Guid conversationId, Guid userId);
+        Task<GroupInviteDto> GenerateAsync(ClaimsPrincipal user, Guid conversationId, CreateGroupInviteDto dto);
 
-        Task JoinAsync(string code, Guid userId);
+        Task<List<GroupInviteDto>> GetActiveAsync(ClaimsPrincipal user, Guid conversationId);
 
-        Task RevokeAsync(Guid inviteId, Guid userId);
+        Task RevokeAsync(ClaimsPrincipal user, Guid conversationId, Guid inviteId);
+
+        Task<GroupInvitePreviewDto> GetPreviewAsync(ClaimsPrincipal user, string code);
+
+        Task<ConversationDetailsDto> JoinAsync(ClaimsPrincipal user, string code);
     }
 }

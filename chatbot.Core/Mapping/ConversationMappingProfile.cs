@@ -37,6 +37,15 @@ namespace chatbot.Core.Mapping
                 .ForMember(d => d.Url,
                 opt => opt.MapFrom(s => s.Path));
 
+            CreateMap<CreateGroupDto, Conversation>()
+               .ForMember(d => d.Id, opt => opt.Ignore())
+               .ForMember(d => d.Type,opt => opt.Ignore())
+               .ForMember( d => d.CreatedById, opt => opt.Ignore())
+               .ForMember(d => d.CreatedAt,opt => opt.Ignore())
+               .ForMember(d => d.Image,opt => opt.Ignore())
+               .ForMember(d => d.ImageId,opt => opt.Ignore())
+               .ForMember( d => d.Members, opt => opt.Ignore())
+               .ForMember(d => d.Messages,opt => opt.Ignore());
         }
     }
 }

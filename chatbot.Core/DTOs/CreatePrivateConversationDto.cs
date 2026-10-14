@@ -8,6 +8,6 @@ namespace chatbot.Core.DTOs
 {
     public class CreatePrivateConversationDto
     {
-        public Guid UserId { get; set; }
+        public string UserId { get; set; }
     }
 }

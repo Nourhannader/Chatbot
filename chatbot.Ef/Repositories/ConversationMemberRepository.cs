@@ -79,5 +79,11 @@ namespace chatbot.Ef.Repositories
         {
             context.ConversationMembers.Update(entity);
         }
+
+        public async Task<int> CountActiveAsync(Guid conversationId)
+        {
+            return await context.ConversationMembers
+                .CountAsync(x => x.ConversationId == conversationId && x.LeftAt == null && !x.IsBanned);
+        }
     }
 }
