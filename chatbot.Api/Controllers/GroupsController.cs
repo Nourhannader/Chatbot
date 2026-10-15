@@ -1,6 +1,7 @@
 ﻿using chatbot.Core.Common;
 using chatbot.Core.DTOs;
 using chatbot.Core.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,23 +9,44 @@ namespace chatbot.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class GroupsController(IGroupService groupService) : ControllerBase
+    [Authorize]
+    public sealed class GroupsController(IGroupService groupService) : ControllerBase
     {
         [HttpPost]
         [Consumes("multipart/form-data")]
-        [RequestSizeLimit(5 * 1024 * 1024)]
-        public async Task<IActionResult> Create([FromForm] CreateGroupDto dto)
+        public async Task<ActionResult<ConversationDetailsDto>>
+         Create(
+             [FromForm] CreateGroupDto dto)
         {
-            var userId = User.GetUserId();
+            var result =
+                await groupService.CreateAsync(User, dto);
 
-            var Id = await groupService.CreateAsync(userId, dto);
+            return Ok(result);
+        }
 
-            return CreatedAtAction(nameof(GetById),
-                new
-                {
-                    conversationId =Id
-                },
-                ApiResponse<ConversationDetailsDto>.Ok(Id,"Group created successfully."));
+        [HttpPatch("{groupId:guid}")]
+        public async Task<ActionResult<ConversationDetailsDto>> Update(Guid groupId, [FromBody] UpdateGroupDto dto)
+        {
+            var result =
+                await groupService.UpdateAsync(User, groupId, dto);
+
+            return Ok(result);
+        }
+
+        [HttpDelete("{groupId:guid}")]
+        public async Task<IActionResult> Delete(Guid groupId)
+        {
+            await groupService.DeleteAsync(User, groupId);
+
+            return NoContent();
+        }
+
+        [HttpPost("{groupId:guid}/leave")]
+        public async Task<IActionResult> Leave(Guid groupId)
+        {
+            await groupService.LeaveAsync(User, groupId);
+
+            return NoContent();
         }
     }
 }

@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using AutoMapper;
 using chatbot.Core.Authorization.Conversation;
 using chatbot.Core.Common;
 using chatbot.Core.DTOs;
@@ -17,57 +19,64 @@ using chatbot.Ef.UnitOfWork;
 
 namespace chatbot.Ef.Services
 {
-    public class GroupService : IGroupService
+    public class GroupService(IUnitOfWork unitOfWork, IStorageService storageService, IConversationAuthorizationService authorizationService,
+        IMapper mapper,TimeProvider timeProvider) : IGroupService
     {
-        private readonly IStorageService storageService;
-        private readonly IUnitOfWork unitOfWork;
-        private readonly IConversationAuthorizationService authorizationService ;
-        public GroupService(IUnitOfWork unitOfWork,IStorageService storageService,IConversationAuthorizationService authorizationService)
+        public async Task AddMemberAsync(ClaimsPrincipal user,Guid conversationId,Guid userId)
         {
-            this.unitOfWork = unitOfWork;
-            this.storageService = storageService;
-            this.authorizationService = authorizationService;
-        }
-        public async Task AddMemberAsync(ClaimsPrincipal User,Guid conversationId, Guid userId)
-        {
-            await authorizationService.AuthorizeMemberAsync(User, conversationId,userId, ConversationPermissions.AddMember);
-            var conversation = await unitOfWork.Conversations.GetGroupWithMembersAsync(conversationId);
+            await authorizationService.AuthorizeMemberAsync(user, conversationId, userId, ConversationPermissions.AddMember);
 
-            if (conversation == null || conversation.Type != ConversationType.Group)
+            var group = await unitOfWork.Groups
+                    .GetByIdAsync(conversationId)
+                ?? throw new NotFoundException("Group not found.");
+
+            var existing = await unitOfWork.ConversationMember
+                    .GetAsync(conversationId, userId);
+
+            ConversationMember member;
+
+            if (existing is not null)
             {
-                throw new KeyNotFoundException("Group not found.");
-            }
-            var member = await unitOfWork.ConversationMember.GetAsync(conversationId, userId);
-            if (member != null)
-            {
-                if (member.LeftAt == null)
-                    throw new ConflictException("User is already a member");
-                if (member.IsBanned)
-                    throw new ForbiddenException("Banned User cann't be added.");
-                member.LeftAt = null;
-                member.JoinedAt = DateTime.UtcNow;
-                member.Role = ConversationRole.Member;
-                unitOfWork.ConversationMember.Update(member);
+                if (existing.IsBanned)
+                {
+                    throw new ForbiddenException("Banned user cannot be added.");
+                }
+
+                if (existing.LeftAt is null)
+                {
+                    throw new ConflictException("User is already a member.");
+                }
+
+                existing.LeftAt = null;
+                existing.JoinedAt = DateTime.UtcNow;
+                existing.Role = ConversationRole.Member;
+                member = existing;
             }
             else
             {
-                await unitOfWork.ConversationMember.AddAsync(new ConversationMember
-                {
-                    Id=Guid.NewGuid(),
-                    ConversationId=conversationId,
-                    UserId=userId,
-                    Role=ConversationRole.Member,
-                    JoinedAt=DateTime.UtcNow
-                });
+                member =
+                    new ConversationMember
+                    {
+                        Id = Guid.NewGuid(),
+                        ConversationId = conversationId,
+                        UserId = userId,
+                        Role = ConversationRole.Member,
+                        JoinedAt = DateTime.UtcNow
+                    };
+
+                await unitOfWork.ConversationMember.AddAsync(member);
             }
 
             await unitOfWork.SaveChangesAsync();
+
+            var dto = mapper.Map<ConversationMemberDto>(member);
         }
 
-        public async Task<Guid> CreateAsync(Guid ownerId, CreateGroupDto dto)
+        public async Task<ConversationDetailsDto> CreateAsync(ClaimsPrincipal user, CreateGroupDto dto)
         {
-            if (string.IsNullOrWhiteSpace(dto.Title))
-                throw new ArgumentException("Group title is required.");
+            var ownerId = user.GetUserId();
+
+            var now = timeProvider.GetUtcNow().UtcDateTime;
 
             var conversation = new Conversation
             {
@@ -76,64 +85,103 @@ namespace chatbot.Ef.Services
                 Title = dto.Title.Trim(),
                 Description = dto.Description?.Trim(),
                 CreatedById = ownerId,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = now
             };
-            
-            var member= new ConversationMember
-                {
-                    Id=Guid.NewGuid(),
-                    ConversationId=conversation.Id,
-                    UserId=ownerId,
-                    Role=ConversationRole.Owner,
-                    JoinedAt=DateTime.UtcNow
-                };
-            conversation.Members.Add(member);
-            
+
             await unitOfWork.Conversations.AddAsync(conversation);
-            await unitOfWork.SaveChangesAsync();
-            return conversation.Id;
+
+            await unitOfWork.ConversationMember
+                .AddAsync(
+                    new ConversationMember
+                    {
+                        Id = Guid.NewGuid(),
+                        ConversationId = conversation.Id,
+                        UserId = ownerId,
+                        Role = ConversationRole.Owner,
+                        JoinedAt = now
+                    });
+
+            foreach (var memberId in dto.MemberIds
+                .Where(x => x != ownerId)
+                .Distinct())
+            {
+                if (memberId == ownerId)
+                    continue;
+
+                await unitOfWork.ConversationMember
+                    .AddAsync(
+                        new ConversationMember
+                        {
+                            Id = Guid.NewGuid(),
+                            ConversationId = conversation.Id,
+                            UserId = memberId,
+                            Role = ConversationRole.Member,
+                            JoinedAt = now
+                        });
+            }
+
+            //// Image upload with compensation
+            //StoredFile? imageFile = null;
+
+            //try
+            //{
+            //    if (dto.Image is not null)
+            //    {
+            //        var upload = await storageService.UploadAsync(dto.Image, $"conversations/{conversation.Id:N}");
+            //        imageFile = CreateStoredFile(dto.Image, upload);
+            //        await unitOfWork.StoredFiles.AddAsync(imageFile);
+            //        conversation.ImageId = imageFile.Id;
+            //        conversation.Image = imageFile;
+            //    }
+
+            //    await unitOfWork.SaveChangesAsync();
+            //}
+            //catch
+            //{
+            //    if (imageFile is not null)
+            //    {
+            //        await TryDeleteAsync(imageFile.StorageKey);
+            //    }
+
+            //    throw;
+            //}
+
+            var result = mapper.Map<ConversationDetailsDto>(conversation);
+            result.CurrentUserRole = ConversationRole.Owner;
+            return result;
         }
        
         public async Task DeleteAsync(ClaimsPrincipal user, Guid conversationId)
         {
             await authorizationService.AuthorizeAsync(user, conversationId, ConversationPermissions.DeleteGroup);
 
-            var conversation =
-                await unitOfWork.Conversations.GetByIdAsync(conversationId);
+            var group = await unitOfWork.Groups.GetByIdAsync(conversationId)
+                 ?? throw new NotFoundException("Group not found.");
 
-            if (conversation == null || conversation.Type != ConversationType.Group)
-                throw new KeyNotFoundException("Group not found.");
+            group.IsDeleted = true;
+            group.DeletedAt = DateTime.UtcNow;
 
-            conversation.IsDeleted = true;
-            conversation.DeletedAt = DateTime.UtcNow;
-
-            var userId = Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            conversation.DeletedById = userId;
-
-            unitOfWork.Conversations.Update(conversation);
+            group.DeletedById = user.GetUserId();
 
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task DemoteAsync(ClaimsPrincipal User, Guid conversationId, Guid memberId)
+        public async Task DemoteAsync(ClaimsPrincipal user, Guid conversationId, Guid memberId)
         {
-            await authorizationService.AuthorizeMemberAsync(User, conversationId,memberId ,ConversationPermissions.DemoteMember);
+            await authorizationService.AuthorizeMemberAsync(user, conversationId,memberId, ConversationPermissions.DemoteMember);
 
-            var member = await unitOfWork.ConversationMember.GetActiveMemberAsync(conversationId, memberId);
-            if (member == null)
-            {
-                throw new NotFoundException("Member not found.");
-            }
+            var member = await unitOfWork.ConversationMember
+                    .GetActiveAsync(conversationId, memberId)
+                ?? throw new NotFoundException("Member not found.");
 
             member.Role = ConversationRole.Member;
 
-            unitOfWork.ConversationMember.Update(member);
-
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task LeaveAsync(Guid conversationId, Guid userId)
+        public async Task LeaveAsync(ClaimsPrincipal user,Guid conversationId)
         {
+            var userId = user.GetUserId();
             var member = await unitOfWork.ConversationMember.GetAsync(conversationId, userId);
 
             if (member == null)
@@ -179,38 +227,28 @@ namespace chatbot.Ef.Services
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task PromoteAsync(ClaimsPrincipal User, Guid conversationId, Guid memberId)
+        public async Task PromoteAsync(ClaimsPrincipal user, Guid conversationId, Guid memberId)
         {
-            await authorizationService.AuthorizeMemberAsync(User, conversationId, memberId, ConversationPermissions.PromoteMember);
+            await authorizationService.AuthorizeMemberAsync(user, conversationId, memberId, ConversationPermissions.PromoteMember);
 
-            var member = await unitOfWork.ConversationMember.GetActiveMemberAsync(conversationId, memberId);
-            if (member == null)
-            {
-                throw new NotFoundException("Member not found.");
-            }
-           
+            var member = await unitOfWork.ConversationMember
+                    .GetActiveAsync(conversationId, memberId)
+                ?? throw new NotFoundException("Member not found.");
 
             member.Role = ConversationRole.Admin;
-
-            unitOfWork.ConversationMember.Update(member);
 
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task RemoveMemberAsync(ClaimsPrincipal User, Guid conversationId, Guid memberId)
+        public async Task RemoveMemberAsync(ClaimsPrincipal user, Guid conversationId, Guid memberId)
         {
-            await authorizationService.AuthorizeMemberAsync(User, conversationId,memberId, ConversationPermissions.RemoveMember);
+            await authorizationService.AuthorizeMemberAsync(user, conversationId, memberId, ConversationPermissions.RemoveMember);
 
-            var target = await unitOfWork.ConversationMember.GetActiveMemberAsync(conversationId, memberId);
-            if (target == null)
-            {
-                throw new NotFoundException("Member not found.");
-            }
+            var member = await unitOfWork.ConversationMember
+                    .GetActiveAsync(conversationId, memberId)
+                ?? throw new NotFoundException("Member not found.");
 
-
-            target.LeftAt = DateTime.UtcNow;
-
-            unitOfWork.ConversationMember.Update(target);
+            member.LeftAt = timeProvider.GetUtcNow().UtcDateTime;
 
             await unitOfWork.SaveChangesAsync();
         }
@@ -221,60 +259,44 @@ namespace chatbot.Ef.Services
 
             var currentOwnerId = user.GetUserId();
 
-            var owner = await unitOfWork.ConversationMember.GetActiveMemberAsync(conversationId, currentOwnerId);
-            var newOwner = await unitOfWork.ConversationMember.GetActiveMemberAsync(conversationId, newOwnerId);
+            var oldOwner = await unitOfWork.ConversationMember.GetActiveAsync(conversationId, user.GetUserId())
+                 ?? throw new NotFoundException("Owner not found.");
+            var newOwner = await unitOfWork.ConversationMember.GetActiveAsync(conversationId, newOwnerId)
+                ?? throw new NotFoundException("New owner not found.");
 
-            if (owner == null || owner.Role != ConversationRole.Owner)
+            if ( oldOwner.Role != ConversationRole.Owner)
                 throw new ForbiddenException("Only the owner can transfer ownership.");
 
-            if (newOwner == null)
-            {
-                throw new NotFoundException("New owner is not an active member.");
-            }
-
-            owner.Role = ConversationRole.Admin;
+            oldOwner.Role = ConversationRole.Admin;
             newOwner.Role = ConversationRole.Owner;
 
 
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task UpdateAsync(ClaimsPrincipal User,Guid conversationId, UpdateGroupDto dto)
+        public async Task<ConversationDetailsDto> UpdateAsync(ClaimsPrincipal user,Guid conversationId, UpdateGroupDto dto)
         {
-            await authorizationService.AuthorizeAsync(User, conversationId, ConversationPermissions.ManageGroup);
-            var conversation = await unitOfWork.Conversations.GetByIdAsync(conversationId);
+            await authorizationService.AuthorizeAsync(user, conversationId, ConversationPermissions.ManageGroup);
 
-            if (conversation == null ||
-                conversation.Type != ConversationType.Group)
-            {
-                throw new KeyNotFoundException("Group not found.");
-            }
+            var group =
+                await unitOfWork.Groups
+                    .GetByIdAsync(conversationId)
+                ?? throw new NotFoundException("Group not found.");
 
-            if (dto.Title != null)
-            {
+            if (dto.Title is not null)
+                group.Title = dto.Title.Trim();
 
-                conversation.Title = dto.Title.Trim();
-            }
-
-            if (dto.Description != null)
-            {
-                conversation.Description = dto.Description.Trim();
-            }
-            var uploadedBy = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            if (dto.Image != null)
-            {
-                var result =
-                    await storageService.UploadConversationImageAsync(dto.Image,conversationId,uploadedBy);//return here
-
-                conversation.ImageId = result.FileId;
-            }
-
-            unitOfWork.Conversations.Update(conversation);
+            if (dto.Description is not null)
+                group.Description = dto.Description.Trim();
 
             await unitOfWork.SaveChangesAsync();
+
+            var result = mapper.Map<ConversationDetailsDto>(group);
+
+            return result;
         }
   
-        public async Task BanMemberAsync(ClaimsPrincipal user,Guid conversationId, Guid userId)
+        public async Task BanMemberAsync(ClaimsPrincipal user,Guid conversationId, Guid userId, BanMemberDto dto)
         {
             await authorizationService.AuthorizeMemberAsync(user, conversationId, userId,ConversationPermissions.BanMember);
             var member = await unitOfWork.ConversationMember.GetAsync(conversationId, userId);
@@ -284,8 +306,9 @@ namespace chatbot.Ef.Services
             }
 
             member.IsBanned = true;
-            member.BannedAt = DateTime.UtcNow;
+            member.BannedAt = timeProvider.GetUtcNow().UtcDateTime;
             member.BannedById = user.GetUserId();
+            member.BanReason = dto.Reason;
             await unitOfWork.SaveChangesAsync();
         }
 
@@ -303,26 +326,27 @@ namespace chatbot.Ef.Services
             member.IsBanned = false;
             member.BannedAt = null;
             member.BannedById = null;
+            member.BanReason = null;
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task MuteMemberAsync(ClaimsPrincipal user,Guid conversationId,Guid userId,DateTime? until=null)
+        public async Task MuteMemberAsync(ClaimsPrincipal user,Guid conversationId,Guid userId, MuteConversationDto dto)
         {
             await authorizationService.AuthorizeMemberAsync(user, conversationId,userId, ConversationPermissions.MuteMember);
-            var member = await unitOfWork.ConversationMember.GetActiveMemberAsync(conversationId, userId);
+            var member = await unitOfWork.ConversationMember.GetActiveAsync(conversationId, userId);
             if (member == null)
             {
                 throw new NotFoundException("Member not found.");
             }
             member.IsMutedByAdmin = true;
-            member.MutedUntil = until;
+            member.MutedUntil = dto.MuteUntil;
             member.MutedById = user.GetUserId();
            await unitOfWork.SaveChangesAsync();
         }
         public async Task UnMuteMemberAsync(ClaimsPrincipal user, Guid conversationId, Guid userId)
         {
             await authorizationService.AuthorizeMemberAsync(user, conversationId, userId,ConversationPermissions.UnmuteMember);
-            var member = await unitOfWork.ConversationMember.GetActiveMemberAsync(conversationId, userId);
+            var member = await unitOfWork.ConversationMember.GetActiveAsync(conversationId, userId);
             if (member == null)
             {
                 throw new NotFoundException("Member not found.");

@@ -17,13 +17,15 @@ namespace chatbot.Ef.Repositories
             await context.GroupInvites.AddAsync(entity);
         }
 
-        public async Task<List<GroupInvite>> GetActiveInvitesAsync(Guid conversationId)
+        public async Task<List<GroupInvite>> GetActiveInviteAsync(Guid conversationId,DateTime now)
         {
             return await context.GroupInvites
              .Where(x =>
-                 x.ConversationId == conversationId &&
-                 x.IsActive)
-             .OrderByDescending(x => x.CreatedAt)
+                 x.ConversationId ==
+                     conversationId &&
+                 x.IsActive &&
+                 x.ExpiresAt > now &&
+                 x.UsedCount < x.MaxUses)
              .AsNoTracking()
              .ToListAsync();
         }

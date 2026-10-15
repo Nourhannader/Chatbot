@@ -11,7 +11,7 @@ using chatbot.Core.Models;
 
 namespace chatbot.Ef.Authorization
 {
-    public class RolePermissionService(IUnitOfWork unitOfWork) : IRolePermissionService
+    public sealed class RolePermissionService(IUnitOfWork unitOfWork) : IRolePermissionService
     {
         
         private static bool IsMessagingPermission(string permission)
@@ -50,12 +50,8 @@ namespace chatbot.Ef.Authorization
                 return false;
             }
 
-            if (!ConversationRolePermissions.Permissions.TryGetValue(member.Role, out var permissions))
-            {
-                return false;
-            }
-
-            return permissions.Contains(permission);
+            return ConversationRolePermissions
+            .GetPermissions(member.Role).Contains(permission);
         }
     }
 }

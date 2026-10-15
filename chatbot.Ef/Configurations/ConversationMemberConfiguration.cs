@@ -9,32 +9,14 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace chatbot.Ef.Configurations
 {
-    public class ConversationMemberConfiguration : IEntityTypeConfiguration<ConversationMember>
+    public sealed class ConversationMemberConfiguration : IEntityTypeConfiguration<ConversationMember>
     {
         public void Configure(EntityTypeBuilder<ConversationMember> builder)
         {
 
-            builder.Property(x => x.IsBanned)
-             .HasDefaultValue(false);
+            // A user has only one membership row
+            // per conversation.
 
-            builder.HasOne(x => x.Conversation)
-                .WithMany(x => x.Members)
-                .HasForeignKey(x => x.ConversationId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            builder.HasOne(x => x.User)
-                .WithMany(x => x.ConversationMembers)
-                .HasForeignKey(x => x.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.HasOne(x => x.BannedBy)
-                .WithMany(x => x.ConversationMembers)
-                .HasForeignKey(x => x.BannedById)
-                .OnDelete(DeleteBehavior.Restrict);
-
-
-
-            // Prevent duplicate membership
             builder.HasIndex(x => new
             {
                 x.ConversationId,
@@ -42,13 +24,34 @@ namespace chatbot.Ef.Configurations
             })
             .IsUnique();
 
-            builder.HasIndex(x => x.UserId);
-
             builder.HasIndex(x => new
             {
                 x.ConversationId,
                 x.IsBanned
             });
+
+
+            builder.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            builder.HasOne(x => x.MutedBy)
+                .WithMany()
+                .HasForeignKey(x => x.MutedById)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            builder.HasOne(x => x.BannedBy)
+                .WithMany()
+                .HasForeignKey(x => x.BannedById)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Property(x => x.BanReason)
+                .HasMaxLength(500);
+
+
         }
     }
 }

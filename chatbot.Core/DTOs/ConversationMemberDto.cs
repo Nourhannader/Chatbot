@@ -11,14 +11,17 @@ namespace chatbot.Core.DTOs
     {
         public Guid UserId { get; set; }
 
-        public string UserName { get; set; } = string.Empty;
+        public string UserName { get; set; }
+            = string.Empty;
 
-        public string? DisplayName { get; set; } = string.Empty;
         public string? ProfileImageUrl { get; set; }
+
         public ConversationRole Role { get; set; }
 
         public DateTime JoinedAt { get; set; }
+
         public bool IsMutedByAdmin { get; set; }
+
         public DateTime? MutedUntil { get; set; }
     }
 }

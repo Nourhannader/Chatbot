@@ -14,16 +14,17 @@ namespace chatbot.Core.DTOs
         public ConversationType Type { get; set; }
 
         public string? Title { get; set; }
+
         public string? Description { get; set; }
+
         public ConversationImageDto? Image { get; set; }
 
-        public DateTime CreatedAt { get; set; }
-        public Guid? CreateById { get; set; }
-
         public int MembersCount { get; set; }
+
         public ConversationRole? CurrentUserRole { get; set; }
-        public bool IsMuted { get; set; }
-        public bool IsArchived { get; set; }
-        public bool IsPinned { get; set; }
+
+        public List<ConversationMemberDto> Members { get; set; } = [];
+
+        public DateTime CreatedAt { get; set; }
     }
 }

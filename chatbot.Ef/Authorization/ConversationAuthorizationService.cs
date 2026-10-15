@@ -5,11 +5,13 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using chatbot.Core.Authorization.Conversation;
+using chatbot.Core.Common;
 using chatbot.Core.Enums;
 using chatbot.Core.Exceptions;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Ef.Data;
+using chatbot.Ef.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Org.BouncyCastle.Asn1.Cmp;
@@ -42,6 +44,35 @@ namespace chatbot.Ef.Authorization
 
             if (!result.Succeeded)
                 throw new ForbiddenException("You are not authorized to perform this action.");
+        }
+
+        public async Task AuthorizeImageManagementAsync(ClaimsPrincipal user, Guid conversationId)
+        {
+            var userId=user.GetUserId();
+            var conversation =await unitOfWork.Conversations
+                .GetByIdAsync(conversationId)
+            ?? throw new NotFoundException("Conversation not found.");
+
+            var member = await unitOfWork.ConversationMember
+                    .GetActiveAsync(conversationId,userId)
+             ?? throw new ForbiddenException("You are not a member of this conversation.");
+
+            if (conversation.Type ==
+            ConversationType.Private)
+            {
+                
+                return;
+            }
+
+            if (conversation.Type == ConversationType.Group &&
+                member.Role is
+                    ConversationRole.Admin or
+                    ConversationRole.Owner)
+            {
+                return;
+            }
+
+            throw new ForbiddenException("You are not authorized to manage the conversation image.");
         }
     }
 }

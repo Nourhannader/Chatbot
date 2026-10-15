@@ -12,6 +12,8 @@ namespace chatbot.Core.DTOs
 
         public Guid FileId { get; set; }
 
+        public string StorageKey { get; set; } = null!;
+
         public string FileUrl { get; set; } = string.Empty;
 
         public string ContentType { get; set; } = string.Empty;

@@ -24,7 +24,7 @@ namespace chatbot.Ef.Authorization
             if (context.User.Identity?.IsAuthenticated != true)
                 return;
             var actorUserId = context.User.GetUserId();
-            var actor = await unitOfWork.ConversationMember.GetActiveMemberAsync(resource.ConversationId, actorUserId);
+            var actor = await unitOfWork.ConversationMember.GetActiveAsync(resource.ConversationId, actorUserId);
             if(actor is null)
             {
                 return;
@@ -147,7 +147,7 @@ namespace chatbot.Ef.Authorization
 
             return permission switch
             {
-                ConversationPermissions.DeleteMessage =>  message.SenderId == actor.UserId,
+                ConversationPermissions.DeleteOwnMessage =>  message.SenderId == actor.UserId,
                 ConversationPermissions.ManageMessages => actor.Role is
                          ConversationRole.Admin or ConversationRole.Owner,
                 _ => false
@@ -171,7 +171,7 @@ namespace chatbot.Ef.Authorization
         private static bool IsMessagePermission(string permission)
         {
             return permission is
-                ConversationPermissions.DeleteMessage
+                ConversationPermissions.DeleteOwnMessage
                 or ConversationPermissions.ManageMessages;
         }
 

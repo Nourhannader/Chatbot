@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace chatbot.Ef.Repositories
 {
-    public class ConversationSettingRepository(ApplicationDbContext context) : IConversationSettingRepository
+    public sealed class ConversationSettingRepository(ApplicationDbContext context) : IConversationSettingRepository
     {
         public Task AddAsync(ConversationUserSettings settings)
         {

@@ -31,7 +31,8 @@ namespace chatbot.Core.Interfaces.UnitOFWork
         INotificationPreferenceRepository NotificationPreference { get; }
         IConversationMemberRepository ConversationMember { get; }
         IGroupInviteRepository GroupInvite { get; }
-        IMessageReadRepository MessageReads { get; }
+
+        IGroupRepository Groups { get; }
 
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();

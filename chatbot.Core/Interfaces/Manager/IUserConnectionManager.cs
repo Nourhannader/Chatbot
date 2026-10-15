@@ -17,6 +17,10 @@ namespace chatbot.Core.Interfaces.Manager
             string connectionId);
 
         Task<IReadOnlyCollection<string>>
-            GetConnectionsAsync(Guid userId);
+            GetConnectionsAsync(
+                Guid userId);
+
+        Task<bool> IsOnlineAsync(
+            Guid userId);
     }
 }

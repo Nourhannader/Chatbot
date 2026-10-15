@@ -13,42 +13,45 @@ namespace chatbot.Ef.Configurations
     {
         public void Configure(EntityTypeBuilder<StoredFile> builder)
         {
-            builder.Property(x => x.OriginalName)
+            builder.Property(x => x.OriginalFileName)
+             .HasMaxLength(255)
+             .IsRequired();
+
+            builder.Property(x => x.StoredFileName)
                 .HasMaxLength(255)
                 .IsRequired();
-            builder.Property(x => x.StoredName)
-                .HasMaxLength(255)
+
+            builder.Property(x => x.Extension)
+                .HasMaxLength(20)
                 .IsRequired();
-            builder.Property(x => x.Path)
-                .HasMaxLength(500)
-                .IsRequired();
+
             builder.Property(x => x.ContentType)
-                .HasMaxLength(100)
+                .HasMaxLength(150)
                 .IsRequired();
-            builder.Property(x => x.Size)
+
+            builder.Property(x => x.StorageKey)
+                .HasMaxLength(1000)
                 .IsRequired();
-            builder.Property(x => x.IsDeleted)
-                .HasDefaultValue(false);
-            builder.Property(x => x.CreatedAt)
-                .HasDefaultValueSql("GETDATE()");
-            // UploadedByUser
-            builder.HasOne(x => x.UploadedByUser)
+
+            builder.Property(x => x.FileUrl)
+                .HasMaxLength(2000);
+
+            builder.Property(x => x.Provider)
+                .HasConversion<int>();
+
+            builder.HasOne(x => x.UploadedBy)
                 .WithMany()
-                .HasForeignKey(x => x.UploadedByUserId)
+                .HasForeignKey(x => x.UploadedById)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Message
-            builder.HasOne(x => x.Message)
-                .WithMany(x => x.Files)
-                .HasForeignKey(x => x.MessageId)
-                .OnDelete(DeleteBehavior.Cascade);
+            builder.HasIndex(x => x.StorageKey)
+                .IsUnique();
 
-            //indexes
-            builder.HasIndex(x => x.MessageId);
-
-            builder.HasIndex(x => x.UploadedByUserId);
-
-            builder.HasIndex(x => x.Category);
+            builder.HasIndex(x => new
+            {
+                x.IsDeleted,
+                x.CreatedAt
+            });
         }
     }
 }

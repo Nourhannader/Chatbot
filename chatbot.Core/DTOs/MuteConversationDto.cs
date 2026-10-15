@@ -8,8 +8,6 @@ namespace chatbot.Core.DTOs
 {
     public class MuteConversationDto
     {
-        public Guid ConversationId { get; set; }
-
         public DateTime? MuteUntil { get; set; }
     }
 }

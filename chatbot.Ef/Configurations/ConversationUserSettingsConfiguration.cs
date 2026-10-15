@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace chatbot.Ef.Configurations
 {
-    public class ConversationUserSettingsConfiguration : IEntityTypeConfiguration<ConversationUserSettings>
+    public sealed class ConversationUserSettingsConfiguration : IEntityTypeConfiguration<ConversationUserSettings>
     {
         public void Configure(EntityTypeBuilder<ConversationUserSettings> builder)
         {

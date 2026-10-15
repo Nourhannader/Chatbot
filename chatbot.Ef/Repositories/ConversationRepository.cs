@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace chatbot.Ef.Repositories
 {
-    public class ConversationRepository(ApplicationDbContext context) : IConversationRepository
+    public sealed class ConversationRepository(ApplicationDbContext context) : IConversationRepository
     {
         public async Task AddAsync(Conversation entity)
         {
@@ -39,8 +39,16 @@ namespace chatbot.Ef.Repositories
         public Task<Conversation?> GetByIdAsync(Guid id)
         {
             return context.Conversations
-                .Include(c => c.Members)
                 .FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted);
+        }
+
+        public Task<Conversation?> GetDetailsAsync(Guid conversationId)
+        {
+            return context.Conversations
+            .Include(x => x.Image)
+            .Include(x => x.Members)
+                .ThenInclude(x => x.User)
+                .FirstOrDefaultAsync(x =>  x.Id == conversationId && !x.IsDeleted);
         }
 
         public Task<Conversation?> GetGroupWithMembersAsync(Guid ConversationId)
@@ -53,22 +61,67 @@ namespace chatbot.Ef.Repositories
                 );
         }
 
+        public Task<Conversation?> GetPrivateAsync(Guid firstUserId, Guid secondUserId)
+        {
+            return context.Conversations
+            .Include(x => x.Members)
+            .FirstOrDefaultAsync(x => !x.IsDeleted && x.Type == ConversationType.Private &&
+                x.Members.Count(m =>
+                    m.LeftAt == null &&
+                    !m.IsBanned) == 2 &&
+                x.Members.Any(m =>
+                    m.UserId == firstUserId &&
+                    m.LeftAt == null &&
+                    !m.IsBanned) &&
+                x.Members.Any(m =>
+                    m.UserId == secondUserId &&
+                    m.LeftAt == null &&
+                    !m.IsBanned));
+        }
+
         public Task<List<Conversation>> GetUserConversationsAsync(Guid userId)
         {
             return context.Conversations
-                 .Where(c =>
-                   !c.IsDeleted &&
-                   c.Members.Any(m => m.UserId == userId && m.LeftAt == null && !m.IsBanned))
-                 .Include(c => c.Members.Where(m => m.LeftAt == null))
-                 .OrderByDescending(c => c.Messages.Max(m => (DateTime?)m.SendAt))
-                 .AsNoTracking()
-                 .ToListAsync();
+           .Where(c => !c.IsDeleted &&
+               c.Members.Any(m =>
+                   m.UserId == userId &&
+                   m.LeftAt == null &&
+                   !m.IsBanned))
+           .Include(c => c.Image)
+           .Include(c => c.Members)
+               .ThenInclude(m => m.User)
+           .AsNoTracking()
+           .ToListAsync();
         }
-        
+
+        public Task<Conversation?> GetWithImageAsync(Guid conversationId)
+        {
+            return context.Conversations
+           .Include(x => x.Image)
+           .FirstOrDefaultAsync(x => x.Id == conversationId && !x.IsDeleted);
+        }
 
         public void Update(Conversation entity)
         {
            context.Conversations.Update(entity);
+        }
+    
+        public Task<bool> ExistsAsync(Guid conversationId)
+        {
+            return context.Conversations
+                .AnyAsync(x =>
+                    x.Id == conversationId &&
+                    !x.IsDeleted);
+        }
+
+        public async Task<Conversation?> GetPrivateByKeyAsync(string privateKey)
+        {
+            return await context.Conversations
+                .Include(x => x.Members)
+                    .ThenInclude(x => x.User)
+                .FirstOrDefaultAsync(x =>
+                    x.Type == ConversationType.Private &&
+                    x.PrivateConversationKey == privateKey);
         }
     }
 }

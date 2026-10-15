@@ -64,5 +64,12 @@ namespace chatbot.Ef.Repositories
             context.StoredFiles.Update(file);
             return Task.CompletedTask;
         }
+
+        public async Task<StoredFile?> GetByStorageKeyAsync(string storageKey)
+        {
+            return await context.StoredFiles
+           .FirstOrDefaultAsync(x =>
+               x.StorageKey == storageKey);
+        }
     }
 }

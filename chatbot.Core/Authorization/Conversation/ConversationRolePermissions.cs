@@ -9,69 +9,70 @@ namespace chatbot.Core.Authorization.Conversation
 {
     public static class ConversationRolePermissions
     {
-        public static readonly IReadOnlyDictionary<ConversationRole,HashSet<string>> Permissions =
-            new Dictionary<ConversationRole, HashSet<string>>
+        private static readonly HashSet<string>
+        MemberPermissions =
+    [
+        ConversationPermissions.View,
+        ConversationPermissions.SendMessage,
+        ConversationPermissions.Reply,
+        ConversationPermissions.React,
+        ConversationPermissions.UploadFile,
+        ConversationPermissions.DeleteOwnMessage
+    ];
+
+
+        private static readonly HashSet<string>
+            AdminPermissions =
+        [
+            .. MemberPermissions,
+
+        ConversationPermissions.ManageMessages,
+
+        ConversationPermissions.AddMember,
+        ConversationPermissions.RemoveMember,
+
+        ConversationPermissions.MuteMember,
+        ConversationPermissions.UnmuteMember,
+
+        ConversationPermissions.BanMember,
+        ConversationPermissions.UnbanMember,
+
+        ConversationPermissions.ManageGroup,
+        ConversationPermissions.ManageInvites
+        ];
+
+
+        private static readonly HashSet<string>
+            OwnerPermissions =
+        [
+            .. AdminPermissions,
+
+        ConversationPermissions.PromoteMember,
+        ConversationPermissions.DemoteMember,
+
+        ConversationPermissions.TransferOwnership,
+
+        ConversationPermissions.DeleteGroup
+        ];
+
+
+        public static IReadOnlySet<string>
+            GetPermissions(
+                ConversationRole role)
+        {
+            return role switch
             {
-                [ConversationRole.Member] = new()
-                {
-                ConversationPermissions.View,
-                ConversationPermissions.SendMessage,
-                ConversationPermissions.Reply,
-                ConversationPermissions.React,
-                ConversationPermissions.UploadFile
-                },
+                ConversationRole.Member =>
+                    MemberPermissions,
 
-                [ConversationRole.Admin] = new()
-                {
-                ConversationPermissions.View,
-                ConversationPermissions.SendMessage,
-                ConversationPermissions.Reply,
-                ConversationPermissions.React,
-                ConversationPermissions.UploadFile,
+                ConversationRole.Admin =>
+                    AdminPermissions,
 
-                ConversationPermissions.ManageMessages,
-                ConversationPermissions.DeleteMessage,
+                ConversationRole.Owner =>
+                    OwnerPermissions,
 
-                ConversationPermissions.AddMember,
-                ConversationPermissions.RemoveMember,
-
-                ConversationPermissions.ManageGroup,
-
-                ConversationPermissions.MuteMember,
-                ConversationPermissions.UnmuteMember,
-
-                ConversationPermissions.BanMember,
-                ConversationPermissions.UnbanMember
-                },
-
-                [ConversationRole.Owner] = new()
-                {
-                ConversationPermissions.View,
-                ConversationPermissions.SendMessage,
-                ConversationPermissions.Reply,
-                ConversationPermissions.React,
-                ConversationPermissions.UploadFile,
-
-                ConversationPermissions.ManageMessages,
-                ConversationPermissions.DeleteMessage,
-
-                ConversationPermissions.AddMember,
-                ConversationPermissions.RemoveMember,
-
-                ConversationPermissions.ManageGroup,
-
-                ConversationPermissions.MuteMember,
-                ConversationPermissions.UnmuteMember,
-
-                ConversationPermissions.BanMember,
-                ConversationPermissions.UnbanMember,
-
-                ConversationPermissions.PromoteMember,
-                ConversationPermissions.DemoteMember,
-
-                ConversationPermissions.TransferOwnership,
-                ConversationPermissions.DeleteGroup
-                }
+                _ => new HashSet<string>()
             };
+        }
     }
 }

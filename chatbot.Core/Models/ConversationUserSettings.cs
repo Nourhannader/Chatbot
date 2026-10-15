@@ -13,22 +13,35 @@ namespace chatbot.Core.Models
         public Conversation Conversation { get; set; }
             = null!;
 
+
         public Guid UserId { get; set; }
 
         public ApplicationUser User { get; set; }
             = null!;
 
-        // Mute
+
+        // =============================
+        // Notification mute
+        // =============================
+
         public bool IsMuted { get; set; }
 
         public DateTime? MuteUntil { get; set; }
 
+
+        // =============================
         // Archive
+        // =============================
+
         public bool IsArchived { get; set; }
 
         public DateTime? ArchivedAt { get; set; }
 
+
+        // =============================
         // Pin
+        // =============================
+
         public bool IsPinned { get; set; }
 
         public DateTime? PinnedAt { get; set; }

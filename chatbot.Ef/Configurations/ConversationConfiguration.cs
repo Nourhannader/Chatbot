@@ -9,66 +9,86 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace chatbot.Ef.Configurations
 {
-    public class ConversationConfiguration : IEntityTypeConfiguration<Conversation>
+    public sealed class ConversationConfiguration : IEntityTypeConfiguration<Conversation>
     {
         public void Configure(EntityTypeBuilder<Conversation> builder)
         {
-           
 
-            builder.Property(c => c.Title)
+            builder.Property(x => x.Title)
                 .HasMaxLength(100);
 
-            builder.Property(c=> c.Type)
-                .HasConversion<int>()
-                .IsRequired();
+            builder.Property(x => x.Description)
+                .HasMaxLength(500);
 
-            builder.Property(x => x.IsDeleted)
-            .HasDefaultValue(false);
 
-            // Created By
+            // Private conversation uniqueness
+
+            builder.HasIndex(x =>
+                    x.PrivateConversationKey)
+                .IsUnique()
+                .HasFilter(
+                    "[PrivateConversationKey] IS NOT NULL");
+
+
+            // Creator
+
             builder.HasOne(x => x.CreatedBy)
-                .WithMany(u=> u.Conversations)
+                .WithMany()
                 .HasForeignKey(x => x.CreatedById)
                 .OnDelete(DeleteBehavior.Restrict);
 
+
             // Deleted By
+
             builder.HasOne(x => x.DeletedBy)
-                .WithMany(u=> u.Conversations)
+                .WithMany()
                 .HasForeignKey(x => x.DeletedById)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Group Image
+
+            // Image
+
             builder.HasOne(x => x.Image)
                 .WithMany()
                 .HasForeignKey(x => x.ImageId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+
             // Members
+
             builder.HasMany(x => x.Members)
                 .WithOne(x => x.Conversation)
                 .HasForeignKey(x => x.ConversationId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Settings
-            builder.HasMany(x => x.UserSettings)
-                .WithOne(x => x.Conversation)
-                .HasForeignKey(x => x.ConversationId)
-                .OnDelete(DeleteBehavior.Cascade);
 
             // Messages
+
             builder.HasMany(x => x.Messages)
                 .WithOne(x => x.Conversation)
                 .HasForeignKey(x => x.ConversationId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            //index
-            builder.HasIndex(x => x.CreatedById);
+
+            // Settings
+
+            builder.HasMany(x => x.UserSettings)
+                .WithOne(x => x.Conversation)
+                .HasForeignKey(x => x.ConversationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            // Soft delete
+
+            builder.HasQueryFilter(x =>
+                !x.IsDeleted);
 
             builder.HasIndex(x => new
             {
                 x.Type,
                 x.IsDeleted
             });
+
         }
     }
 }

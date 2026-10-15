@@ -9,18 +9,23 @@ namespace chatbot.Core.Interfaces.Repositories
 {
     public interface IConversationMemberRepository:IBaseRepository<ConversationMember,Guid>
     {
-        Task<ConversationMember?> GetAsync(Guid conversationId,Guid userId);
+        Task AddRangeAsync(IEnumerable<ConversationMember> members);
+
+        Task<ConversationMember?> GetAsync(Guid conversationId, Guid userId);
+
+        Task<ConversationMember?> GetActiveAsync(Guid conversationId, Guid userId);
 
         Task<List<ConversationMember>> GetActiveMembersAsync(Guid conversationId);
-        Task<ConversationMember?> GetActiveMemberAsync(Guid conversationId,Guid userId);
+
+        Task<List<Guid>> GetActiveMemberIdsAsync(Guid conversationId);
+
+        Task<List<Guid>> GetOtherMemberIdsAsync(Guid conversationId, Guid currentUserId);
 
         Task<bool> IsActiveMemberAsync(Guid conversationId, Guid userId);
 
+        Task<int> CountActiveAsync(Guid conversationId);
+
         Task<bool> ExistsAsync(Guid conversationId,Guid userId);
         void Remove(ConversationMember member);
-
-        Task<List<Guid>> GetOtherMemberIdsAsync(Guid conversationId, Guid senderId);
-
-        Task<int> CountActiveAsync(Guid conversationId);
     }
 }

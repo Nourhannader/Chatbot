@@ -9,7 +9,8 @@ namespace chatbot.Core.Helper
 {
     public static class ConversationRoleHierarchy
     {
-        public static int GetLevel(ConversationRole role)
+        public static int GetLevel(
+        ConversationRole role)
         {
             return role switch
             {
@@ -21,9 +22,12 @@ namespace chatbot.Core.Helper
             };
         }
 
-        public static bool IsHigherThan(ConversationRole actor, ConversationRole target)
+        public static bool IsHigherThan(
+            ConversationRole actor,
+            ConversationRole target)
         {
-            return GetLevel(actor) > GetLevel(target);
+            return GetLevel(actor) >
+                   GetLevel(target);
         }
     }
 }

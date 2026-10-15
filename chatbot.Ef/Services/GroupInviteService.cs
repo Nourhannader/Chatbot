@@ -24,7 +24,6 @@ namespace chatbot.Ef.Services
     public sealed class GroupInviteService(IUnitOfWork unitOfWork,
     IConversationAuthorizationService authorizationService,
     IMapper mapper,
-    IChatRealtimeService realtimeService,
     TimeProvider timeProvider) : IGroupInviteService
     {
         public async Task<GroupInviteDto> GenerateAsync(ClaimsPrincipal user, Guid conversationId, CreateGroupInviteDto dto)
@@ -87,16 +86,11 @@ namespace chatbot.Ef.Services
         {
             await authorizationService.AuthorizeAsync(user, conversationId, ConversationPermissions.ManageInvites);
 
-            var invites = await unitOfWork.GroupInvite.GetActiveInvitesAsync(conversationId);
-
             var now = timeProvider.GetUtcNow().UtcDateTime;
 
-            var activeInvites = invites.Where(x =>
-                        x.ExpiresAt > now &&
-                        x.UsedCount < x.MaxUses)
-                    .ToList();
+            var invites = await unitOfWork.GroupInvite.GetActiveInviteAsync(conversationId,now);
 
-            return mapper.Map<List<GroupInviteDto>>(activeInvites);
+            return mapper.Map<List<GroupInviteDto>>(invites);
         }
 
         public async Task<GroupInvitePreviewDto> GetPreviewAsync(ClaimsPrincipal user, string code)
@@ -136,7 +130,7 @@ namespace chatbot.Ef.Services
 
                 Description = invite.Conversation.Description,
 
-                ImageUrl = invite.Conversation.Image?.Path,
+                Image = mapper.Map<ConversationImageDto>(invite.Conversation.Image),
 
                 MemberCount = await unitOfWork.ConversationMember.CountActiveAsync(invite.ConversationId),
 
@@ -230,8 +224,6 @@ namespace chatbot.Ef.Services
 
             // Realtime AFTER successful DB commit.
             var memberDto = mapper.Map<ConversationMemberDto>(member);
-
-            await realtimeService.MemberAddedAsync(invite.ConversationId, memberDto);
 
             var result = mapper.Map<ConversationDetailsDto>(invite.Conversation);
 

@@ -3,13 +3,15 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace chatbot.Api.Hubs
 {
-    public class UserIdProvider : IUserIdProvider
+    public sealed class UserIdProvider
+    : IUserIdProvider
     {
-        public string? GetUserId(HubConnectionContext connection)
+        public string? GetUserId(
+            HubConnectionContext connection)
         {
             return connection.User?
-             .FindFirst(ClaimTypes.NameIdentifier)?
-             .Value;
+                .FindFirstValue(
+                    ClaimTypes.NameIdentifier);
         }
     }
 }

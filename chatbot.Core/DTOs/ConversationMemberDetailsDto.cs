@@ -7,21 +7,16 @@ using chatbot.Core.Enums;
 
 namespace chatbot.Core.DTOs
 {
-    public class ConversationMemberDetailsDto
+    public class ConversationMemberDetailsDto :ConversationMemberDto
     {
-        public Guid UserId { get; set; }
+        public DateTime? LeftAt { get; set; }
 
-        public string UserName { get; set; } = string.Empty;
+        public DateTime? LastReadAt { get; set; }
 
-        public string? DisplayName { get; set; } = string.Empty;
-        public string? ProfileImageUrl { get; set; }
-        public ConversationRole Role { get; set; }
-
-        public DateTime JoinedAt { get; set; }
-
-        public DateTime? LastReadAt {  get; set; }
-        public bool IsMutedByAdmin { get; set; }
-        public DateTime? MutedUntil { get; set; }
         public bool IsBanned { get; set; }
+
+        public DateTime? BannedAt { get; set; }
+
+        public string? BanReason { get; set; }
     }
 }

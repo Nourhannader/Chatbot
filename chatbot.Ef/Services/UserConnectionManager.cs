@@ -8,45 +8,87 @@ using chatbot.Core.Interfaces.Manager;
 
 namespace chatbot.Ef.Services
 {
-    public class UserConnectionManager : IUserConnectionManager
+    public sealed class UserConnectionManager
+    : IUserConnectionManager
     {
-        private readonly ConcurrentDictionary< Guid, ConcurrentDictionary<string, byte>>_connections = new();
+        private readonly ConcurrentDictionary<
+            Guid,
+            ConcurrentDictionary<string, byte>>
+            _connections = new();
 
-        public Task AddConnectionAsync(Guid userId,string connectionId)
+        public Task AddConnectionAsync(
+            Guid userId,
+            string connectionId)
         {
-            var connections =
-                _connections.GetOrAdd( userId,_ => new ConcurrentDictionary< string, byte>());
+            var userConnections =
+                _connections.GetOrAdd(
+                    userId,
+                    _ => new ConcurrentDictionary<
+                        string,
+                        byte>());
 
-            connections.TryAdd(connectionId,0);
+            userConnections.TryAdd(
+                connectionId,
+                0);
 
             return Task.CompletedTask;
         }
 
-        public Task RemoveConnectionAsync( Guid userId, string connectionId)
+        public Task RemoveConnectionAsync(
+            Guid userId,
+            string connectionId)
         {
-            if (_connections.TryGetValue(userId,out var connections))
+            if (!_connections.TryGetValue(
+                    userId,
+                    out var userConnections))
             {
-                connections.TryRemove( connectionId, out _);
+                return Task.CompletedTask;
+            }
 
-                if (connections.IsEmpty)
-                {
-                    _connections.TryRemove(userId, out _);
-                }
+            userConnections.TryRemove(
+                connectionId,
+                out _);
+
+            if (userConnections.IsEmpty)
+            {
+                _connections.TryRemove(
+                    userId,
+                    out _);
             }
 
             return Task.CompletedTask;
         }
 
-        public Task<IReadOnlyCollection<string>> GetConnectionsAsync(Guid userId)
+        public Task<IReadOnlyCollection<string>>
+            GetConnectionsAsync(
+                Guid userId)
         {
-            if (!_connections.TryGetValue(userId,out var connections))
+            if (!_connections.TryGetValue(
+                    userId,
+                    out var connections))
             {
-                return Task.FromResult<IReadOnlyCollection<string>>(Array.Empty<string>());
+                return Task.FromResult<
+                    IReadOnlyCollection<string>>(
+                        Array.Empty<string>());
             }
 
-            IReadOnlyCollection<string> result =connections.Keys.ToList();
+            IReadOnlyCollection<string> result =
+                connections.Keys.ToArray();
 
             return Task.FromResult(result);
+        }
+
+        public Task<bool> IsOnlineAsync(
+            Guid userId)
+        {
+            var online =
+                _connections.TryGetValue(
+                    userId,
+                    out var connections)
+                &&
+                !connections.IsEmpty;
+
+            return Task.FromResult(online);
         }
     }
 }

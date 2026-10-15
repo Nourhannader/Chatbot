@@ -10,6 +10,6 @@ namespace chatbot.Core.Interfaces.Repositories
     public interface IGroupInviteRepository:IBaseRepository<GroupInvite,Guid>
     {
         Task<GroupInvite?> GetByCodeAsync(string code);
-        Task<List<GroupInvite>> GetActiveInvitesAsync(Guid conversationId);
+        Task<List<GroupInvite>> GetActiveInviteAsync(Guid conversationId,DateTime now);
     }
 }

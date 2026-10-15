@@ -8,6 +8,6 @@ namespace chatbot.Core.DTOs
 {
     public class AddMembersDto
     {
-        public List<Guid> UserIds { get; set; } = new();
+        public List<Guid> UserIds { get; set; } = [];
     }
 }

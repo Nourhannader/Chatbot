@@ -10,43 +10,65 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IChatClient
     {
-        Task ReceiveMessage(
-            MessageDto message);
+        public interface IChatClient
+        {
+            // Conversation
 
-        Task GroupUpdated(
-            ConversationDetailsDto group);
+            Task ConversationAdded( ConversationDetailsDto conversation);
 
-        Task MemberAdded(
-            ConversationMemberDto member);
+            Task ConversationUpdated( ConversationDetailsDto conversation);
 
-        Task MemberRemoved(
-            Guid userId);
+            Task ConversationDeleted(Guid conversationId);
 
-        Task MemberRoleChanged(
-            Guid userId,
-            ConversationRole role);
+            Task ConversationImageUpdated(Guid conversationId,ConversationImageDto image);
 
-        Task MemberMuted(
-            Guid userId,
-            DateTime? until);
+            Task ConversationImageRemoved(Guid conversationId);
 
-        Task MemberUnmuted(
-            Guid userId);
 
-        Task MemberBanned(
-            Guid userId);
+            // Members
 
-        Task MemberUnbanned(
-            Guid userId);
+            Task MemberAdded(ConversationMemberDto member);
 
-        Task OwnershipTransferred(
-            Guid oldOwnerId,
-            Guid newOwnerId);
+            Task MemberRemoved(Guid userId);
 
-        Task RemovedFromConversation(
-            Guid conversationId);
+            Task MemberRoleChanged(Guid userId,ConversationRole role);
 
-        Task GroupDeleted(
-            Guid conversationId);
+            Task MemberMuted( Guid userId,DateTime? until);
+
+            Task MemberUnmuted( Guid userId);
+
+            Task MemberBanned(Guid userId);
+
+            Task MemberUnbanned(Guid userId);
+
+            Task OwnershipTransferred( Guid oldOwnerId,Guid newOwnerId);
+
+            Task RemovedFromConversation( Guid conversationId);
+
+
+            // Messages
+
+            Task ReceiveMessage( MessageDto message);
+
+            Task MessageEdited( MessageDto message);
+
+            Task MessageDeleted(Guid messageId);
+
+            Task MessageReactionAdded( Guid messageId, MessageReactionDto reaction);
+
+            Task MessageReactionRemoved(Guid messageId,Guid userId);
+
+
+            // Typing
+
+            Task UserTyping( Guid conversationId,Guid userId);
+
+            Task UserStoppedTyping( Guid conversationId, Guid userId);
+
+
+            // Read
+
+            Task ConversationRead( Guid conversationId,Guid userId,DateTime readAt);
+        }
     }
 }

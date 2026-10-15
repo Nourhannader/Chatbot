@@ -8,43 +8,60 @@ namespace chatbot.Core.Authorization.Conversation
 {
     public static class ConversationPermissions
     {
-        public const string View = "conversation.view";
+        // Basic
 
-        public const string SendMessage = "conversation.message.send";
+       public const string View ="conversation.view";
 
-        public const string Reply = "conversation.message.reply";
+
+        // Messages
+
+        public const string SendMessage ="conversation.message.send";
+
+        public const string Reply ="conversation.message.reply";
 
         public const string React = "conversation.message.react";
 
-        public const string UploadFile = "conversation.file.upload";
+        public const string UploadFile ="conversation.file.upload";
 
-        public const string ManageMessages = "conversation.message.manage";
+        public const string DeleteOwnMessage ="conversation.message.deleteOwn";
 
-        public const string DeleteMessage = "conversation.message.delete";
+        public const string ManageMessages ="conversation.message.manage";
 
-        public const string AddMember = "conversation.member.add";
 
-        public const string RemoveMember = "conversation.member.remove";
+        // Members
 
-        public const string PromoteMember = "conversation.member.promote";
+        public const string AddMember ="conversation.member.add";
 
-        public const string DemoteMember = "conversation.member.demote";
+        public const string RemoveMember ="conversation.member.remove";
 
-        public const string ManageGroup = "conversation.group.manage";
+        public const string PromoteMember ="conversation.member.promote";
 
-        public const string DeleteGroup = "conversation.group.delete";
+        public const string DemoteMember ="conversation.member.demote";
 
-        public const string TransferOwnership = "conversation.group.transferOwnership";
+        public const string MuteMember ="conversation.member.mute";
 
-        public const string MuteMember = "conversation.member.mute";
-
-        public const string UnmuteMember = "conversation.member.unmute";
+        public const string UnmuteMember ="conversation.member.unmute";
 
         public const string BanMember = "conversation.member.ban";
 
         public const string UnbanMember = "conversation.member.unban";
 
-        public const string ManageInvites = "conversation.invite.manage";
+
+        // Group
+
+        public const string ManageGroup ="conversation.group.manage";
+
+        public const string DeleteGroup ="conversation.group.delete";
+
+        public const string TransferOwnership ="conversation.group.transferOwnership";
+
+        public const string ManageInvites ="conversation.invite.manage";
+
+        // Images
+
+        public const string UpdateImage = "conversation.image.update";
+
+        public const string RemoveImage = "conversation.image.remove";
 
     }
 }

@@ -21,6 +21,8 @@ namespace chatbot.Core.Interfaces.Repositories
 
         Task<List<StoredFile>> GetFilesForCleanupAsync(DateTime olderThan);
 
+        Task<StoredFile?> GetByStorageKeyAsync(string storageKey);
+
         Task UpdateAsync(StoredFile file);
 
         void Delete(StoredFile file);

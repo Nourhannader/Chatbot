@@ -15,7 +15,7 @@ namespace chatbot.Core.DTOs
 
         public IFormFile? Image { get; set; }
 
-        public List<Guid> MemberIds { get; set; } = new();
+        public List<Guid> MemberIds { get; set; } = [];
 
     }
 }

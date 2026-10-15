@@ -10,25 +10,66 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IChatRealtimeService
     {
-        Task MessageSentAsync(Guid conversationId,MessageDto message);
+        public interface IChatRealtimeService
+        {
+            // =========================
+            // Conversation
+            // =========================
 
-        Task GroupUpdatedAsync( Guid conversationId,ConversationDetailsDto group);
+            Task ConversationAddedAsync(Guid userId,ConversationDetailsDto conversation);
 
-        Task MemberAddedAsync( Guid conversationId,ConversationMemberDto member);
+            Task ConversationUpdatedAsync(Guid conversationId,ConversationDetailsDto conversation);
 
-        Task MemberRemovedAsync( Guid conversationId, Guid userId);
+            Task ConversationDeletedAsync( Guid conversationId);
 
-        Task MemberRoleChangedAsync(Guid conversationId, Guid userId, ConversationRole role);
+            Task ConversationImageUpdatedAsync(Guid conversationId,ConversationImageDto image);
 
-        Task MemberMutedAsync(Guid conversationId,Guid userId, DateTime? until);
+            Task ConversationImageRemovedAsync(Guid conversationId);
 
-        Task MemberUnmutedAsync(Guid conversationId,Guid userId);
 
-        Task MemberBannedAsync(Guid conversationId, Guid userId);
+            // =========================
+            // Members
+            // =========================
 
-        Task MemberUnbannedAsync(Guid conversationId, Guid userId);
+            Task MemberAddedAsync(Guid conversationId, ConversationMemberDto member);
 
-        Task OwnershipTransferredAsync(Guid conversationId,Guid oldOwnerId, Guid newOwnerId);
-        Task RemoveUserFromConversationAsync(Guid conversationId, Guid userId);
+            Task MemberRemovedAsync( Guid conversationId,Guid userId);
+
+            Task MemberRoleChangedAsync(Guid conversationId, Guid userId,ConversationRole role);
+
+            Task MemberMutedAsync(Guid conversationId,Guid userId,DateTime? until);
+
+            Task MemberUnmutedAsync( Guid conversationId,Guid userId);
+
+            Task MemberBannedAsync(Guid conversationId,Guid userId);
+
+            Task MemberUnbannedAsync( Guid conversationId,Guid userId);
+
+            Task OwnershipTransferredAsync(Guid conversationId,Guid oldOwnerId, Guid newOwnerId);
+
+            Task RemoveUserFromConversationAsync( Guid conversationId,Guid userId);
+
+
+            // =========================
+            // Messages
+            // =========================
+
+            Task MessageSentAsync( Guid conversationId,MessageDto message);
+
+            Task MessageEditedAsync(Guid conversationId,MessageDto message);
+
+            Task MessageDeletedAsync(Guid conversationId, Guid messageId);
+
+            Task MessageReactionAddedAsync(Guid conversationId,Guid messageId, MessageReactionDto reaction);
+
+            Task MessageReactionRemovedAsync( Guid conversationId, Guid messageId,Guid userId);
+
+
+            // =========================
+            // Read
+            // =========================
+
+            Task ConversationReadAsync( Guid conversationId,Guid userId, DateTime readAt);
+        }
     }
 }
