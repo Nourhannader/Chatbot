@@ -4,13 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace chatbot.Core.DTOs
+namespace chatbot.Core.DTOs.Messages
 {
     public class ForwardMessageDto
     {
-        public Guid MessageId { get; set; } 
+        public Guid MessageId { get; set; }
 
-        public List<string> ConversationIds { get; set; }
+        public List<Guid> ConversationIds { get; set; }
             = new();
     }
 }

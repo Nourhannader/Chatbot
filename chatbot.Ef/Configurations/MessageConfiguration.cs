@@ -14,8 +14,6 @@ namespace chatbot.Ef.Configurations
         public void Configure(EntityTypeBuilder<Message> builder)
         {
 
-            builder.HasQueryFilter(m => !m.IsDeleted);
-
             builder.Property(x => x.Content)
                 .HasMaxLength(4000);
 
@@ -30,17 +28,21 @@ namespace chatbot.Ef.Configurations
             builder.Property(x => x.IsDeletedForEveryone)
             .HasDefaultValue(false);
 
-            builder.HasOne(x => x.Sender)
-            .WithMany(x => x.MessagesSent)
-            .HasForeignKey(x => x.SenderId)
-            .OnDelete(DeleteBehavior.Restrict);
-
             // Relationships
+            builder.HasOne(x => x.Sender)
+              .WithMany(x => x.MessagesSent)
+              .HasForeignKey(x => x.SenderId)
+              .OnDelete(DeleteBehavior.Restrict);
+
             builder.HasMany(x => x.Reactions)
                 .WithOne(x => x.Message)
                 .HasForeignKey(x => x.MessageId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            builder.HasOne(x => x.Conversation)
+               .WithMany(x => x.Messages)
+               .HasForeignKey(x => x.ConversationId)
+               .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasMany(x => x.RecipientStatuses)
                 .WithOne(x => x.Message)
@@ -65,7 +67,7 @@ namespace chatbot.Ef.Configurations
                 .HasForeignKey(x => x.StickerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasMany(x=> x.Files)
+            builder.HasMany(x=> x.Attachments)
                 .WithOne(x=> x.Message)
                 .HasForeignKey(x => x.MessageId)
                 .OnDelete(DeleteBehavior.Restrict);
@@ -82,6 +84,12 @@ namespace chatbot.Ef.Configurations
                     x.ConversationId,
                     x.SendAt
                 });
+
+            builder.HasIndex(x => x.ReplyToMessageId);
+
+            builder.HasIndex(x => x.OriginalMessageId);
+
+            builder.HasIndex(x => x.ConversationId);
         }
     }
 }

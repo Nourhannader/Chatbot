@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AutoMapper;
 using chatbot.Core.DTOs;
+using chatbot.Core.DTOs.Messages;
 using chatbot.Core.Enums;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
@@ -14,64 +16,105 @@ using Microsoft.AspNetCore.Http;
 
 namespace chatbot.Ef.Services
 {
-    public class MessageService(IUnitOfWork unitOfWork,IStorageService storage,IMessageStatusService messageStatusService,IFileValidationService validator) : IMessageService
+    public class MessageService(IUnitOfWork unitOfWork,IStorageService storage,IMessageStatusService messageStatusService
+        ,IFileValidationService validator,IMapper mapper) : IMessageService
     {
-        public async Task DeleteForEveryoneAsync(Guid messageId, Guid userId)
+        public async Task<DeleteMessageResultDto> DeleteForEveryoneAsync(Guid messageId, Guid userId)
         {
-            var message =
-           await unitOfWork.Messages
+            var message =  await unitOfWork.Messages
                .GetByIdAsync(messageId);
 
             if (message == null)
                 throw new KeyNotFoundException("Message not found.");
 
+            var isMember = await unitOfWork.ConversationMember
+                 .ExistsAsync(message.ConversationId, userId);
+
+            if (!isMember)
+            {
+                throw new UnauthorizedAccessException("You are not a member of this conversation.");
+            }
+
             if (message.SenderId != userId)
-                throw new UnauthorizedAccessException("Only sender can delete this message.");
-
+            {
+                throw new UnauthorizedAccessException("Only the sender can delete this message.");
+            }
             if (message.IsDeletedForEveryone)
-                return;
+            {
+                return new DeleteMessageResultDto
+                {
+                    MessageId = message.Id,
+                    ConversationId = message.ConversationId,
+                    DeletedByUserId = userId,
+                    DeletedAt = message.DeletedForEveryoneAt
+                        ?? DateTime.UtcNow
+                };
+            }
 
+
+            var deletedAt = DateTime.UtcNow;
             message.IsDeletedForEveryone = true;
+            message.DeletedForEveryoneAt = deletedAt;
+            message.Content = string.Empty;
 
-            message.DeletedForEveryoneAt =
-                DateTime.UtcNow;
+            await unitOfWork.SaveChangesAsync();
 
-            message.Content = "This message was deleted";
-
-            await unitOfWork
-                .SaveChangesAsync();
+            return new DeleteMessageResultDto
+            {
+                MessageId = message.Id,
+                ConversationId = message.ConversationId,
+                DeletedByUserId = userId,
+                DeletedAt = deletedAt
+            };
 
         }
 
-        public async Task DeleteForMeAsync(Guid messageId, Guid userId)
+        public async Task<DeleteForMeResultDto> DeleteForMeAsync(Guid messageId, Guid userId)
         {
-            var message =
-            await unitOfWork.Messages.GetByIdAsync(messageId);
+            var message =  await unitOfWork.Messages.GetByIdAsync(messageId);
 
             if (message == null)
                 throw new KeyNotFoundException("Message not found.");
 
-            var exists =
-                await unitOfWork.Messages
-                    .IsDeletedForUserAsync(
-                        messageId,
-                        userId);
+            var isMember = await unitOfWork.ConversationMember
+                 .ExistsAsync(message.ConversationId, userId);
+
+            if (!isMember)
+            {
+                throw new UnauthorizedAccessException("You are not a member of this conversation.");
+            }
+
+            var exists =await unitOfWork.Messages
+                    .IsDeletedForUserAsync( messageId,userId);
 
             if (exists)
-                return;
+            {
+                return new DeleteForMeResultDto
+                {
+                    MessageId = messageId,
+                    UserId = userId,
+                    DeletedAt = DateTime.UtcNow
+                };
+            }
 
-            var deletion = new MessageDeletion
+            var deletedAt = DateTime.UtcNow;
+            var deletion =
+                new MessageDeletion
+                {
+                    MessageId = messageId,
+                    UserId = userId,
+                    DeletedAt = deletedAt
+                };
+
+            await unitOfWork.Messages.AddDeletionAsync(deletion);
+            await unitOfWork.SaveChangesAsync();
+
+            return new DeleteForMeResultDto
             {
                 MessageId = messageId,
                 UserId = userId,
-                DeletedAt = DateTime.UtcNow
+                DeletedAt = deletedAt
             };
-
-            await unitOfWork.Messages
-                .AddDeletionAsync(deletion);
-
-            await unitOfWork
-                .SaveChangesAsync();
         }
 
         public async Task<PagedResultDto<MessageDto>> GetMessagesAsyns(Guid userId, Guid conversationId, int page = 1, int pageSize = 20)
@@ -87,34 +130,11 @@ namespace chatbot.Ef.Services
                 throw new UnauthorizedAccessException("You are not a member of this conversation.");
 
             var messages = await unitOfWork.Messages
-                .GetConversationMessagesAsync(conversationId, page, pageSize);
+                .GetConversationMessagesAsync(conversationId,userId, page, pageSize);
 
-            var totalCount = await unitOfWork.Messages.CountByConversationAsync(conversationId);
+            var totalCount = await unitOfWork.Messages.CountByConversationAsync(conversationId,userId);
 
-            var items = messages.Select(message => new MessageDto
-            {
-                Id = message.Id,
-                ConversationId = message.ConversationId,
-                SenderId = message.SenderId,
-                SenderName = message.Sender.UserName ?? string.Empty,
-                Content = message.Content,
-                CreatedAt = message.SendAt,
-
-                Files = message.Files.Select(file => new FileMetadataDto
-                {
-                    Id = file.Id,
-                    OriginalName = file.OriginalName,
-                    ContentType = file.ContentType,
-                    Size = file.Size,
-                    FileUrl = file.CDNUrl,
-                    ThumbnailUrl = file.ThumbnailUrl,
-                    Width = file.Width,
-                    Height = file.Height,
-                    DurationSeconds = file.DurationSeconds
-
-
-                }).ToList()
-            }).ToList();
+            var items = mapper.Map<List<MessageDto>>(messages);
 
             return new PagedResultDto<MessageDto>
             {
@@ -125,30 +145,84 @@ namespace chatbot.Ef.Services
             };
         }
 
-        public async Task<Message> ReplyAsync(Guid senderId, ReplyMessageDto dto)
+        public async Task<MessageDto> ReplyAsync(Guid senderId, ReplyMessageDto dto)
         {
-            var originalMessage = await unitOfWork.Messages.GetByIdAsync(dto.MessageId);
-            if (originalMessage == null)
-                throw new Exception("Message not found.");
-            if (originalMessage.ConversationId != dto.ConversationId)
-                throw new InvalidOperationException("The original message does not belong to the this conversation.");
+            var isMember = await unitOfWork.ConversationMember
+                .ExistsAsync(dto.ConversationId, senderId);
+
+            if (!isMember)
+            {
+                throw new UnauthorizedAccessException("You are not a member of this conversation.");
+            }
+            var original = await unitOfWork.Messages
+                .GetMessageByConversationIdAsync(dto.MessageId, dto.ConversationId);
+
+            if (original is null)
+            {
+                throw new KeyNotFoundException("Original message not found.");
+            }
+            if (original.IsDeletedForEveryone)
+            {
+                throw new InvalidOperationException("You cannot reply to a deleted message.");
+            }
+
+            var deletedForUser = await unitOfWork.Messages
+                .IsDeletedForUserAsync(original.Id, senderId);
+
+            if (deletedForUser)
+            {
+                throw new KeyNotFoundException("Original message not found.");
+            }
 
             var message = new Message
             {
+                Id = Guid.NewGuid(),
                 SenderId = senderId,
                 ConversationId = dto.ConversationId,
                 Content = dto.Content,
                 MessageType = dto.Type,
                 SendAt = DateTime.UtcNow,
-                ReplyToMessageId = dto.MessageId
+                ReplyToMessageId = original.Id
 
             };
            await unitOfWork.Messages.AddAsync(message);
             await unitOfWork.SaveChangesAsync();
-            return message;
+
+            var recipientIds = await unitOfWork.ConversationMember
+                .GetOtherMemberIdsAsync(dto.ConversationId, senderId);
+
+            foreach (var recipientId in recipientIds)
+            {
+                await messageStatusService
+                    .MarkAsSentAsync(message.Id, recipientId);
+            }
+
+
+            var senderName = original.Sender.UserName ?? string.Empty;
+
+            return new MessageDto
+            {
+                Id = message.Id,
+                ConversationId = message.ConversationId,
+                SenderId = message.SenderId,
+                SenderName = senderName,
+                Content = message.Content,
+                MessageType = message.MessageType,
+                CreatedAt = message.SendAt,
+                ReplyToMessageId = original.Id,
+                ReplyToMessage =
+                new ReplyPreviewDto
+                {
+                    Id = original.Id,
+                    SenderId = original.SenderId,
+                    Content = original.Content,
+                    MessageType = original.MessageType,
+                    IsDeletedForEveryone = original.IsDeletedForEveryone
+                }
+            };
         }
 
-        public Task<MessageDto> SendFileAsync(SendFileDto filedto)
+        public Task<MessageDto> SendFileAsync(Guid senderId, SendFileDto filedto)
         {
            // validator.ValidateFile(filedto.)
            throw new NotImplementedException();
@@ -181,8 +255,7 @@ namespace chatbot.Ef.Services
             
             await unitOfWork.Messages.AddAsync(message);
             await unitOfWork.SaveChangesAsync();
-            var recipientIds =
-            await unitOfWork.ConversationMember.GetOtherMemberIdsAsync(dto.ConversationId,senderId);
+            var recipientIds = await unitOfWork.ConversationMember.GetOtherMemberIdsAsync(dto.ConversationId,senderId);
 
             foreach (var recipientId in recipientIds)
             {
@@ -198,10 +271,16 @@ namespace chatbot.Ef.Services
                 SenderId = message.SenderId,
                 SenderName = senderName,
                 Content = message.Content,
-                CreatedAt = message.SendAt
+                MessageType = message.MessageType,
+                CreatedAt = message.SendAt,
+                IsEdited = false,
+                IsDeletedForEveryone = false,
+                IsForwarded = false,
+                Files = new List<FileMetadataDto>(),
+                Reactions = new List<MessageReactionDto>()
             };
         }
-        private async Task<string> GetSenderNameAsync( Guid senderId)
+        private async Task<string> GetSenderNameAsync(Guid senderId)
         {
             var user = await unitOfWork.Auth.GetByIdAsync(senderId);
 

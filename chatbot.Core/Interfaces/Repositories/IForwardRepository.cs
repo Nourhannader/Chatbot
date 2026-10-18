@@ -9,8 +9,7 @@ namespace chatbot.Core.Interfaces.Repositories
 {
     public interface IForwardRepository
     {
-        Task<bool> ConversationExistsAsync(Guid conversationId);
-        Task<bool> IsMemberAsync(Guid conversationId, Guid memberId);
         Task AddRangeAsync(IEnumerable<Message> messages);
+        Task<List<Guid>>GetValidConversationIdsAsync(Guid userId,IEnumerable<Guid> conversationIds);
     }
 }

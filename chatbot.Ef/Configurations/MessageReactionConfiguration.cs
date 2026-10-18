@@ -13,8 +13,6 @@ namespace chatbot.Ef.Configurations
     {
         public void Configure(EntityTypeBuilder<MessageReaction> builder)
         {
-            builder.HasKey(x => x.Id);
-
             builder.Property(x => x.ReactionType)
                 .HasConversion<int>();
 
@@ -28,7 +26,7 @@ namespace chatbot.Ef.Configurations
             builder.HasOne(x => x.Message)
                 .WithMany(m => m.Reactions)
                 .HasForeignKey(x => x.MessageId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
 
 
             // Indexes

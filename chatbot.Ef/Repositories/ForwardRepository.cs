@@ -19,16 +19,19 @@ namespace chatbot.Ef.Repositories
             await context.Messages.AddRangeAsync(messages);
         }
 
-        public async Task<bool> ConversationExistsAsync(Guid conversationId)
+        public async Task<List<Guid>> GetValidConversationIdsAsync(Guid userId, IEnumerable<Guid> conversationIds)
         {
-            return await context.Conversations
-                .AnyAsync(c => c.Id == conversationId);
-        }
+            var ids = conversationIds.Distinct().ToList();
 
-        public async Task<bool> IsMemberAsync(Guid conversationId, Guid memberId)
-        {
             return await context.ConversationMembers
-                .AnyAsync(cm => cm.ConversationId == conversationId && cm.UserId==memberId);
+                .Where(cm =>
+                    ids.Contains(cm.ConversationId) &&
+                    cm.UserId == userId &&
+                    cm.LeftAt == null &&
+                    !cm.IsBanned)
+                .Select(cm => cm.ConversationId)
+                .Distinct()
+                .ToListAsync();
         }
     }
 }

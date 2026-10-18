@@ -55,13 +55,6 @@ namespace chatbot.Core.Models
 
         public DateTime? EditedAt { get; set; }
 
-
-        // Delete
-        public bool IsDeleted { get; set; }
-
-        public DateTime? DeletedAt { get; set; }
-
-
         // Time
         public DateTime SendAt { get; set; }
             = DateTime.UtcNow;
@@ -92,8 +85,7 @@ namespace chatbot.Core.Models
         // Navigation Property for Recipient Statuses
         public ICollection<MessageRecipientStatus> RecipientStatuses { get; set; } = new List<MessageRecipientStatus>();
         public ICollection<MessageReaction> Reactions { get; set; } = new List<MessageReaction>();
-        // Multiple Files
-        public ICollection<StoredFile> Files { get; set; }= new List<StoredFile>();
+        public ICollection<MessageAttachment> Attachments { get; set; } = new List<MessageAttachment>();
     }
 }
 

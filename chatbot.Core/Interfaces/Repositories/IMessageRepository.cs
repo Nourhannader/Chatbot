@@ -10,17 +10,16 @@ namespace chatbot.Core.Interfaces.Repositories
 {
     public interface IMessageRepository : IBaseRepository<Message,Guid>
     {
-        Task<List<Message>> GetConversationMessagesAsync( Guid conversationId,int page,int pageSize);
-        Task<List<Message>> SearchMessagesAsync(Guid conversationId, string keyword);
-        Task<Message?> GetMessageByConversationIdAsync(Guid messageId, Guid conversationId);
-        Task<Message?> GetWithDetailsAsync(Guid messageId);
-        Task<int> CountByConversationAsync(Guid conversationId);
-        void Remove(Message message);
-        Task<Message?> GetWithFilesAsync(Guid id);
-        Task<bool> IsDeletedForUserAsync(Guid messageId,Guid userId);
         Task AddDeletionAsync(MessageDeletion message);
-
+        Task<Message?> GetMessageByConversationIdAsync(Guid messageId, Guid conversationId);
+        Task<Message?> GetWithFilesAsync(Guid id);
+        Task<Message?> GetWithDetailsAsync(Guid messageId);
+        Task<List<Message>> GetConversationMessagesAsync( Guid conversationId,Guid userId,int page,int pageSize);
+        Task<int> CountByConversationAsync(Guid conversationId,Guid userId);
+        Task<List<Message>> SearchMessagesAsync(Guid conversationId,Guid userId ,string keyword);
+        Task<bool> IsDeletedForUserAsync(Guid messageId,Guid userId);
         Task<List<Message>> GetAllMessageDeletedOlder(DateTime cutoff);
+        void Remove(Message message);
         void RemoveRange(List<Message> messages);
 
     }

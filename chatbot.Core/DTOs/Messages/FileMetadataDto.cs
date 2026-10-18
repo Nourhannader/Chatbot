@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace chatbot.Core.DTOs
+namespace chatbot.Core.DTOs.Messages
 {
     public class FileMetadataDto
     {
@@ -18,8 +18,7 @@ namespace chatbot.Core.DTOs
 
         public long Size { get; set; }
 
-        public string FileUrl { get; set; }
-            = string.Empty;
+        public string? FileUrl { get; set; }
 
         public string? ThumbnailUrl { get; set; }
 
@@ -27,6 +26,6 @@ namespace chatbot.Core.DTOs
 
         public int? Height { get; set; }
 
-        public int? DurationSeconds { get; set; }
+        public double? DurationSeconds { get; set; }
     }
 }

@@ -30,6 +30,8 @@ namespace chatbot.Ef.Repositories
                     x.IsDeletedForEveryone &&
                     x.DeletedForEveryoneAt.HasValue &&
                     x.DeletedForEveryoneAt < cutoff)
+                .Include(x => x.Attachments)
+                .ThenInclude(a => a.StoredFile)
                 .ToListAsync();
         }
 
@@ -38,6 +40,7 @@ namespace chatbot.Ef.Repositories
             return await context.Messages
                 .Include(m => m.Sender)
                 .Include(m => m.Reactions)
+                    .ThenInclude(r => r.User)
                 .Include(m => m.RecipientStatuses)
                 .FirstOrDefaultAsync(m => m.Id == id);
         }
@@ -46,22 +49,30 @@ namespace chatbot.Ef.Repositories
         {
             return await context.Messages
                     .AsNoTracking()
+                    .Include(m => m.Sender)
                     .FirstOrDefaultAsync(x =>
                         x.Id == messageId &&
                         x.ConversationId == conversationId);
         } 
 
-        public async Task<List<Message>> GetConversationMessagesAsync(Guid conversationId, int page, int pageSize)
+        public async Task<List<Message>> GetConversationMessagesAsync(Guid conversationId,Guid userId, int page, int pageSize)
         {
            return await context.Messages
-                .Where(m => m.ConversationId == conversationId)
+                .Where(m => m.ConversationId == conversationId
+                && !m.Deletions.Any(d => d.UserId ==userId))
                 .Include(m => m.Reactions)
+                   .ThenInclude(r => r.User)
                 .Include(m => m.Sender)
-                .Include(m => m.Files)
+                .Include(x => x.Attachments)
+                .ThenInclude(a => a.StoredFile)
+                .Include(m => m.VoiceNote)
+                .Include(m=> m.Sticker)
+                .Include(m => m.ReplyToMessage)
+                   .ThenInclude(r => r!.Sender)
                 .Include(m => m.RecipientStatuses)
-                .ThenInclude(rs => rs.Recipient)
+                  .ThenInclude(rs => rs.Recipient)
                 .OrderByDescending(m => m.SendAt)
-                .ThenByDescending(m => m.Id)
+                 .ThenByDescending(m => m.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
@@ -71,7 +82,8 @@ namespace chatbot.Ef.Repositories
         public async Task<Message?> GetWithFilesAsync(Guid id)
         {
             return  await context.Messages
-                .Include(m=> m.Files)
+                .Include(x => x.Attachments)
+                .ThenInclude(a => a.StoredFile)
                 .Include(m => m.VoiceNote)
                 .FirstOrDefaultAsync(m => m.Id == id);
                 
@@ -93,12 +105,19 @@ namespace chatbot.Ef.Repositories
             context.Messages.RemoveRange(messages);
         }
 
-        public async Task<List<Message>> SearchMessagesAsync(Guid conversationId, string keyword)
+        public async Task<List<Message>> SearchMessagesAsync(Guid conversationId,Guid userId, string keyword)
         {
             return await context.Messages
-                .Where(x =>x.ConversationId == conversationId &&x.Content.Contains(keyword))
-              .OrderByDescending(x => x.SendAt)
-               .ToListAsync();
+                .AsNoTracking()
+                .Where(x =>x.ConversationId == conversationId &&
+                !x.IsDeletedForEveryone &&
+                !x.Deletions.Any(d => d.UserId == userId) &&
+                 x.Content.Contains(keyword))
+                .Include(m => m.Sender)
+                .Include(x => x.Attachments)
+                .ThenInclude(a => a.StoredFile)
+                .OrderByDescending(x => x.SendAt)
+                .ToListAsync();
         }
 
         public void Update(Message entity)
@@ -109,18 +128,24 @@ namespace chatbot.Ef.Repositories
         public async Task<Message?> GetWithDetailsAsync(Guid messageId)
         {
             return await context.Messages
-                .Include(m => m.SenderId)
-                .Include(m => m.Files)
+                .Include(m => m.Sender)
+                .Include(x => x.Attachments)
+                .ThenInclude(a => a.StoredFile)
                 .Include(m => m.VoiceNote)
+                .Include(m => m.Sticker)
                 .Include(m => m.Reactions)
+                    .ThenInclude(r => r.User)
+                .Include(m => m.ReplyToMessage)
+                    .ThenInclude(r => r!.Sender)
                 .Include(m => m.RecipientStatuses)
-                .ThenInclude(rs => rs.Recipient)
+                    .ThenInclude(rs => rs.Recipient)
                 .FirstOrDefaultAsync(m => m.Id == messageId);
         }
 
-        public async Task<int> CountByConversationAsync(Guid conversationId)
+        public async Task<int> CountByConversationAsync(Guid conversationId,Guid userId)
         {
-            return await context.Messages.CountAsync(m => m.ConversationId == conversationId);
+            return await context.Messages.CountAsync(m => m.ConversationId == conversationId && 
+            !m.Deletions.Any(d => d.UserId == userId));
         }
     }
 }

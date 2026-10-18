@@ -3,29 +3,33 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using chatbot.Core.DTOs;
+using chatbot.Core.DTOs.Messages;
 using chatbot.Core.Enums;
 using FluentValidation;
 
 namespace chatbot.Core.Validators.Messages
 {
-    public class SendMessageDtoValidator: AbstractValidator<CreateMessageDto>
+    public class SendMessageDtoValidator : AbstractValidator<SendMessageDto>
     {
         public SendMessageDtoValidator()
         {
             RuleFor(x => x.ConversationId)
-            .NotEmpty();
+                .NotEmpty();
 
             RuleFor(x => x.Content)
                 .NotEmpty()
-                .When(x => x.Type == MessageType.Text);
+                .MaximumLength(5000);
 
-            RuleFor(x => x.File)
-                .NotNull()
+            RuleFor(x => x.MessageType)
+                .IsInEnum();
+
+            RuleFor(x => x)
+                .Must(x =>
+                    x.ReplyToMessageId != Guid.Empty)
                 .When(x =>
-                    x.Type == MessageType.Image ||
-                    x.Type == MessageType.Video ||
-                    x.Type == MessageType.Audio);
+                    x.ReplyToMessageId.HasValue)
+                .WithMessage(
+                    "Invalid ReplyToMessageId.");
         }
     }
 }

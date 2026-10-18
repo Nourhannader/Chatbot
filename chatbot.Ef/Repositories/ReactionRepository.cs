@@ -19,7 +19,9 @@ namespace chatbot.Ef.Repositories
 
         public async Task<MessageReaction?> GetByIdAsync(Guid id)
         {
-            return await context.MessageReactions.FirstOrDefaultAsync(r => r.Id == id);
+            return await context.MessageReactions
+                .Include(r => r.User)
+                .FirstOrDefaultAsync(r => r.Id == id);
         }
 
         public async Task<MessageReaction?> GetByMessageAndUserAsync(Guid messageId, Guid userId)
@@ -29,7 +31,12 @@ namespace chatbot.Ef.Repositories
 
         public async Task<List<MessageReaction>> GetByMessageIdAsync(Guid messageId)
         {
-            return await context.MessageReactions.Where(r => r.MessageId == messageId).ToListAsync();
+            return await context.MessageReactions
+                .AsNoTracking()
+                .Where(r => r.MessageId == messageId)
+                .Include(r => r.User)
+                .OrderBy(r => r.CreatedAt)
+                .ToListAsync();
         }
 
         public void Remove(MessageReaction reaction)

@@ -11,16 +11,16 @@ namespace chatbot.Core.Models
 {
     public class MessageReaction:BaseEntity
     {
-        [ForeignKey("Message")]
         public Guid MessageId { get; set; } 
         public Message Message { get; set; } = null!;
 
-        [ForeignKey(nameof(User))]
         public Guid UserId { get; set; }
 
         public ApplicationUser User { get; set; } = null!;
 
         public  ReactionType ReactionType{ get; set; } 
         public DateTime CreatedAt { get; set; }
+
+        public DateTime? UpdatedAt { get; set; }
     }
 }

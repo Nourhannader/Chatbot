@@ -10,10 +10,10 @@ namespace chatbot.Core.Models
     {
         public Guid MessageId { get; set; }
 
-        public Message Message { get; set; }
-            = null!;
+        public Message Message { get; set; } = null!;
 
         public Guid UserId { get; set; }
+
         public ApplicationUser User { get; set; } = null!;
 
         public DateTime DeletedAt { get; set; }= DateTime.UtcNow;
