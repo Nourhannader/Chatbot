@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace chatbot.Ef.Repositories
 {
-    public class NotificationPreferenceRepository(ApplicationDbContext context) : INotificationPreferenceRepository
+    public sealed class NotificationPreferenceRepository(ApplicationDbContext context) : INotificationPreferenceRepository
     {
         public async Task AddAsync(NotificationPreferences entity)
         {
@@ -19,16 +19,11 @@ namespace chatbot.Ef.Repositories
         }
 
 
-        public async Task<NotificationPreferences?> GetByIdAsync(Guid id)
+        public async Task<NotificationPreferences?>  GetByUserIdAsync(Guid userId)
         {
-            return await context
-           .NotificationPreferences
-           .FirstOrDefaultAsync(x =>x.UserId == id);
-        }
-
-        public void Update(NotificationPreferences entity)
-        {
-            context.NotificationPreferences.Update(entity);
+            return await context.NotificationPreferences
+                .FirstOrDefaultAsync(x =>
+                    x.UserId == userId);
         }
     }
 }

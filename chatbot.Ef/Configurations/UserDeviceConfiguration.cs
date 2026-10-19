@@ -28,6 +28,7 @@ namespace chatbot.Ef.Configurations
                 .HasMaxLength(200);
 
             builder.Property(x => x.IsActive)
+                .IsRequired()
                 .HasDefaultValue(true);
 
             builder.Property(x => x.CreatedAt)
@@ -45,17 +46,23 @@ namespace chatbot.Ef.Configurations
             builder.HasMany(x => x.Connections)
             .WithOne(x => x.UserDevice)
             .HasForeignKey(x => x.UserDeviceId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.SetNull);
 
             //indexes
+
+            builder.HasIndex(
+                x => new
+                {
+                    x.PushToken,
+                    x.Provider,
+                })
+            .IsUnique();
+
             builder.HasIndex(x => new
             {
                 x.UserId,
-                x.PushToken,
-                x.Provider
-            }).IsUnique();
-
-            builder.HasIndex(x => x.UserId);
+                x.IsActive
+            });
         }
     }
 }

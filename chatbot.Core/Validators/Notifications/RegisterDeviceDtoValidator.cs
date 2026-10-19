@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using chatbot.Core.DTOs;
+using chatbot.Core.DTOs.Notifications;
 using FluentValidation;
 
 namespace chatbot.Core.Validators.Notifications
@@ -13,17 +13,33 @@ namespace chatbot.Core.Validators.Notifications
         public RegisterDeviceDtoValidator()
         {
             RuleFor(x => x.PushToken)
-            .NotEmpty()
-            .MaximumLength(1000);
+                .NotEmpty()
+                .WithMessage(
+                    "Push token is required.")
+                .MaximumLength(2000)
+                .WithMessage(
+                    "Push token must not exceed 2000 characters.");
 
-            RuleFor(x => x.Provider)
-                .IsInEnum();
 
             RuleFor(x => x.DeviceType)
-                .IsInEnum();
+                .IsInEnum()
+                .WithMessage(
+                    "Invalid device type.");
+
+
+            RuleFor(x => x.Provider)
+                .IsInEnum()
+                .WithMessage(
+                    "Invalid push provider.");
+
 
             RuleFor(x => x.DeviceName)
-                .MaximumLength(100);
+                .MaximumLength(200)
+                .WithMessage(
+                    "Device name must not exceed 200 characters.")
+                .When(x =>
+                    !string.IsNullOrWhiteSpace(
+                        x.DeviceName));
         }
     }
 }

@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace chatbot.Ef.Repositories
 {
-    public class UserDeviceRepository(ApplicationDbContext context) : IUserDeviceRepository
+    public sealed class UserDeviceRepository(ApplicationDbContext context) : IUserDeviceRepository
     {
         public async Task AddAsync(UserDevice entity)
         {
@@ -25,6 +25,7 @@ namespace chatbot.Ef.Repositories
             if(device ==null)
                 return;
             device.IsActive = false;
+            device.LastUsedAt = DateTime.UtcNow;
         }
 
         public async Task<List<UserDevice>> GetActiveDevicesAsync(Guid userId)
@@ -32,6 +33,7 @@ namespace chatbot.Ef.Repositories
             return await context.UserDevices
                 .AsNoTracking()
                 .Where(ud => ud.UserId == userId && ud.IsActive)
+                .OrderByDescending(ud => ud.LastUsedAt)
                 .ToListAsync();
         }
 
@@ -43,17 +45,35 @@ namespace chatbot.Ef.Repositories
                 && x.Provider ==provider);
         }
 
+        public async Task<UserDevice?> GetByPushTokenAsync(string pushToken, PushProvider provider)
+        {
+            return await context.UserDevices
+                .FirstOrDefaultAsync(x =>
+                    x.PushToken == pushToken &&
+                    x.Provider == provider);
+        }
+
         public async Task<UserDevice?> GetByIdAsync(Guid id)
         {
             return await context.UserDevices
                 .FirstOrDefaultAsync(ud => ud.Id == id);
         }
 
+        public async Task<UserDevice?> GetByIdForUserAsync(Guid id, Guid userId)
+        {
+            return await context.UserDevices
+                .FirstOrDefaultAsync(x =>
+                    x.Id == id &&
+                    x.UserId == userId);
+        }
+
 
         public async Task<IEnumerable<UserDevice>> GetUserDevicesAsync(Guid userId)
         {
            return await context.UserDevices
+                .AsNoTracking()
                 .Where(ud => ud.UserId == userId)
+                .OrderByDescending(ud => ud.LastUsedAt)
                 .ToListAsync();
         }
 

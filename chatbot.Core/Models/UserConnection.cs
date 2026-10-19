@@ -22,6 +22,8 @@ namespace chatbot.Core.Models
 
         public bool IsOnline { get; set; }
 
+        public DateTime CreatedAt { get; set; }
+
         public DateTime ConnectedAt { get; set; }
             = DateTime.UtcNow;
 

@@ -17,6 +17,7 @@ namespace chatbot.Core.Interfaces.Repositories
 
         Task DeactivateAsync(Guid userId, string pushToken, PushProvider provider);
         Task<UserDevice?> GetAsync(Guid userId,string pushToken,PushProvider provider);
-
+        Task<UserDevice?> GetByPushTokenAsync(string pushToken, PushProvider provider);
+        Task<UserDevice?> GetByIdForUserAsync(Guid id, Guid userId);
     }
 }

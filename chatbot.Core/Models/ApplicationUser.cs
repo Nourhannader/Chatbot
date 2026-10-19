@@ -24,6 +24,7 @@ namespace chatbot.Core.Models
         public Guid? ProfileImageId { get; set; }
 
         public StoredFile? ProfileImage { get; set; }
+        public NotificationPreferences? NotificationPreferences { get; set; }
         public ICollection<RefreshToken>? RefreshTokens { get; set; }
         public ICollection<Conversation>? Conversations { get; set; }
         public ICollection<ConversationMember>? ConversationMembers { get; set; }

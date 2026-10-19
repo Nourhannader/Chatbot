@@ -15,6 +15,8 @@ namespace chatbot.Core.Models
         public string Body { get; set; } = string.Empty;
         public NotificationType Type { get; set; } 
         public string? Data {  get; set; }
+
+        public string? ReferenceId { get; set; } // This can be used to reference the related entity (e.g., MessageId, ConversationId, etc.)
         public bool IsRead { get; set; } = false;
         public DateTime? ReadAt { get; set; }   
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

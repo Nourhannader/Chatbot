@@ -8,15 +8,18 @@ namespace chatbot.Core.Models
 {
     public class NotificationOptions
     {
-        public bool SendPush { get; set; } = true;
-
-        public bool SendSignalR { get; set; } = true;
-
         public bool SaveToDatabase { get; set; } = true;
 
-        public string? ConversationId { get; set; }
+        public bool SendRealtimeNotification { get; set; } = true;
 
-        public string? MessageId { get; set; }
-        public Dictionary<string,string>? Data { get; set; } 
+        public bool SendPush { get; set; } = true;
+
+        public bool SoundEnabled { get; set; } = true;
+
+        public Guid? ConversationId { get; set; }
+
+        public Guid? MessageId { get; set; }
+
+        public Dictionary<string, string>? Data { get; set; }
     }
 }

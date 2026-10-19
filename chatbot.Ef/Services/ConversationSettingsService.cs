@@ -10,10 +10,10 @@ using chatbot.Core.Models;
 using System.Management;
 using System.Security.Claims;
 using AutoMapper;
-using chatbot.Core.Common;
 using System.Runtime.CompilerServices;
 using chatbot.Core.Authorization.Conversation;
 using chatbot.Core.DTOs;
+using chatbot.Core.Common;
 
 namespace chatbot.Ef.Services
 {

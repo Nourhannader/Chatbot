@@ -30,6 +30,9 @@ namespace chatbot.Ef.Configurations
             builder.Property(x => x.Data)
             .HasColumnType("nvarchar(max)");
 
+            builder.Property(x => x.ReferenceId)
+            .HasMaxLength(450);
+
             // Relationships
             builder.HasOne(x => x.User)
                 .WithMany(x => x.Notifications)

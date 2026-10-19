@@ -7,8 +7,9 @@ using chatbot.Core.Models;
 
 namespace chatbot.Core.Interfaces.Repositories
 {
-    public interface INotificationPreferenceRepository:IBaseRepository<NotificationPreferences,Guid>
-    {
-       
+    public interface INotificationPreferenceRepository
+    { 
+       Task AddAsync(NotificationPreferences entity);
+        Task<NotificationPreferences?> GetByUserIdAsync(Guid userId);
     }
 }

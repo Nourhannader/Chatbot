@@ -15,8 +15,8 @@ namespace chatbot.Core.Enums
         RemovedFromGroup = 5,
         Mention = 6,
         System=7,
-        FriendRequest = 8
-
+        FriendRequest = 8,
+        GroupInvite = 9
 
     }
 }
