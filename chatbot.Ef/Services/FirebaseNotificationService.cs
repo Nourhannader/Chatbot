@@ -9,11 +9,13 @@ using FirebaseAdmin.Messaging;
 
 namespace chatbot.Ef.Services
 {
-    public class FirebaseNotificationService(IUnitOfWork unitOfWork) : IPushNotificationService
+    public sealed class FirebaseNotificationService(IUnitOfWork unitOfWork) : IPushNotificationService
     {
         public async Task SendAsync(string pushToken, string title,string body,
         Dictionary<string, string>? data = null)
         {
+            if (string.IsNullOrWhiteSpace(pushToken))
+                return;
             var message = new Message
             {
                 Token = pushToken,

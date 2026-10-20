@@ -16,7 +16,7 @@ namespace chatbot.Core.Interfaces.Services
 
         Task AddConnectionAsync(Guid userId, string connectionId, Guid? userDeviceId);
 
-        Task RemoveConnectionAsync(string connectionId);
+        Task DisconnectAsync(string connectionId);
 
         Task<UserConnectionDto?> GetByConnectionIdAsync(string connectionId);
         public Task<UserConnectionStatusDto> GetOnlineStatusAsync(Guid userId);

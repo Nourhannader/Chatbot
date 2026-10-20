@@ -22,8 +22,14 @@ namespace chatbot.Ef.Services
 
         public async Task AddConnectionAsync(Guid userId, string connectionId,Guid? userDeviceId)
         {
+            var existing = await unitOfWork.UserConnections.GetByConnectionIdAsync(connectionId);
+            if (existing is not null)
+                return;
+
             var connection = new UserConnection
             {
+                Id=Guid.NewGuid(),
+
                 UserId = userId,
 
                 UserDeviceId = userDeviceId,
@@ -40,9 +46,10 @@ namespace chatbot.Ef.Services
             await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task RemoveConnectionAsync(string connectionId)
+        public async Task DisconnectAsync(string connectionId)
         {
             await unitOfWork.UserConnections.RemoveAsync(connectionId);
+            await unitOfWork.SaveChangesAsync();
         }
 
         public async Task<UserConnectionDto?> GetByConnectionIdAsync(string connectionId)

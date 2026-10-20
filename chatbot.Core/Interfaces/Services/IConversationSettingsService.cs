@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using chatbot.Core.DTOs;
+using chatbot.Core.Enums;
 using chatbot.Core.Models;
 
 namespace chatbot.Core.Interfaces.Services
@@ -12,9 +13,11 @@ namespace chatbot.Core.Interfaces.Services
     public interface IConversationSettingsService
     {
         Task<ConversationSettingsDto> GetAsync(ClaimsPrincipal user, Guid conversationId);
-        Task MuteAsync(ClaimsPrincipal user,Guid conversationId,DateTime? muteUntil);
+        Task MuteAsync(ClaimsPrincipal user,Guid conversationId,MuteDuration? duration);
 
         Task UnmuteAsync(ClaimsPrincipal user,Guid conversationId);
+
+        Task<bool> IsMutedAsync(ClaimsPrincipal user,Guid conversationId);
 
         Task ArchiveAsync(ClaimsPrincipal user,Guid conversationId);
 

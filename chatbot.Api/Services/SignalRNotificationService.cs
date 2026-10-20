@@ -1,5 +1,5 @@
 ﻿using chatbot.Api.Hubs;
-using chatbot.Core.DTOs;
+using chatbot.Core.DTOs.Notifications;
 using chatbot.Core.Interfaces.Services;
 using Microsoft.AspNetCore.SignalR;
 
@@ -12,6 +12,13 @@ namespace chatbot.Api.Services
             await hubContext.Clients
                 .User(userId.ToString())
                 .SendAsync("NotificationReceived", notification);
+        }
+
+        public async Task SendUnreadCountAsync(Guid userId, int unreadCount)
+        {
+            await hubContext.Clients
+            .User(userId.ToString())
+            .SendAsync( "NotificationUnreadCountChanged",unreadCount);
         }
     }
 }

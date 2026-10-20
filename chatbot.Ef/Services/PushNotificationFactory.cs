@@ -8,7 +8,7 @@ using chatbot.Core.Interfaces.Services;
 
 namespace chatbot.Ef.Services
 {
-    public class PushNotificationFactory : IPushNotificationFactory
+    public sealed class PushNotificationFactory : IPushNotificationFactory
     {
         private readonly FirebaseNotificationService firebase;
         private readonly OneSignalPushNotificationService oneSignal;
@@ -29,7 +29,7 @@ namespace chatbot.Ef.Services
 
                 _ => throw new
                     NotSupportedException(
-                        $"Provider {provider} is not supported")
+                        $"Push provider {provider} is not supported.")
             };
         }
     }

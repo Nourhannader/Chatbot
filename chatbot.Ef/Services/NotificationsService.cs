@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using chatbot.Core.DTOs.Notifications;
 using chatbot.Core.DTOs;
 using chatbot.Core.Enums;
 using chatbot.Core.Interfaces.Repositories;
@@ -11,121 +12,133 @@ using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Models;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 
 namespace chatbot.Ef.Services
 {
     public class NotificationService(IUnitOfWork unitOfWork,IPushNotificationFactory pushFactory
-        ,IRealtimeNotificationService realtimeService)
-    : INotificationService
+        ,IRealtimeNotificationService realtimeService,INotificationDecisionService decisionService,ILogger logger) : INotificationService
     {
-        public Task<List<NotificationDto>> GetAsync(Guid userId, int pageNumber, int pageSize)
+        public async Task<PagedResultDto<NotificationDto>> GetAsync(Guid userId, int pageNumber, int pageSize)
         {
-            throw new NotImplementedException();
+            pageNumber = pageNumber < 1 ? 1 : pageNumber;
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            var notifications = await unitOfWork.Notifications.GetUserNotificationsAsync(userId, pageNumber, pageSize);
+
+            var totalCount = await unitOfWork.Notifications.GetUnreadCountAsync(userId);
+
+            return new PagedResultDto<NotificationDto>
+            {
+                Items = notifications.Select(n => new NotificationDto
+                {
+                    Id = n.Id,
+                    Type = n.Type,
+                    Title = n.Title,
+                    Body = n.Body,
+                    Data = n.Data,
+                    IsRead = n.IsRead,
+                    ReadAt = n.ReadAt,
+                    CreatedAt = n.CreatedAt
+                }).ToList(),
+                TotalCount = totalCount
+            };
         }
 
-        public Task<int> GetUnreadCountAsync(Guid userId)
+        public async Task<int> GetUnreadCountAsync(Guid userId)
         {
-            throw new NotImplementedException();
+           return await unitOfWork.Notifications.GetUnreadCountAsync(userId);
         }
 
-        public Task MarkAllAsReadAsync(Guid userId)
+        public async Task MarkAllAsReadAsync(Guid userId)
         {
-            throw new NotImplementedException();
+            await unitOfWork.Notifications.MarkAllAsReadAsync(userId);
+            await unitOfWork.SaveChangesAsync();
         }
 
-        public Task MarkAsReadAsync(Guid userId, Guid notificationId)
+        public async Task MarkAsReadAsync(Guid userId, Guid notificationId)
         {
-            throw new NotImplementedException();
+            await unitOfWork.Notifications.MarkAsReadAsync(userId, notificationId);
+            await unitOfWork.SaveChangesAsync();
         }
 
         public async Task SendAsync(Guid userId, NotificationType type, string title, string body, NotificationOptions? options = null)
         {
             options ??= new NotificationOptions();
-            var preference=await unitOfWork.NotificationPreference.GetByIdAsync(userId);
-            if (preference !=null)
+            var decision = await decisionService.GetOptionsAsync(userId, type, options.ConversationId, options.MessageId);
+
+            var saveToDatabase = decision.SaveToDatabase && options.SaveToDatabase;
+
+            var sendSignalR = decision.SendRealtimeNotification && options.SendRealtimeNotification;
+
+            var sendPush = decision.SendPush && options.SendPush;
+
+            Notification? notification = null;
+
+            if (saveToDatabase)
             {
-                if (type == NotificationType.NewMessage &&
-                     !preference.NewMessages)
+                notification = new Notification
                 {
-                    return;
-                }
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    Type = type,
+                    Title = title,
+                    Body = body,
+                    ReferenceId = options.MessageId?.ToString(),
+                    Data = options.Data is not null
+                        ? JsonSerializer.Serialize(options.Data)
+                        : null,
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                };
 
-                if (type == NotificationType.MessageReaction &&
-                    !preference.MessageReactions)
-                {
-                    return;
-                }
-
-                if (type == NotificationType.MessageReply &&
-                   !preference.MessageReplies)
-                {
-                    return;
-                }
-
-                if (type == NotificationType.Mention &&
-                    !preference.Mentions)
-                {
-                    return;
-                }
-            }
-            var notification = new Notification
-            {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                Title = title,
-                Body = body,
-                Type = type,
-                IsRead = false,
-                Data = options.Data != null ? JsonSerializer.Serialize(options.Data) : null,
-                CreatedAt = DateTime.UtcNow
-
-            };
-            //save notification
-            if (options.SaveToDatabase)
-            {
                 await unitOfWork.Notifications.AddAsync(notification);
+
                 await unitOfWork.SaveChangesAsync();
             }
+
+
             var dto = new NotificationDto
             {
-                Id = notification.Id,
-
-                Type = notification.Type,
-
-                Title = notification.Title,
-
-                Body = notification.Body,
-
-                Data = notification.Data,
-
-                IsRead = notification.IsRead,
-
-                CreatedAt = notification.CreatedAt
+                Id = notification?.Id ?? Guid.NewGuid(),
+                Type = type,
+                Title = title,
+                Body = body,
+                ReferenceId = options.MessageId?.ToString(),
+                Data = options.Data is not null
+                ? JsonSerializer.Serialize(options.Data)
+                : null,
+                IsRead = false,
+                CreatedAt = notification?.CreatedAt ?? DateTime.UtcNow
             };
-            //signalr
-            if (options.SendSignalR)
+
+            if (sendSignalR)
             {
                 await realtimeService.SendAsync(userId, dto);
             }
-            //push
-            if (options.SendPush && preference?.PushNotifications != false)
+
+            if (!sendPush)
+                return;
+
+            var devices = await unitOfWork.UserDevices.GetActiveDevicesAsync(userId);
+
+            foreach(var device in devices)
             {
-                var devices = await unitOfWork.UserDevices.GetActiveDevicesAsync(userId);
-                foreach (var device in devices)
+                try
                 {
-                    try
-                    {
-                        var pushService = pushFactory.Get(device.Provider);
-                        await pushService.SendAsync(device.PushToken, title, body, options.Data);
-                    }
-                    catch(Exception ex) 
-                    {
-                        //log error
+                    var pushService =  pushFactory.Get(device.Provider);
 
-
-                    }
+                    await pushService.SendAsync( device.PushToken,title,body,options.Data);
+                }
+                catch
+                {
+                    // Add ILogger later.
+                    // Failure on one device should not
+                    // prevent the remaining devices.
+                    logger.Log(LogLevel.Information, "Failure on one device should not prevent the remaining devices. ");
                 }
             }
+
         }
     }
 }

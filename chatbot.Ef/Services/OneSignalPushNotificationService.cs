@@ -12,7 +12,15 @@ namespace chatbot.Ef.Services
     {
         public async Task SendAsync(string pushToken, string title, string body, Dictionary<string, string>? data = null)
         {
-            //call api in future
+            if (string.IsNullOrWhiteSpace(pushToken))
+                return;
+
+            // OneSignal-specific HTTP implementation.
+            //
+            // Keep provider-specific API logic here,
+            // not inside NotificationService.
+
+            await Task.CompletedTask;
         }
     }
 }

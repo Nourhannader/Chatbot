@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using chatbot.Core.DTOs;
+using AutoMapper;
+using chatbot.Core.DTOs.Notifications;
 using chatbot.Core.Enums;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
@@ -12,20 +13,22 @@ using chatbot.Ef.UnitOfWork;
 
 namespace chatbot.Ef.Services
 {
-    public class UserDeviceService(IUnitOfWork unitOfWork) : IUserDeviceService
+    public sealed class UserDeviceService(IUnitOfWork unitOfWork,IMapper mapper) : IUserDeviceService
     {
-        public async Task<List<UserDevice>> GetUserDevicesAsync(Guid userId)
+        public async Task<List<UserDeviceDto>> GetUserDevicesAsync(Guid userId)
         {
-           return await unitOfWork.UserDevices.GetActiveDevicesAsync(userId);
+           var devices= await unitOfWork.UserDevices.GetActiveDevicesAsync(userId);
+            return mapper.Map<List<UserDeviceDto>>(devices);
         }
 
         public async Task RegisterAsync(Guid userId, RegisterDeviceDto dto)
         {
-            var device = await unitOfWork.UserDevices.GetAsync(userId, dto.PushToken,dto.Provider);
+            var device = await unitOfWork.UserDevices.GetByPushTokenAsync( dto.PushToken,dto.Provider);
             if(device == null)
             {
                 device = new UserDevice
                 {
+                    Id=Guid.NewGuid(),
                     UserId = userId,
                     PushToken = dto.PushToken,
                     DeviceType = dto.DeviceType,
@@ -38,12 +41,11 @@ namespace chatbot.Ef.Services
             }
             else
             {
-                device.IsActive = true;
+                device.UserId = userId;
                 device.DeviceType = dto.DeviceType;
                 device.DeviceName = dto.DeviceName;
+                device.IsActive = true;
                 device.LastUsedAt = DateTime.UtcNow;
-
-                unitOfWork.UserDevices.Update(device);
             }
 
             await unitOfWork.SaveChangesAsync();

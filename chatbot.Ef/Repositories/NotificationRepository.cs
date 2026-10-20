@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using chatbot.Core.DTOs.Notifications;
+using chatbot.Core.Exceptions;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Models;
 using chatbot.Ef.Data;
@@ -88,7 +89,7 @@ namespace chatbot.Ef.Repositories
         {
             var notification = await GetByIdForUserAsync(notificationId, userId);
             if (notification == null)
-                return;
+                throw new NotFoundException("Notification not found.");
             if (notification.IsRead)
                 return;
             notification.IsRead = true;

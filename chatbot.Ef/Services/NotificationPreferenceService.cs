@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using chatbot.Core.DTOs;
+using AutoMapper;
+using chatbot.Core.DTOs.Notifications;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Models;
@@ -11,35 +12,41 @@ using chatbot.Ef.UnitOfWork;
 
 namespace chatbot.Ef.Services
 {
-    public class NotificationPreferenceService(IUnitOfWork unitOfWork) : INotificationPreferenceService
+    public sealed class NotificationPreferenceService(IUnitOfWork unitOfWork,IMapper mapper) : INotificationPreferenceService
     {
-        public async Task<NotificationPreferences> GetAsync(Guid userId)
+        public async Task<NotificationPreferencesDto> GetAsync(Guid userId)
         {
-            var preference =
-            await unitOfWork.NotificationPreference.GetByIdAsync(userId);
+            var preference = await unitOfWork.NotificationPreference.GetByUserIdAsync(userId);
 
-            if (preference != null)
-                return preference;
-
-            preference = new NotificationPreferences
+            if (preference is null)
             {
-                Id = Guid.NewGuid(),
-                UserId = userId
-            };
+                preference =
+                    new NotificationPreferences
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = userId,
+                        NewMessages = true,
+                        MessageReactions = true,
+                        MessageReplies = true,
+                        Mentions = true,
+                        PushNotifications = true,
+                        SoundEnabled = true
+                    };
 
-            await unitOfWork.NotificationPreference.AddAsync(preference);
+                await unitOfWork.NotificationPreference.AddAsync(preference);
 
-            await unitOfWork.SaveChangesAsync();
+                await unitOfWork.SaveChangesAsync();
+            }
 
-            return preference;
+            return mapper.Map<NotificationPreferencesDto>(preference);
+
         }
 
         public async Task UpdateAsync(Guid userId, UpdateNotificationPreferencesDto dto)
         {
-            var preference =
-             await unitOfWork.NotificationPreference.GetByIdAsync(userId);
+            var preference = await unitOfWork.NotificationPreference.GetByUserIdAsync(userId);
 
-            if (preference == null)
+            if (preference is null)
             {
                 preference =
                     new NotificationPreferences
@@ -51,21 +58,12 @@ namespace chatbot.Ef.Services
                 await unitOfWork.NotificationPreference.AddAsync(preference);
             }
 
-            preference.NewMessages =
-                dto.NewMessages;
-
-            preference.MessageReactions =
-                dto.MessageReactions;
-
-            preference.Mentions =
-                dto.Mentions;
-
-            preference.PushNotifications =
-                dto.PushNotifications;
-
-            preference.SoundEnabled =
-                dto.SoundEnabled;
-
+            preference.NewMessages = dto.NewMessages;
+            preference.MessageReactions = dto.MessageReactions;
+            preference.MessageReplies = dto.MessageReplies;
+            preference.Mentions = dto.Mentions;
+            preference.PushNotifications = dto.PushNotifications;
+            preference.SoundEnabled = dto.SoundEnabled;
             await unitOfWork.SaveChangesAsync();
         }
     }

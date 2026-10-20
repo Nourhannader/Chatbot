@@ -14,6 +14,7 @@ using System.Runtime.CompilerServices;
 using chatbot.Core.Authorization.Conversation;
 using chatbot.Core.DTOs;
 using chatbot.Core.Common;
+using chatbot.Core.Enums;
 
 namespace chatbot.Ef.Services
 {
@@ -31,20 +32,63 @@ namespace chatbot.Ef.Services
            await unitOfWork.SaveChangesAsync();
         }
 
-        public async Task MuteAsync(ClaimsPrincipal user, Guid conversationId, DateTime? muteUntil)
+        public async Task MuteAsync(ClaimsPrincipal user, Guid conversationId, MuteDuration? duration)
         {
             await AuthorizeAsync(user, conversationId);
             var now = timeProvider.GetUtcNow().UtcDateTime;
-            if (muteUntil.HasValue && muteUntil <= now)
+
+            // Removed invalid comparison between MuteDuration? and DateTime
+            if (duration.HasValue && duration.Value == MuteDuration.Forever)
             {
                 throw new BadRequestException("Mute expiration must be in the future.");
             }
-            var settings =await GetSettingsAsync(user, conversationId);
-            settings.IsMuted = true;
-            settings.MuteUntil = muteUntil;
-           await unitOfWork.SaveChangesAsync();
+
+            var settings = await GetSettingsAsync(user, conversationId);
+            settings.IsMuted = false;
+            settings.MuteUntil = null;
+
+            switch (duration)
+            {
+                case MuteDuration.OneHour:
+                    settings.MuteUntil = DateTime.UtcNow.AddHours(1);
+                    break;
+
+                case MuteDuration.EightHours:
+                    settings.MuteUntil = DateTime.UtcNow.AddHours(8);
+                    break;
+
+                case MuteDuration.OneWeek:
+                    settings.MuteUntil = DateTime.UtcNow.AddDays(7);
+                    break;
+
+                case MuteDuration.Forever:
+                    settings.IsMuted = true;
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(
+                        nameof(duration), duration, "Invalid mute duration.");
+            }
+            await unitOfWork.SaveChangesAsync();
         }
 
+        public async Task<bool> IsMutedAsync(ClaimsPrincipal user, Guid conversationId)
+        {
+            var userId = user.GetUserId();
+            var settings = await unitOfWork.Settings
+                    .GetAsync(userId, conversationId);
+
+            if (settings is null)
+                return false;
+
+            if (settings.IsMuted)
+                return true;
+
+            return settings.MuteUntil.HasValue &&
+                   settings.MuteUntil.Value >
+                   DateTime.UtcNow;
+        }
+       
         public async Task UnarchiveAsync(ClaimsPrincipal user, Guid conversationId)
         {
             await AuthorizeAsync(user, conversationId);

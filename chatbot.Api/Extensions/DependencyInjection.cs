@@ -53,6 +53,7 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IMailService, MailService>();
             Services.AddScoped<IChatService, ChatService>();
             Services.AddScoped<IMessageService, MessageService>();
+            Services.AddScoped<IMessageReactionService,MessageReactionService>();
             Services.AddScoped<IMessageEncryptionService, MessageEncryptionService>();  
             Services.AddScoped<IConversationService, ConversationService>();
             Services.AddScoped<IRolePermissionService,RolePermissionService>();
@@ -63,12 +64,12 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IGroupInviteService, GroupInviteService>();
             Services.AddScoped<ISystemMessageService, SystemMessageService>();
             Services.AddScoped<IConversationSettingsService, ConversationSettingsService>();
-            Services.AddScoped<IReactionService, ReactionService>();
             Services.AddScoped<IUserDeviceService, UserDeviceService>();
             Services.AddScoped<INotificationService,NotificationService>();
+            Services.AddScoped<INotificationDecisionService, NotificationDecisionService>();
             Services.AddScoped<IPushNotificationFactory, PushNotificationFactory>();
             Services.AddScoped<FirebaseNotificationService>();
-            Services.AddScoped<OneSignalPushNotificationService>();
+            Services.AddHttpClient<OneSignalPushNotificationService>();
             Services.AddScoped<IPresenceService, PresenceService>();
             Services.AddScoped<IMessageStatusService, MessageStatusService>();
             Services.AddScoped<ITypingService, TypingService>();
@@ -88,9 +89,7 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<ITokenHashService,TokenHashService>();
             Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
             Services.AddScoped<IRealtimeNotificationService, SignalRNotificationService>();
-            Services.AddScoped<IMessageReadService, MessageReadService>();
             Services.AddSingleton<TypingRepository>();
-            Services.AddSingleton<IUserIdProvider, UserIdProvider>();
             Services.AddScoped<IUserConnectionService, UserConnectionService>();
 
 

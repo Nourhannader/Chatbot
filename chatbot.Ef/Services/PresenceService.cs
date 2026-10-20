@@ -13,7 +13,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace chatbot.Ef.Services
 {
-    public class PresenceService(IUnitOfWork unitOfWork) : IPresenceService
+    public sealed class PresenceService(IUnitOfWork unitOfWork) : IPresenceService
     {
         private readonly ConcurrentDictionary<string,ConcurrentDictionary<string, byte>>users = new();
 
@@ -24,7 +24,6 @@ namespace chatbot.Ef.Services
 
         public async Task<UserPresenceDto> GetPresenceAsync(Guid userId)
         {
-            var isOline= await unitOfWork.UserConnections.HasActiveConnectionAsync(userId);
 
             var user = await unitOfWork.Auth.GetByIdAsync(userId);
             
@@ -34,7 +33,7 @@ namespace chatbot.Ef.Services
             return new UserPresenceDto
             {
                 UserId = userId,
-                IsOnline = isOline,
+                IsOnline = connectionCount > 0,
                 ConnectionCount = connectionCount,
                 LastSeenAt = user?.LastSeenAt
             };
@@ -42,21 +41,22 @@ namespace chatbot.Ef.Services
 
         public  async Task UserDisconnectedAsync(Guid userId)
         {
-            var isOnline = await unitOfWork.UserConnections.HasActiveConnectionAsync(userId);
-                 
 
-            // Still connected from another device
-            if (isOnline)
+            var connectionCount = await unitOfWork.UserConnections.GetActiveConnectionCountAsync(userId);
+            // Another tab/device is still connected.
+            if (connectionCount > 0)
                 return;
+
 
             var user = await unitOfWork.Auth.GetByIdAsync(userId);
 
-            if (user == null)
+            if (user is null)
                 return;
 
             user.LastSeenAt =DateTime.UtcNow;
 
             await unitOfWork.Auth.updateState(user);
+            await unitOfWork.SaveChangesAsync();
         }
     }
 }
