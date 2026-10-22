@@ -19,6 +19,7 @@ namespace chatbot.Core.Interfaces.Repositories
         Task<List<Message>> SearchMessagesAsync(Guid conversationId,Guid userId ,string keyword);
         Task<bool> IsDeletedForUserAsync(Guid messageId,Guid userId);
         Task<List<Message>> GetAllMessageDeletedOlder(DateTime cutoff);
+       
         void Remove(Message message);
         void RemoveRange(List<Message> messages);
 

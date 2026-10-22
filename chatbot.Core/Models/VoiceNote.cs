@@ -8,12 +8,19 @@ namespace chatbot.Core.Models
 {
     public class VoiceNote:BaseEntity
     {
-       
+        // ==============================
+        // Message
+        // ==============================
+
         public Guid MessageId { get; set; }
 
         public Message Message { get; set; }
             = null!;
 
+
+        // ==============================
+        // File
+        // ==============================
 
         public Guid FileId { get; set; }
 
@@ -21,12 +28,19 @@ namespace chatbot.Core.Models
             = null!;
 
 
-        public int DurationSeconds { get; set; }
+        // ==============================
+        // Voice Metadata
+        // ==============================
 
+        public double DurationSeconds { get; set; }
 
         public string Waveform { get; set; }
-            = string.Empty;
+            = "[]";
 
+
+        // ==============================
+        // Time
+        // ==============================
 
         public DateTime CreatedAt { get; set; }
             = DateTime.UtcNow;

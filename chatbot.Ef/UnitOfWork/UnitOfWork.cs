@@ -50,6 +50,8 @@ namespace chatbot.Ef.UnitOfWork
 
         public IGroupRepository Groups { get; private set; }
 
+        public IMessageAttachmentRepository messageAttachments { get; private set; }
+
         public UnitOfWork(ApplicationDbContext _context, UserManager<ApplicationUser> _userManager)
         {
             this.context = _context;
@@ -75,6 +77,7 @@ namespace chatbot.Ef.UnitOfWork
             this.ConversationMember = new ConversationMemberRepository(context);
             this.GroupInvite = new GroupInviteRepository(context);
             this.Groups = new GroupRepository(context);
+            this.messageAttachments = new MessageAttachmentRepository(context);
         }
 
         public void Dispose()

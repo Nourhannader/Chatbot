@@ -11,7 +11,12 @@ namespace chatbot.Core.DTOs
     public class SendMediaDto
     {
         public Guid ConversationId { get; set; }
-        public List<IFormFile> Files { get; set; } = [];
+
         public string? Content { get; set; }
+
+        public Guid? ReplyToMessageId { get; set; }
+
+        public List<IFormFile> Files { get; set; }
+            = new();
     }
 }

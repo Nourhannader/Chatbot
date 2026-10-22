@@ -11,7 +11,8 @@ namespace chatbot.Core.Enums
         Local=1,
         AzureBlob = 2,
         S3 = 3,
-        CloudStorage = 4
+        CloudStorage = 4,
+        MinIO=5
 
     }
 }

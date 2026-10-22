@@ -3,49 +3,92 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AutoMapper;
 using chatbot.Core.DTOs.MessageStatus;
 using chatbot.Core.Enums;
+using chatbot.Core.Exceptions;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Models;
+using chatbot.Ef.UnitOfWork;
+using MimeKit;
+using static chatbot.Core.Interfaces.Services.IChatRealtimeService;
+using IChatRealtimeService = chatbot.Core.Interfaces.Services.IChatRealtimeService.IChatRealtimeService;
 
 namespace chatbot.Ef.Services
 {
-    public class MessageStatusService(IUnitOfWork unitOfWork) : IMessageStatusService
+    public class MessageStatusService(IUnitOfWork unitOfWork,IChatRealtimeService chatRealtimeService,IMapper mapper) : IMessageStatusService
     {
-        private static MessageRecipientStatusDto MapToDto(MessageRecipientStatus entity)
+        public async Task CreateRecipientsAsync(Message message)
         {
-            return new MessageRecipientStatusDto
+            ArgumentNullException.ThrowIfNull(message);
+            var members = await unitOfWork.ConversationMember.GetActiveMembersAsync(message.ConversationId);
+
+            var recipients = members
+                .Where(x => x.UserId != message.SenderId)
+                .Select(x => new MessageRecipientStatus
+                {
+                    MessageId = message.Id,
+                    RecipientId = x.UserId,
+                    Status = MessageStatus.Sent,
+                    SentAt = message.SendAt
+                }).ToList();
+
+            if (recipients.Count == 0)
+                return;
+
+            await unitOfWork.MessageStatuses.AddRangeAsync(recipients);
+        }
+
+        public async Task<List<MessageRecipientStatusDto>> GetReceiptsAsync(Guid messageId, Guid currentUserId)
+        {
+            var message = await unitOfWork.Messages.GetByIdAsync(messageId);
+            if (message == null)
+                throw new NotFoundException("Message not found.");
+
+            var isMember = await unitOfWork.ConversationMember
+                    .IsActiveMemberAsync(message.ConversationId, currentUserId);
+
+            if (!isMember)
             {
-                Id = entity.Id,
-                MessageId = entity.MessageId,
-                RecipientId = entity.RecipientId,
-                RecipientName = entity.Recipient?.UserName,
-                Status = entity.Status,
-                SentAt = entity.SentAt,
-                DeliveredAt = entity.DeliveredAt,
-                ReadAt = entity.ReadAt
+                throw new ForbiddenException("You are not a member of this conversation.");
+            }
+
+            var recipients = await unitOfWork.MessageStatuses
+            .GetByMessageIdAsync(messageId);
+
+            return mapper.Map<List<MessageRecipientStatusDto>>(recipients);
+
+        }
+
+        public async Task<MessageStatusSummaryDto> GetSummaryAsync(Guid messageId, Guid currentUserId)
+        {
+            var message = await unitOfWork.Messages.GetByIdAsync(messageId);
+
+            if (message == null)
+            {
+                throw new NotFoundException("Message not found.");
+            }
+
+
+            var isMember = await unitOfWork.ConversationMember
+                .IsActiveMemberAsync(message.ConversationId, currentUserId);
+
+            if (!isMember)
+            {
+                throw new ForbiddenException("You are not a member of this conversation.");
+            }
+            var summary = await unitOfWork.MessageStatuses
+                .GetSummaryAsync(messageId);
+
+            return summary ?? new MessageStatusSummaryDto
+            {
+                MessageId = messageId,
+                RecipientCount = 0,
+                SentCount=0,
+                DeliveredCount = 0,
+                ReadCount = 0
             };
-        }
-        public async Task<List<MessageRecipientStatusDto>> GetByMessageAsync(Guid messageId)
-        {
-            var statuses = await unitOfWork.MessageStatuses
-            .GetByMessageAsync(messageId);
-
-            return statuses.Select(MapToDto).ToList();
-        }
-
-        public async Task<List<MessageRecipientStatusDto>> GetReadersAsync(Guid messageId)
-        {
-            var readers = await unitOfWork.MessageStatuses
-            .GetReadersAsync(messageId);
-
-            return readers.Select(MapToDto).ToList();
-        }
-
-        public async Task<MessageStatus?> GetStatusAsync(Guid messageId, Guid recipientId)
-        {
-            return await unitOfWork.MessageStatuses.GetStatusAsync(messageId, recipientId);
         }
 
         public async Task<bool> HasUserReadMessageAsync(Guid messageId, Guid recipientId)
@@ -56,107 +99,84 @@ namespace chatbot.Ef.Services
             return status?.ReadAt is not null;
         }
 
-        public async Task MarkAsDeliveredAsync(Guid messageId, Guid recipientId)
+        public async Task MarkAsDeliveredAsync(Guid userId, Guid messageId)
         {
+            var recipient = await unitOfWork.MessageStatuses.GetAsync(messageId, userId);
+            if (recipient == null)
+            {
+                throw new NotFoundException("Message recipient status not found.");
+            }
+            if (recipient.DeliveredAt.HasValue)
+                return;
+
             var now = DateTime.UtcNow;
 
-            var status = await unitOfWork.MessageStatuses
-                .GetAsync(messageId, recipientId);
+            recipient.DeliveredAt = now;
 
-            if (status is null)
-            {
-                status = new MessageRecipientStatus
-                {
-                    Id = Guid.NewGuid(),
-                    MessageId = messageId,
-                    RecipientId = recipientId,
-                    Status = MessageStatus.Delivered,
-                    SentAt = now,
-                    DeliveredAt = now
-                };
+            recipient.Status = MessageStatus.Delivered;
 
-                await unitOfWork.MessageStatuses.AddAsync(status);
-                await unitOfWork.SaveChangesAsync();
-                return;
-            }
+            var userName = recipient.Recipient?.UserName;
 
-            if (status.Status >= MessageStatus.Delivered)
-                return;
 
-            status.Status = MessageStatus.Delivered;
-            status.SentAt ??= now;
-            status.DeliveredAt ??= now;
-
-            unitOfWork.MessageStatuses.Update(status);
             await unitOfWork.SaveChangesAsync();
-        }
 
-        public async Task MarkAsReadAsync(Guid messageId, Guid recipientId)
-        {
-            var now = DateTime.UtcNow;
-
-            var status = await unitOfWork.MessageStatuses
-                .GetAsync(messageId, recipientId);
-
-            if (status is null)
+            var dto = new MessageRecipientStatusDto
             {
-                // A read event implies that the message was delivered.
-                status = new MessageRecipientStatus
-                {
-                    Id = Guid.NewGuid(),
-                    MessageId = messageId,
-                    RecipientId = recipientId,
-                    Status = MessageStatus.Read,
-                    SentAt = now,
-                    DeliveredAt = now,
-                    ReadAt = now
-                };
-
-                await unitOfWork.MessageStatuses.AddAsync(status);
-                await unitOfWork.SaveChangesAsync();
-                return;
-            }
-
-            if (status.Status >= MessageStatus.Read)
-                return;
-
-            status.Status = MessageStatus.Read;
-            status.SentAt ??= now;
-            status.DeliveredAt ??= now;
-            status.ReadAt ??= now;
-
-            unitOfWork.MessageStatuses.Update(status);
-            await unitOfWork.SaveChangesAsync();
-        }
-
-        public async Task MarkAsSentAsync(Guid messageId, Guid recipientId)
-        {
-            var status = await unitOfWork.MessageStatuses
-            .GetAsync(messageId, recipientId);
-
-            if (status is not null)
-            {
-                if (status.SentAt is null)
-                {
-                    status.SentAt = DateTime.UtcNow;
-                    unitOfWork.MessageStatuses.Update(status);
-                    await unitOfWork.SaveChangesAsync();
-                }
-
-                return;
-            }
-
-            status = new MessageRecipientStatus
-            {
-                Id = Guid.NewGuid(),
-                MessageId = messageId,
-                RecipientId = recipientId,
-                Status = MessageStatus.Sent,
-                SentAt = DateTime.UtcNow
+                MessageId = recipient.MessageId,
+                UserId = recipient.RecipientId,
+                UserName=userName,
+                Status = MessageStatus.Delivered,
+                SentAt = recipient.SentAt,
+                DeliveredAt = recipient.DeliveredAt,
+                ReadAt = recipient.ReadAt
             };
 
-            await unitOfWork.MessageStatuses.AddAsync(status);
+            await chatRealtimeService
+                .MessageDeliveredAsync(recipient.Message.ConversationId, dto);
+        }
+
+        public async Task MarkAsReadAsync(Guid userId, Guid conversationId, Guid lastMessageId)
+        {
+            var message = await unitOfWork.Messages.GetByIdAsync(lastMessageId);
+
+            if (message == null)
+                throw new NotFoundException("Message not found.");
+
+            if (message.ConversationId != conversationId)
+                throw new BadRequestException("Message does not belong to this conversation.");
+
+            var isMember = await unitOfWork.ConversationMember
+            .IsActiveMemberAsync(conversationId, userId);
+
+            if (!isMember)
+                throw new ForbiddenException("You are not a member of this conversation.");
+
+            var now = DateTime.UtcNow;
+
+            var recipients = await unitOfWork.MessageStatuses
+                    .GetUnreadAsync(userId, conversationId, message.SendAt);
+
+            if (recipients.Count == 0)
+                return;
+
+            foreach (var recipient in recipients)
+            {
+                recipient.DeliveredAt ??= now;
+                recipient.ReadAt = now;
+                recipient.Status =MessageStatus.Read;
+            }
+
             await unitOfWork.SaveChangesAsync();
+
+            await chatRealtimeService.MessagesReadAsync(conversationId,
+                    new MessagesReadEventDto
+                    {
+                        UserId = userId,
+                        ConversationId = conversationId,
+                        LastMessageId = lastMessageId,
+                        ReadAt = now
+                    });
+
         }
     }
 }

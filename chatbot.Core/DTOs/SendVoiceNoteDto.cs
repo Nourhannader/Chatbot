@@ -9,10 +9,11 @@ namespace chatbot.Core.DTOs
 {
     public class SendVoiceNoteDto
     {
-        public string ConversationId { get; set; }
+        public Guid ConversationId { get; set; }
 
-        public IFormFile Audio { get; set; } = null!;
+        public IFormFile File { get; set; }
+            = null!;
 
-        public int DurationSeconds { get; set; }
+        public Guid? ReplyToMessageId { get; set; }
     }
 }

@@ -8,8 +8,10 @@ namespace chatbot.Core.Enums
 {
     public enum FileCategory
     {
-        UserProfileImage = 1,
-        ConversationImage = 2,
-        MessageFile = 3
+        Image = 1,
+        Video = 2,
+        Audio = 3,
+        Document = 4,
+        Other = 5
     }
 }

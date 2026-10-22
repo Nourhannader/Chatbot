@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.Enums;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Models;
 using chatbot.Ef.Data;
@@ -33,24 +34,6 @@ namespace chatbot.Ef.Repositories
         {
             return context.StoredFiles.FirstOrDefaultAsync(x => x.Id == id);
         }
-
-        public async Task<List<StoredFile>> GetByMessageIdAsync(Guid messageId)
-        {
-            return await context.StoredFiles
-                .Where(x => x.MessageId ==messageId && !x.IsDeleted)
-                .OrderByDescending(x => x.CreatedAt)
-                .ToListAsync();
-        }
-
-        public async Task<List<StoredFile>> GetAllByMessageIdAsync(Guid messageId)
-        {
-            return await context.StoredFiles
-                .Where(x => x.MessageId == messageId )
-                .OrderByDescending(x => x.CreatedAt)
-                .ToListAsync();
-        }
-
-
         public async Task<List<StoredFile>> GetFilesForCleanupAsync(DateTime olderThan)
         {
             return await context.StoredFiles
@@ -59,10 +42,31 @@ namespace chatbot.Ef.Repositories
                             .ToListAsync();
         }
 
-        public Task UpdateAsync(StoredFile file)
+        public async Task<StoredFile?> GetForProcessingAsync( Guid fileId)
+        {
+            return await context.StoredFiles
+                .Include(x => x.ThumbnailFile)
+                .Include(x => x.MessageAttachments)
+                    .ThenInclude(x => x.Message)
+                .FirstOrDefaultAsync(
+                    x => x.Id == fileId &&
+                         !x.IsDeleted);
+        }
+
+        public async Task<List<StoredFile>> GetPendingFilesAsync( int take)
+        {
+            return await context.StoredFiles
+                .Where(x =>
+                   !x.IsDeleted &&
+                    x.ProcessingStatus ==
+                        FileProcessingStatus.Pending)
+                .OrderBy(x => x.CreatedAt)
+                .Take(take)
+                .ToListAsync();
+        }
+        public void Update(StoredFile file)
         {
             context.StoredFiles.Update(file);
-            return Task.CompletedTask;
         }
 
         public async Task<StoredFile?> GetByStorageKeyAsync(string storageKey)

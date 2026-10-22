@@ -50,8 +50,7 @@ namespace chatbot.Ef.Data
 
         public DbSet<Notification> Notifications => Set<Notification>();
 
-        public DbSet<UserConnection> UserConnections
-            => Set<UserConnection>();
+        public DbSet<UserConnection> UserConnections => Set<UserConnection>();
         public DbSet<VoiceNote> VoiceNotes => Set<VoiceNote>();
         public DbSet<UploadSession> UploadSessions => Set<UploadSession>();
         public DbSet<Sticker> Stickers => Set<Sticker>();
@@ -61,7 +60,7 @@ namespace chatbot.Ef.Data
         public DbSet<DeviceSession> Sessions => Set<DeviceSession>();
         public DbSet<NotificationPreferences> NotificationPreferences => Set<NotificationPreferences>();
         public DbSet<GroupInvite> GroupInvites => Set<GroupInvite>();
-        public DbSet<MessageRead> MessageReads => Set<MessageRead>();
+        public DbSet<MessageAttachment> MessageAttachments => Set<MessageAttachment>();
 
         #endregion
 

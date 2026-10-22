@@ -64,8 +64,10 @@ namespace chatbot.Ef.Repositories
                    .ThenInclude(r => r.User)
                 .Include(m => m.Sender)
                 .Include(x => x.Attachments)
-                .ThenInclude(a => a.StoredFile)
-                .Include(m => m.VoiceNote)
+                .ThenInclude(x => x.StoredFile)
+                    .ThenInclude(x => x.ThumbnailFile)
+                .Include(x => x.VoiceNote)
+                .ThenInclude(x => x!.File)
                 .Include(m=> m.Sticker)
                 .Include(m => m.ReplyToMessage)
                    .ThenInclude(r => r!.Sender)
@@ -84,7 +86,9 @@ namespace chatbot.Ef.Repositories
             return  await context.Messages
                 .Include(x => x.Attachments)
                 .ThenInclude(a => a.StoredFile)
-                .Include(m => m.VoiceNote)
+                 .ThenInclude(x => x.ThumbnailFile)
+                .Include(x => x.VoiceNote)
+                .ThenInclude(x => x!.File)
                 .FirstOrDefaultAsync(m => m.Id == id);
                 
         }
@@ -130,8 +134,10 @@ namespace chatbot.Ef.Repositories
             return await context.Messages
                 .Include(m => m.Sender)
                 .Include(x => x.Attachments)
-                .ThenInclude(a => a.StoredFile)
-                .Include(m => m.VoiceNote)
+                .ThenInclude(x => x.StoredFile)
+                    .ThenInclude(x => x.ThumbnailFile)
+                .Include(x => x.VoiceNote)
+                .ThenInclude(x => x!.File)
                 .Include(m => m.Sticker)
                 .Include(m => m.Reactions)
                     .ThenInclude(r => r.User)

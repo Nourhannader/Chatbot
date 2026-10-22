@@ -255,12 +255,8 @@ namespace chatbot.Ef.Services
             
             await unitOfWork.Messages.AddAsync(message);
             await unitOfWork.SaveChangesAsync();
-            var recipientIds = await unitOfWork.ConversationMember.GetOtherMemberIdsAsync(dto.ConversationId,senderId);
-
-            foreach (var recipientId in recipientIds)
-            {
-                await messageStatusService.MarkAsSentAsync(message.Id,recipientId);
-            }
+        
+           await messageStatusService.CreateRecipientsAsync(message);
 
             var senderName = await GetSenderNameAsync(senderId);
 

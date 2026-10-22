@@ -17,8 +17,7 @@ namespace chatbot.Ef.Services
     {
         private const int MaxFiles = 10;
 
-        private static MessageType GetMessageType(
-            IReadOnlyCollection<IFormFile> files)
+        private static MessageType GetMessageType(IReadOnlyCollection<IFormFile> files)
         {
             if (files.Count == 0)
                 return MessageType.Text;

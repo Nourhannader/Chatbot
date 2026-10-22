@@ -11,17 +11,15 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IMessageStatusService
     {
-        Task<MessageStatus?> GetStatusAsync(Guid messageId, Guid recipientId);
+        Task CreateRecipientsAsync(Message message);
 
-        Task MarkAsSentAsync(Guid messageId, Guid recipientId);
+        Task MarkAsDeliveredAsync(Guid userId, Guid messageId);
 
-        Task MarkAsDeliveredAsync(Guid messageId, Guid recipientId);
+        Task MarkAsReadAsync(Guid userId, Guid conversationId, Guid lastMessageId);
 
-        Task MarkAsReadAsync(Guid messageId, Guid recipientId);
+        Task<List<MessageRecipientStatusDto>> GetReceiptsAsync(Guid messageId, Guid currentUserId);
 
-        Task<List<MessageRecipientStatusDto>> GetByMessageAsync(Guid messageId);
-
-        Task<List<MessageRecipientStatusDto>> GetReadersAsync(Guid messageId);
+        Task<MessageStatusSummaryDto> GetSummaryAsync(Guid messageId, Guid currentUserId);
 
         Task<bool> HasUserReadMessageAsync(Guid messageId, Guid recipientId);
     }

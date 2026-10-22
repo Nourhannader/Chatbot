@@ -9,7 +9,12 @@ namespace chatbot.Core.Interfaces.Repositories
 {
     public interface IVoiceNoteRepository:IBaseRepository<VoiceNote,Guid>
     {
-        Task<VoiceNote?> GetByMessageIdAsync( Guid messageId);
+        Task<VoiceNote?> GetByMessageIdAsync(Guid messageId);
+
+        Task<VoiceNote?> GetByFileIdAsync( Guid fileId);
+
+        Task<VoiceNote?> GetForProcessingAsync(Guid voiceNoteId);
+
         void Remove(VoiceNote voiceNote);
     }
 }

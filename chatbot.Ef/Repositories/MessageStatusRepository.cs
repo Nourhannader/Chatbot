@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.DTOs.MessageStatus;
 using chatbot.Core.Enums;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Models;
@@ -13,53 +14,60 @@ namespace chatbot.Ef.Repositories
 {
     public class MessageStatusRepository(ApplicationDbContext context) : IMessageStatusRepository
     {
-        public async Task AddAsync(MessageRecipientStatus entity)
+        public async Task AddRangeAsync(IEnumerable<MessageRecipientStatus> recipients)
         {
-            await context.MessageRecipientStatuses.AddAsync(entity);
+            await context.MessageRecipientStatuses.AddRangeAsync(recipients);
         }
 
-        public async Task<MessageRecipientStatus?> GetAsync(Guid messageId, Guid recipientId)
+        public async Task<bool> ExistsAsync(Guid messageId, Guid userId)
         {
             return await context.MessageRecipientStatuses
-                .FirstOrDefaultAsync(mrs => mrs.MessageId == messageId && mrs.RecipientId == recipientId);
+                .AnyAsync(x => x.MessageId == messageId && x.RecipientId == userId);
         }
 
-        public async Task<MessageRecipientStatus?> GetByIdAsync(Guid id)
+        public async Task<MessageRecipientStatus?> GetAsync(Guid messageId, Guid userId)
         {
             return await context.MessageRecipientStatuses
-                .FirstOrDefaultAsync(mrs => mrs.MessageId == id);
+                .Include(x => x.Message)
+                .Include(x => x.Recipient)
+                .FirstOrDefaultAsync(x => x.MessageId == messageId && x.RecipientId == userId);
         }
-        public async Task<List<MessageRecipientStatus>> GetByMessageAsync(Guid messageId)
+
+        public async Task<List<MessageRecipientStatus>> GetByMessageIdAsync(Guid messageId)
         {
             return await context.MessageRecipientStatuses
                 .AsNoTracking()
-                .Where(mrs => mrs.MessageId==messageId)
+                .Where(x => x.MessageId == messageId)
                 .ToListAsync();
         }
 
-        public async Task<List<MessageRecipientStatus>> GetReadersAsync(Guid messageId)
+        public async Task<MessageStatusSummaryDto?> GetSummaryAsync(Guid messageId)
         {
             return await context.MessageRecipientStatuses
             .AsNoTracking()
-            .Include(x => x.Recipient)
-            .Where(x =>
-                x.MessageId == messageId &&
-                x.ReadAt != null)
-            .OrderBy(x => x.ReadAt)
-            .ToListAsync();
+            .Where(x => x.MessageId == messageId)
+            .GroupBy(x => x.MessageId)
+            .Select(g => new MessageStatusSummaryDto
+            {
+                MessageId = g.Key,
+                RecipientCount = g.Count(),
+                SentCount = g.Count(x => x.Status == MessageStatus.Sent),
+                DeliveredCount = g.Count(x => x.DeliveredAt != null),
+                ReadCount = g.Count(x => x.ReadAt != null)
+            })
+            .FirstOrDefaultAsync();
         }
 
-        public async Task<MessageStatus?> GetStatusAsync(Guid messageId, Guid recipientId)
+        public async Task<List<MessageRecipientStatus>> GetUnreadAsync(Guid userId, Guid conversationId, DateTime until)
         {
             return await context.MessageRecipientStatuses
-                .Where(mrs => mrs.MessageId == messageId && mrs.RecipientId == recipientId)
-                .Select(mrs => (MessageStatus?)mrs.Status)
-                .FirstOrDefaultAsync();
-        }
-
-        public void Update(MessageRecipientStatus entity)
-        {
-            context.MessageRecipientStatuses.Update(entity);
+            .Include(x => x.Message)
+            .Where(x =>
+                x.RecipientId == userId &&
+                x.Message.ConversationId == conversationId &&
+                x.ReadAt == null &&
+                x.Message.SendAt <= until)
+            .ToListAsync();
         }
     }
 }

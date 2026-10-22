@@ -85,6 +85,8 @@ namespace chatbot.Core.DTOs.Messages
         public List<MessageRecipientStatusDto> RecipientStatuses { get; set; }
             = new();
 
+        public List<MessageAttachmentDto> attachments { get; set; } = new();
+
 
     }
 }

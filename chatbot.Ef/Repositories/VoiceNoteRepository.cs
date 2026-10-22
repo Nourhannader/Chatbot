@@ -28,9 +28,26 @@ namespace chatbot.Ef.Repositories
         public async Task<VoiceNote?> GetByMessageIdAsync(Guid messageId)
         {
             return await context.VoiceNotes
-                .Include(vn => vn.Message)
-                .Include(vn => vn.File)
-                .FirstOrDefaultAsync(vn => vn.MessageId == messageId);
+                .Include(x => x.File)
+                .FirstOrDefaultAsync(
+                    x => x.MessageId == messageId);
+        }
+
+        public async Task<VoiceNote?> GetByFileIdAsync(Guid fileId)
+        {
+            return await context.VoiceNotes
+                .Include(x => x.File)
+                .FirstOrDefaultAsync(
+                    x => x.FileId == fileId);
+        }
+
+        public async Task<VoiceNote?> GetForProcessingAsync(Guid voiceNoteId)
+        {
+            return await context.VoiceNotes
+                .Include(x => x.File)
+                .Include(x => x.Message)
+                .FirstOrDefaultAsync(
+                    x => x.Id == voiceNoteId);
         }
 
         public void Remove(VoiceNote voiceNote)

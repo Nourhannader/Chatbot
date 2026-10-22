@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.Enums;
 
 namespace chatbot.Core.DTOs.Messages
 {
@@ -27,5 +28,13 @@ namespace chatbot.Core.DTOs.Messages
         public int? Height { get; set; }
 
         public double? DurationSeconds { get; set; }
+
+        public FileCategory Category { get; set; }
+
+        public FileProcessingStatus ProcessingStatus { get; set; }
+
+        public int Order { get; set; }
+
+        public string? Caption { get; set; }
     }
 }

@@ -16,20 +16,16 @@ namespace chatbot.Core.Models
 
         public Guid SenderId { get; set; }
 
-        public ApplicationUser Sender { get; set; }
-            = null!;
+        public ApplicationUser Sender { get; set; } = null!;
 
         
         public Guid ConversationId { get; set; }
 
-        public Conversation Conversation { get; set; }
-            = null!;
+        public Conversation Conversation { get; set; } = null!;
 
 
         // Message content
-        public string Content { get; set; }
-            = string.Empty;
-
+        public string Content { get; set; } = string.Empty;
 
         public MessageType MessageType { get; set; }
 

@@ -35,6 +35,18 @@ namespace chatbot.Ef.Configurations
                 x.MessageId,
                 x.RecipientId
             }).IsUnique();
+
+            builder.HasIndex(x => new
+            {
+                x.RecipientId,
+                x.Status
+            });
+
+            builder.HasIndex(x => new
+            {
+                x.RecipientId,
+                x.ReadAt
+            });
         }
     }
 }

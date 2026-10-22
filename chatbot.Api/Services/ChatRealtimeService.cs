@@ -1,5 +1,7 @@
 ﻿using chatbot.Api.Hubs;
 using chatbot.Core.DTOs;
+using chatbot.Core.DTOs.Messages;
+using chatbot.Core.DTOs.MessageStatus;
 using chatbot.Core.Enums;
 using chatbot.Core.Helper;
 using chatbot.Core.Interfaces.Manager;
@@ -22,18 +24,14 @@ namespace chatbot.Api.Services
         // Conversation
         // ==========================================
 
-        public Task ConversationAddedAsync(
-            Guid userId,
-            ConversationDetailsDto conversation)
+        public Task ConversationAddedAsync(Guid userId,ConversationDetailsDto conversation)
         {
             return hubContext.Clients
                 .User(userId.ToString())
                 .ConversationAdded(conversation);
         }
 
-        public Task ConversationUpdatedAsync(
-            Guid conversationId,
-            ConversationDetailsDto conversation)
+        public Task ConversationUpdatedAsync(Guid conversationId,ConversationDetailsDto conversation)
         {
             return hubContext.Clients
                 .Group(ConversationGroup.Name(
@@ -41,8 +39,7 @@ namespace chatbot.Api.Services
                 .ConversationUpdated(conversation);
         }
 
-        public Task ConversationDeletedAsync(
-            Guid conversationId)
+        public Task ConversationDeletedAsync(Guid conversationId)
         {
             return hubContext.Clients
                 .Group(ConversationGroup.Name(
@@ -51,9 +48,7 @@ namespace chatbot.Api.Services
                     conversationId);
         }
 
-        public Task ConversationImageUpdatedAsync(
-            Guid conversationId,
-            ConversationImageDto image)
+        public Task ConversationImageUpdatedAsync(Guid conversationId,ConversationImageDto image)
         {
             return hubContext.Clients
                 .Group(ConversationGroup.Name(
@@ -63,8 +58,7 @@ namespace chatbot.Api.Services
                     image);
         }
 
-        public Task ConversationImageRemovedAsync(
-            Guid conversationId)
+        public Task ConversationImageRemovedAsync(Guid conversationId)
         {
             return hubContext.Clients
                 .Group(ConversationGroup.Name(
@@ -78,9 +72,7 @@ namespace chatbot.Api.Services
         // Members
         // ==========================================
 
-        public Task MemberAddedAsync(
-            Guid conversationId,
-            ConversationMemberDto member)
+        public Task MemberAddedAsync(Guid conversationId,ConversationMemberDto member)
         {
             return hubContext.Clients
                 .Group(ConversationGroup.Name(
@@ -88,9 +80,7 @@ namespace chatbot.Api.Services
                 .MemberAdded(member);
         }
 
-        public Task MemberRemovedAsync(
-            Guid conversationId,
-            Guid userId)
+        public Task MemberRemovedAsync(Guid conversationId,Guid userId)
         {
             return hubContext.Clients
                 .Group(ConversationGroup.Name(
@@ -98,10 +88,7 @@ namespace chatbot.Api.Services
                 .MemberRemoved(userId);
         }
 
-        public Task MemberRoleChangedAsync(
-            Guid conversationId,
-            Guid userId,
-            ConversationRole role)
+        public Task MemberRoleChangedAsync(Guid conversationId,Guid userId,ConversationRole role)
         {
             return hubContext.Clients
                 .Group(ConversationGroup.Name(
@@ -111,10 +98,7 @@ namespace chatbot.Api.Services
                     role);
         }
 
-        public Task MemberMutedAsync(
-            Guid conversationId,
-            Guid userId,
-            DateTime? until)
+        public Task MemberMutedAsync(Guid conversationId,Guid userId,DateTime? until)
         {
             return hubContext.Clients
                 .Group(ConversationGroup.Name(
@@ -124,9 +108,7 @@ namespace chatbot.Api.Services
                     until);
         }
 
-        public Task MemberUnmutedAsync(
-            Guid conversationId,
-            Guid userId)
+        public Task MemberUnmutedAsync( Guid conversationId,Guid userId)
         {
             return hubContext.Clients
                 .Group(ConversationGroup.Name(
@@ -134,9 +116,7 @@ namespace chatbot.Api.Services
                 .MemberUnmuted(userId);
         }
 
-        public Task MemberBannedAsync(
-            Guid conversationId,
-            Guid userId)
+        public Task MemberBannedAsync(Guid conversationId,Guid userId)
         {
             return hubContext.Clients
                 .Group(ConversationGroup.Name(
@@ -144,9 +124,7 @@ namespace chatbot.Api.Services
                 .MemberBanned(userId);
         }
 
-        public Task MemberUnbannedAsync(
-            Guid conversationId,
-            Guid userId)
+        public Task MemberUnbannedAsync( Guid conversationId,Guid userId)
         {
             return hubContext.Clients
                 .Group(ConversationGroup.Name(
@@ -154,10 +132,7 @@ namespace chatbot.Api.Services
                 .MemberUnbanned(userId);
         }
 
-        public Task OwnershipTransferredAsync(
-            Guid conversationId,
-            Guid oldOwnerId,
-            Guid newOwnerId)
+        public Task OwnershipTransferredAsync( Guid conversationId,Guid oldOwnerId,Guid newOwnerId)
         {
             return hubContext.Clients
                 .Group(ConversationGroup.Name(
@@ -172,9 +147,7 @@ namespace chatbot.Api.Services
         // Messages
         // ==========================================
 
-        public Task MessageSentAsync(
-            Guid conversationId,
-            MessageDto message)
+        public Task MessageSentAsync(Guid conversationId,MessageDto message)
         {
             return hubContext.Clients
                 .Group(ConversationGroup.Name(
@@ -182,9 +155,7 @@ namespace chatbot.Api.Services
                 .ReceiveMessage(message);
         }
 
-        public Task MessageEditedAsync(
-            Guid conversationId,
-            MessageDto message)
+        public Task MessageEditedAsync( Guid conversationId,MessageDto message)
         {
             return hubContext.Clients
                 .Group(ConversationGroup.Name(
@@ -192,9 +163,7 @@ namespace chatbot.Api.Services
                 .MessageEdited(message);
         }
 
-        public Task MessageDeletedAsync(
-            Guid conversationId,
-            Guid messageId)
+        public Task MessageDeletedAsync(Guid conversationId,Guid messageId)
         {
             return hubContext.Clients
                 .Group(ConversationGroup.Name(
@@ -202,10 +171,7 @@ namespace chatbot.Api.Services
                 .MessageDeleted(messageId);
         }
 
-        public Task MessageReactionAddedAsync(
-            Guid conversationId,
-            Guid messageId,
-            MessageReactionDto reaction)
+        public Task MessageReactionAddedAsync(Guid conversationId,Guid messageId,MessageReactionDto reaction)
         {
             return hubContext.Clients
                 .Group(ConversationGroup.Name(
@@ -215,10 +181,7 @@ namespace chatbot.Api.Services
                     reaction);
         }
 
-        public Task MessageReactionRemovedAsync(
-            Guid conversationId,
-            Guid messageId,
-            Guid userId)
+        public Task MessageReactionRemovedAsync(Guid conversationId,Guid messageId, Guid userId)
         {
             return hubContext.Clients
                 .Group(ConversationGroup.Name(
@@ -233,14 +196,34 @@ namespace chatbot.Api.Services
         // Read
         // ==========================================
 
-        public Task ConversationReadAsync(
-            Guid conversationId,
-            Guid userId,
-            DateTime readAt)
+        public Task ConversationReadAsync(Guid conversationId, Guid userId,DateTime readAt)
         {
             return hubContext.Clients
                 .Group(ConversationGroup.Name( conversationId))
                 .ConversationRead(conversationId, userId,readAt);
+        }
+
+        public async Task MessageDeliveredAsync(Guid conversationId, MessageRecipientStatusDto dto)
+        {
+            await hubContext.Clients
+            .Group(conversationId.ToString())
+            .SendAsync(
+                "MessageDelivered",
+                dto);
+        }
+        public async Task MessagesReadAsync(Guid conversationId, MessagesReadEventDto messagesReadEventDto)
+        {
+            await hubContext.Clients
+            .Group(conversationId.ToString())
+            .SendAsync(
+                "MessagesRead",
+                messagesReadEventDto);
+        }
+        public async Task NewMessageAsync(Guid conversationId, MessageDto message)
+        {
+            await hubContext.Clients
+            .Group(conversationId.ToString())
+            .SendAsync("ReceiveMessage", message);
         }
 
 

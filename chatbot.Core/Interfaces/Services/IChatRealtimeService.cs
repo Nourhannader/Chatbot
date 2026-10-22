@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using chatbot.Core.DTOs;
+using chatbot.Core.DTOs.Messages;
+using chatbot.Core.DTOs.MessageStatus;
 using chatbot.Core.Enums;
 
 namespace chatbot.Core.Interfaces.Services
@@ -70,6 +72,10 @@ namespace chatbot.Core.Interfaces.Services
             // =========================
 
             Task ConversationReadAsync( Guid conversationId,Guid userId, DateTime readAt);
+            Task MessageDeliveredAsync(Guid conversationId, MessageRecipientStatusDto dto);
+            Task MessagesReadAsync(Guid conversationId, MessagesReadEventDto messagesReadEventDto);
+            Task NewMessageAsync(Guid conversationId, MessageDto message);
+
         }
     }
 }

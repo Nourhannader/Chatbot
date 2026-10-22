@@ -12,9 +12,9 @@ namespace chatbot.Core.DTOs.MessageStatus
 
         public Guid MessageId { get; set; }
 
-        public Guid RecipientId { get; set; }
+        public Guid UserId { get; set; }
 
-        public string? RecipientName { get; set; }
+        public string? UserName { get; set; }
 
         // Fully qualify the MessageStatus type to resolve ambiguity
         public chatbot.Core.Enums.MessageStatus Status { get; set; }

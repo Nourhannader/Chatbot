@@ -15,15 +15,16 @@ namespace chatbot.Core.Interfaces.Repositories
 
         Task<StoredFile?> GetByIdAsync(Guid id);
 
-        Task<List<StoredFile>> GetByMessageIdAsync( Guid messageId);
-
-        Task<List<StoredFile>> GetAllByMessageIdAsync(Guid messageId);
-
         Task<List<StoredFile>> GetFilesForCleanupAsync(DateTime olderThan);
 
         Task<StoredFile?> GetByStorageKeyAsync(string storageKey);
 
-        Task UpdateAsync(StoredFile file);
+
+        Task<StoredFile?> GetForProcessingAsync( Guid fileId);
+
+        Task<List<StoredFile>> GetPendingFilesAsync(int take );
+
+        void Update(StoredFile file);
 
         void Delete(StoredFile file);
     }

@@ -60,6 +60,14 @@ namespace chatbot.Core.Mapping
                     opt => opt.MapFrom(
                         s => s.SendAt))
                 .ForMember(
+                  d => d.attachments,
+                  opt => opt.MapFrom(src  =>
+                  src.Attachments.OrderBy(x =>x.Order)))
+
+                .ForMember(
+                d => d.VoiceNote,
+                opt => opt.Ignore())
+                .ForMember(
                     d => d.Content,
                     opt => opt.MapFrom(
                         s => s.IsDeletedForEveryone
@@ -103,6 +111,12 @@ namespace chatbot.Core.Mapping
         d => d.Height,
         opt => opt.MapFrom(
             s => s.StoredFile.Height));
+
+            CreateMap<MessageAttachment, MessageAttachmentDto>()
+    .ForMember(
+        dest => dest.File,
+        opt => opt.MapFrom(src => src.StoredFile));
         }
+
     }
 }

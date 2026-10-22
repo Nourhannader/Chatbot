@@ -41,6 +41,8 @@ namespace chatbot.Core.Models
 
         public long FileSize { get; set; }
 
+        public FileCategory Category { get; set; }
+
 
         // ==============================
         // Storage
@@ -80,6 +82,30 @@ namespace chatbot.Core.Models
 
         public int? Height { get; set; }
 
+        public double? DurationSeconds { get; set; }
+
+        // ==============================
+        // Thumbnail
+        // ==============================
+
+        public Guid? ThumbnailFileId { get; set; }
+
+        public StoredFile? ThumbnailFile { get; set; }
+
+
+        // ==============================
+        // Processing
+        // ==============================
+
+        public FileProcessingStatus ProcessingStatus { get; set; }
+            = FileProcessingStatus.Pending;
+
+        [MaxLength(2000)]
+        public string? ProcessingError { get; set; }
+
+        public DateTime? ProcessingStartedAt { get; set; }
+
+        public DateTime? ProcessingCompletedAt { get; set; }
 
         // ==============================
         // Soft Delete
