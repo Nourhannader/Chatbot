@@ -12,6 +12,6 @@ namespace chatbot.Core.Interfaces.Services
     {
         Task<MessageDto> SendMediaAsync(SendMediaDto dto, Guid uploadBy,CancellationToken cancellationToken = default);
 
-        Task<MediaDownloadResultDto> GetAttachmentAsync(Guid messageId,Guid attachmentId, Guid userId,CancellationToken cancellationToken = default);
+        //Task<MediaDownloadResultDto> GetAttachmentAsync(Guid messageId,Guid attachmentId, Guid userId,CancellationToken cancellationToken = default);
     }
 }

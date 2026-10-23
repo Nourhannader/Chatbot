@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.DTOs;
+using chatbot.Core.Enums;
 using chatbot.Core.Exceptions;
 using chatbot.Core.Interfaces.Validators;
 using Microsoft.AspNetCore.Http;
@@ -11,281 +13,200 @@ namespace chatbot.Ef.ValidatorService
 {
     public class FileValidationService : IFileValidationService
     {
-        private static readonly Dictionary<string, string[]> AllowedExtensions = new()
-        {
-            ["image"] = [".jpg", ".jpeg", ".png", ".gif"],
-            ["document"] = [".pdf", ".docx"],
-            ["video"] = [".mp4"],
-            ["audio"] = [".mp3", ".wav", ".mpeg"]
-        };
-        private static readonly Dictionary<string, string[]> AllowedMimeTypes = new()
-        {
-            ["image"] =
-        [
-            "image/jpeg",
-            "image/png",
-            "image/gif"
-        ],
-
-            ["document"] =
-        [
-            "application/pdf",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        ],
-
-            ["video"] =
-        [
-            "video/mp4"
-        ],
-
-            ["audio"] =
-        [
-            "audio/mpeg",
-            "audio/wav",
-            "audio/x-wav"
-        ]
-        };
-        private static readonly Dictionary<string, string[]> ValidExtensionMimePairs = new()
-        {
-            [".jpg"] =
-            [
-                "image/jpeg"
-            ],
-
-            [".jpeg"] =
-            [
-                "image/jpeg"
-            ],
-
-            [".png"] =
-            [
-                "image/png"
-            ],
-
-            [".gif"] =
-            [
-                "image/gif"
-            ],
-
-            [".pdf"] =
-            [
-                "application/pdf"
-            ],
-
-            [".docx"] =
-            [
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            ],
-
-            [".mp4"] =
-            ["video/mp4"],
-
-            [".mp3"] =
-            [
-                "audio/mpeg"
-            ],
-
-            [".mpeg"] =
-            [
-                "audio/mpeg"
-            ],
-
-            [".wav"] =
-            [
-                "audio/wav",
-                "audio/x-wav"
-            ]
-        };
-        private const long MaxSize = 50 * 1024 * 1024;//50MB
+        private const long MaxFileSize = 50 * 1024 * 1024;//50MB
         private const long MaxImageSize = 5 * 1024 * 1024;//5MB
-        public async Task ValidateFileAsync(IFormFile file)
+        private const long MaxVoiceSize = 20 * 1024 * 1024;//20MB
+        private sealed record FileRule(FileCategory Category, string[] MimeTypes);
+
+        private static readonly IReadOnlyDictionary<string, FileRule>
+        Rules = new Dictionary<string, FileRule>(StringComparer.OrdinalIgnoreCase)
         {
+            [".jpg"] = new(FileCategory.Image,["image/jpeg"]),
 
-            ValidateBasicFile(file,"File");
+            [".jpeg"] = new(FileCategory.Image,["image/jpeg"]),
 
-            var extension=Path.GetExtension(file.FileName).ToLowerInvariant();
-            var mimeType = (file.ContentType ?? string.Empty).ToLowerInvariant();
-            
-            //valid Extension
-            ValidateExtension(extension);
-            //valid MimeType
-            ValidateMimeType(mimeType);
+            [".png"] = new(FileCategory.Image,["image/png"]),
 
-            ValidateExtensionAndMimeType(extension, mimeType);
+            [".gif"] = new(FileCategory.Image,["image/gif"]),
 
-            await ValidateFileSignatureAsync(file);
+            [".pdf"] = new(FileCategory.Document,["application/pdf"]),
 
-        }
-        public async Task ValidateImageAsync(IFormFile file)
+            [".docx"] = new(FileCategory.Document, ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"]),
+
+            [".mp4"] = new(FileCategory.Video,["video/mp4"]),
+
+            [".mp3"] = new(FileCategory.Audio, ["audio/mpeg","audio/mp3"]),
+
+            [".mpeg"] = new(FileCategory.Audio,["audio/mpeg"]),
+
+            [".wav"] = new( FileCategory.Audio,[ "audio/wav","audio/x-wav","audio/wave" ])
+        };
+        public async Task<ValidatedFileDto> ValidateFileAsync(IFormFile file,CancellationToken cancellationToken=default)
         {
-            ValidateBasicFile(file, "Image");
-            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-            var mimeType = (file.ContentType ?? string.Empty).ToLowerInvariant();
-            ValidateExtension(extension, "image");
-
-            ValidateMimeType(mimeType, "image");
-
-            ValidateExtensionAndMimeType(extension, mimeType);
-
-            await ValidateFileSignatureAsync(file);
+            return await ValidateAsync(file, expectedCategory: null, MaxFileSize, cancellationToken);
+        }
+        public async Task<ValidatedFileDto> ValidateImageAsync(IFormFile file,CancellationToken cancellationToken= default)
+        {
+            return await ValidateAsync(file, FileCategory.Image , MaxImageSize, cancellationToken);
+        }
+        public async Task<ValidatedFileDto> ValidateVoiceAsync(IFormFile file, CancellationToken cancellationToken = default)
+        {
+            return await ValidateAsync(file, FileCategory.Audio, MaxVoiceSize , cancellationToken);
         }
 
-        private static void ValidateBasicFile(IFormFile file, string? fileType=null)
+        private static async Task<ValidatedFileDto> ValidateAsync(IFormFile file, FileCategory? expectedCategory,
+        long maximumSize, CancellationToken cancellationToken)
+        {
+            ValidateBasicFile(file, maximumSize);
+
+            var safeFileName = Path.GetFileName(file.FileName);
+
+            var extension = Path.GetExtension(safeFileName).ToLowerInvariant();
+
+            if (string.IsNullOrWhiteSpace(extension))
+            {
+                throw new ValidationException("File extension is required.");
+            }
+
+            if (!Rules.TryGetValue(extension, out var rule))
+            {
+                throw new ValidationException($"File extension '{extension}' is not allowed.");
+            }
+
+            if (expectedCategory.HasValue && rule.Category != expectedCategory.Value)
+            {
+                throw new ValidationException($"The selected file must be a " +
+                    $"{expectedCategory.Value.ToString().ToLowerInvariant()} file.");
+            }
+
+            var mimeType = NormalizeMimeType(file.ContentType);
+
+            if (!rule.MimeTypes.Contains(mimeType, StringComparer.OrdinalIgnoreCase))
+            {
+                throw new ValidationException($"File extension '{extension}' does not match " +
+                    $"MIME type '{mimeType}'.");
+            }
+
+            await ValidateFileSignatureAsync(file, extension, cancellationToken);
+
+            return new ValidatedFileDto
+            {
+                OriginalFileName = safeFileName,
+                Extension = extension,
+                ContentType = mimeType,
+                FileSize = file.Length,
+                Category = rule.Category
+            };
+        }
+        private static void ValidateBasicFile(IFormFile file, long maximumSize)
         {
             if (file == null)
             {
-                throw new ValidationException($"{fileType} is required.");
+                throw new ValidationException("File is required.");
             }
 
             if (file.Length <= 0)
             {
-                throw new ValidationException($"Invalid or empty {fileType}.");
+                throw new ValidationException("File cannot be empty.");
             }
 
-            if (file.Length > MaxSize && fileType == "File")
+            if (file.Length > maximumSize)
             {
-                throw new ValidationException("Maximum file size is 50 MB.");
+                var maximumMb = maximumSize / 1024 / 1024;
+
+                throw new ValidationException($"Maximum file size is {maximumMb} MB.");
             }
-            if (file.Length > MaxImageSize && fileType == "Image")
+
+            if (string.IsNullOrWhiteSpace(file.FileName))
             {
-                throw new ValidationException("Maximum image size is 5 MB.");
+                throw new ValidationException("File name is required.");
             }
         }
-        
-        private static void ValidateExtension( string extension,string? fileType = null)
+
+        private static string NormalizeMimeType(string? contentType)
         {
-            if (fileType != null)
+            if (string.IsNullOrWhiteSpace(contentType))
             {
-                if (!AllowedExtensions.TryGetValue(fileType, out var allowedExtensions))
-                {
-                    throw new ValidationException($"Unsupported file type '{fileType}'.");
-                }
-
-                if (!allowedExtensions.Contains( extension,StringComparer.OrdinalIgnoreCase))
-                {
-                    throw new ValidationException($"File extension '{extension}' is not valid for '{fileType}'.");
-                }
-
-                return;
+                throw new ValidationException("File MIME type is required.");
             }
 
-            var validExtension = AllowedExtensions
-                .SelectMany(x => x.Value)
-                .Contains( extension,StringComparer.OrdinalIgnoreCase);
-
-            if (!validExtension)
-            {
-                throw new ValidationException( $"File extension '{extension}' is not allowed.");
-            }
+            return contentType.Split(';', 2)[0].Trim().ToLowerInvariant();
         }
 
-        private static void ValidateMimeType(string mimeType,string? fileType = null)
-        {
-            if (fileType != null)
-            {
-                if (!AllowedMimeTypes.TryGetValue(fileType, out var allowedMimeTypes))
-                {
-                    throw new ValidationException($"Unsupported file type '{fileType}'.");
-                }
-
-                if (!allowedMimeTypes.Contains(mimeType,StringComparer.OrdinalIgnoreCase))
-                {
-                    throw new ValidationException($"MIME type '{mimeType}' is not valid for '{fileType}'.");
-                }
-
-                return;
-            }
-
-            var validMimeType = AllowedMimeTypes
-                .SelectMany(x => x.Value)
-                .Contains( mimeType,StringComparer.OrdinalIgnoreCase);
-
-            if (!validMimeType)
-            {
-                throw new ValidationException($"MIME type '{mimeType}' is not allowed.");
-            }
-        }
-      
-        private static void ValidateExtensionAndMimeType(string extension,string mimeType)
-        {
-            if (!ValidExtensionMimePairs.TryGetValue(
-                    extension,
-                    out var validMimeTypes))
-            {
-                throw new ValidationException(
-                    $"File extension '{extension}' is not supported.");
-            }
-
-            if (!validMimeTypes.Contains(
-                    mimeType,
-                    StringComparer.OrdinalIgnoreCase))
-            {
-                throw new ValidationException(
-                    $"File extension '{extension}' and MIME type '{mimeType}' do not match.");
-            }
-
-        }
-
-        private async Task ValidateFileSignatureAsync(IFormFile file)
+        private static async Task ValidateFileSignatureAsync(IFormFile file, string extension, CancellationToken cancellationToken)
         {
             await using var stream = file.OpenReadStream();
-            var header = new byte[16];
-            var bytesRead= await stream.ReadAsync(header.AsMemory(0,header.Length));
+            var header = new byte[32];
+            var bytesRead= await stream.ReadAsync(header.AsMemory(0, header.Length), cancellationToken);
 
-            if (bytesRead == 0)
+
+            if (bytesRead <= 0)
             {
                 throw new ValidationException("Invalid file content.");
             }
 
-            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
             var isValid = extension switch
             {
                 ".jpg" or ".jpeg" =>
-               IsMatch(header, 0xFF, 0xD8, 0xFF),
+               IsMatch(header, bytesRead ,0xFF, 0xD8, 0xFF),
 
                 ".png" =>
                     IsMatch(
                         header,
+                        bytesRead,
                         0x89, 0x50, 0x4E, 0x47,
                         0x0D, 0x0A, 0x1A, 0x0A),
 
                 ".gif" =>
-                    IsGif(header),
+                    IsGif(header,bytesRead),
 
                 ".pdf" =>
-                    IsMatch(header, 0x25, 0x50, 0x44, 0x46),
+                    IsMatch(header,bytesRead ,0x25, 0x50, 0x44, 0x46),
+
+                ".docx" =>
+                    IsZip(header, bytesRead),
+
+                ".mp4" =>
+                    IsMp4(header, bytesRead),
 
                 ".mp3" =>
-                    IsMp3(header),
+                    IsMp3(header, bytesRead),
+
+                ".mpeg" =>
+                    IsMpegAudio(header, bytesRead),
 
                 ".wav" =>
-                    IsWav(header),
-
-                ".docx" or ".mp4" or ".mpeg" =>
-                    true,
+                    IsWav(header, bytesRead),
 
                 _ => false
             };
             if (!isValid)
             {
-                throw new ValidationException("File signature is invalid.");
+                throw new ValidationException($"File content does not match extension '{extension}'.");
             }
 
         }
-        private static bool IsMatch( byte[] header,params byte[] signature)
+        private static bool IsMatch( byte[] header, int bytesRead, params byte[] signature)
         {
-            if (header.Length < signature.Length)
+            if (bytesRead < signature.Length)
                 return false;
 
-            return header
-                .Take(signature.Length)
-                .SequenceEqual(signature);
+            for (var i = 0; i < signature.Length; i++)
+            {
+                if (header[i] != signature[i])
+                    return false;
+            }
+
+            return true;
         }
-     
-        private static bool IsGif(byte[] header)
+        private static bool IsGif(byte[] header, int bytesRead)
         {
+            if (bytesRead < 6)
+                return false;
+
             return IsMatch(
                        header,
+                       bytesRead,
                        (byte)'G',
                        (byte)'I',
                        (byte)'F',
@@ -295,6 +216,7 @@ namespace chatbot.Ef.ValidatorService
                    ||
                    IsMatch(
                        header,
+                       bytesRead,
                        (byte)'G',
                        (byte)'I',
                        (byte)'F',
@@ -302,38 +224,73 @@ namespace chatbot.Ef.ValidatorService
                        (byte)'9',
                        (byte)'a');
         }
-
-        private static bool IsWav(byte[] header)
+        private static bool IsZip(byte[] header, int bytesRead)
         {
-            return header.Length >= 12 &&
-                   header[0] == (byte)'R' &&
-                   header[1] == (byte)'I' &&
-                   header[2] == (byte)'F' &&
-                   header[3] == (byte)'F' &&
-                   header[8] == (byte)'W' &&
-                   header[9] == (byte)'A' &&
-                   header[10] == (byte)'V' &&
-                   header[11] == (byte)'E';
+            // DOCX is an OpenXML ZIP container.
+            return
+                IsMatch(
+                    header,
+                    bytesRead,
+                    0x50, 0x4B, 0x03, 0x04)
+                ||
+                IsMatch(
+                    header,
+                    bytesRead,
+                    0x50, 0x4B, 0x05, 0x06)
+                ||
+                IsMatch(
+                    header,
+                    bytesRead,
+                    0x50, 0x4B, 0x07, 0x08);
         }
-
-        private static bool IsMp3(byte[] header)
+        private static bool IsMp4(byte[] header, int bytesRead)
         {
-            // ID3 header
-            if (header.Length >= 3 &&
-                header[0] == (byte)'I' &&
-                header[1] == (byte)'D' &&
-                header[2] == (byte)'3')
+            if (bytesRead < 12)
+                return false;
+
+            // ISO Base Media File Format:
+            // bytes 4-7 should normally be "ftyp".
+            return
+                header[4] == (byte)'f' &&
+                header[5] == (byte)'t' &&
+                header[6] == (byte)'y' &&
+                header[7] == (byte)'p';
+        }
+        private static bool IsWav(byte[] header, int bytesRead)
+        {
+            if (bytesRead < 12)
+                return false;
+            return
+            header[0] == (byte)'R' &&
+            header[1] == (byte)'I' &&
+            header[2] == (byte)'F' &&
+            header[3] == (byte)'F' &&
+
+            header[8] == (byte)'W' &&
+            header[9] == (byte)'A' &&
+            header[10] == (byte)'V' &&
+            header[11] == (byte)'E';
+        }
+        private static bool IsMp3(byte[] header, int bytesRead)
+        {
+            if (bytesRead >= 3 &&
+            header[0] == (byte)'I' &&
+            header[1] == (byte)'D' &&
+            header[2] == (byte)'3')
             {
                 return true;
             }
 
-
-            // MPEG frame sync
-            return header.Length >= 2 &&
-                   header[0] == 0xFF &&
-                   (header[1] & 0xE0) == 0xE0;
+            return IsMpegAudio(header, bytesRead);
+        }
+        private static bool IsMpegAudio(byte[] header, int bytesRead)
+        {
+            return
+                bytesRead >= 2 &&
+                header[0] == 0xFF &&
+                (header[1] & 0xE0) == 0xE0;
         }
 
-        
+
     }
 }

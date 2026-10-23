@@ -10,7 +10,8 @@ namespace chatbot.Core.Interfaces.Validators
 {
     public interface IFileValidationService
     {
-        Task<ValidatedFileDto> ValidateFileAsync(IFormFile file,CancellationToken cancellationToken);
-        Task<ValidatedFileDto> ValidateImageAsync(IFormFile file,CancellationToken cancellationToken);
+        Task<ValidatedFileDto> ValidateFileAsync(IFormFile file,CancellationToken cancellationToken = default);
+        Task<ValidatedFileDto> ValidateImageAsync(IFormFile file,CancellationToken cancellationToken = default);
+        Task<ValidatedFileDto> ValidateVoiceAsync(IFormFile file, CancellationToken cancellationToken = default);
     }
 }

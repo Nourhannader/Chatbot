@@ -6,6 +6,8 @@ using chatbot.Core.Authorization.Conversation;
 using chatbot.Core.Helper;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
+using chatbot.Core.Interfaces.Services.Helper;
+using chatbot.Core.Interfaces.Services.Media;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Interfaces.Validators;
 using chatbot.Core.Mapping;
@@ -16,6 +18,8 @@ using chatbot.Ef.Data;
 using chatbot.Ef.Jobs;
 using chatbot.Ef.Repositories;
 using chatbot.Ef.Services;
+using chatbot.Ef.Services.Helper;
+using chatbot.Ef.Services.Media;
 using chatbot.Ef.Services.Providers;
 using chatbot.Ef.UnitOfWork;
 using chatbot.Ef.ValidatorService;
@@ -91,6 +95,12 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IRealtimeNotificationService, SignalRNotificationService>();
             Services.AddSingleton<TypingRepository>();
             Services.AddScoped<IUserConnectionService, UserConnectionService>();
+            Services.AddScoped<IFfmpegService,FfmpegService>();
+            Services.AddScoped< ITemporaryFileService, TemporaryFileService>();
+            Services.AddScoped<IImageProcessorService,ImageProcessorService>();
+            Services.AddScoped<IVideoProcessorService,VideoProcessorService>();
+            Services.AddScoped< IAudioProcessorService,AudioProcessorService>();
+            Services.AddScoped<IFileProcessorFactory,FileProcessorFactory>();
 
 
             //jobSchedular

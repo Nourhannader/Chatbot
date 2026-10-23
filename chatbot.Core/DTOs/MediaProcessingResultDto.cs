@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace chatbot.Core.DTOs
 {
-    public class MediaProcessingResultDto
+    public class MediaProcessingResultDto:IDisposable
     {
         public int? Width { get; set; }
 
@@ -19,5 +19,10 @@ namespace chatbot.Core.DTOs
         public string? ThumbnailContentType { get; set; }
 
         public List<double>? Waveform { get; set; }
+
+        public void Dispose()
+        {
+            ThumbnailStream?.Dispose();
+        }
     }
 }
