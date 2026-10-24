@@ -16,6 +16,7 @@ namespace chatbot.Core.Interfaces.Repositories
 
         Task<ApplicationUser?> GetByNameAsync(string username);
         Task<ApplicationUser?> GetByIdAsync(Guid userId);
+        Task<ApplicationUser?> GetByIdWithProfileImageAsync(Guid userId);
 
         Task<IdentityResult> CreateUserAsync( ApplicationUser user,string password);
         Task<IdentityResult> AddToRoleAsync(ApplicationUser user, SystemRole role);

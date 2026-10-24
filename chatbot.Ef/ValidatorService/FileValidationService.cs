@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,53 +17,51 @@ namespace chatbot.Ef.ValidatorService
         private const long MaxFileSize = 50 * 1024 * 1024;//50MB
         private const long MaxImageSize = 5 * 1024 * 1024;//5MB
         private const long MaxVoiceSize = 20 * 1024 * 1024;//20MB
-        private sealed record FileRule(FileCategory Category, string[] MimeTypes);
+        private sealed record FileRule(MediaType MediaType, string[] MimeTypes);
 
         private static readonly IReadOnlyDictionary<string, FileRule>
         Rules = new Dictionary<string, FileRule>(StringComparer.OrdinalIgnoreCase)
         {
-            [".jpg"] = new(FileCategory.Image,["image/jpeg"]),
+            [".jpg"] = new(MediaType.Image,["image/jpeg"]),
 
-            [".jpeg"] = new(FileCategory.Image,["image/jpeg"]),
+            [".jpeg"] = new(MediaType.Image,["image/jpeg"]),
 
-            [".png"] = new(FileCategory.Image,["image/png"]),
+            [".png"] = new(MediaType.Image,["image/png"]),
 
-            [".gif"] = new(FileCategory.Image,["image/gif"]),
+            [".gif"] = new(MediaType.Image,["image/gif"]),
 
-            [".pdf"] = new(FileCategory.Document,["application/pdf"]),
+            [".pdf"] = new(MediaType.Document,["application/pdf"]),
 
-            [".docx"] = new(FileCategory.Document, ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"]),
+            [".docx"] = new(MediaType.Document, ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"]),
 
-            [".mp4"] = new(FileCategory.Video,["video/mp4"]),
+            [".mp4"] = new(MediaType.Video,["video/mp4"]),
 
-            [".mp3"] = new(FileCategory.Audio, ["audio/mpeg","audio/mp3"]),
+            [".mp3"] = new(MediaType.Audio, ["audio/mpeg","audio/mp3"]),
 
-            [".mpeg"] = new(FileCategory.Audio,["audio/mpeg"]),
+            [".mpeg"] = new(MediaType.Audio,["audio/mpeg"]),
 
-            [".wav"] = new( FileCategory.Audio,[ "audio/wav","audio/x-wav","audio/wave" ])
+            [".wav"] = new( MediaType.Audio,[ "audio/wav","audio/x-wav","audio/wave" ])
         };
         public async Task<ValidatedFileDto> ValidateFileAsync(IFormFile file,CancellationToken cancellationToken=default)
         {
-            return await ValidateAsync(file, expectedCategory: null, MaxFileSize, cancellationToken);
+            return await ValidateAsync(file, expectedMediaType: null, MaxFileSize, cancellationToken);
         }
         public async Task<ValidatedFileDto> ValidateImageAsync(IFormFile file,CancellationToken cancellationToken= default)
         {
-            return await ValidateAsync(file, FileCategory.Image , MaxImageSize, cancellationToken);
+            return await ValidateAsync(file, MediaType.Image , MaxImageSize, cancellationToken);
         }
         public async Task<ValidatedFileDto> ValidateVoiceAsync(IFormFile file, CancellationToken cancellationToken = default)
         {
-            return await ValidateAsync(file, FileCategory.Audio, MaxVoiceSize , cancellationToken);
+            return await ValidateAsync(file, MediaType.Audio, MaxVoiceSize , cancellationToken);
         }
 
-        private static async Task<ValidatedFileDto> ValidateAsync(IFormFile file, FileCategory? expectedCategory,
+        private static async Task<ValidatedFileDto> ValidateAsync(IFormFile file, MediaType? expectedMediaType,
         long maximumSize, CancellationToken cancellationToken)
         {
             ValidateBasicFile(file, maximumSize);
 
             var safeFileName = Path.GetFileName(file.FileName);
-
             var extension = Path.GetExtension(safeFileName).ToLowerInvariant();
-
             if (string.IsNullOrWhiteSpace(extension))
             {
                 throw new ValidationException("File extension is required.");
@@ -73,10 +72,10 @@ namespace chatbot.Ef.ValidatorService
                 throw new ValidationException($"File extension '{extension}' is not allowed.");
             }
 
-            if (expectedCategory.HasValue && rule.Category != expectedCategory.Value)
+            if (expectedMediaType.HasValue && rule.MediaType != expectedMediaType.Value)
             {
                 throw new ValidationException($"The selected file must be a " +
-                    $"{expectedCategory.Value.ToString().ToLowerInvariant()} file.");
+                    $"{expectedMediaType.Value.ToString().ToLowerInvariant()} file.");
             }
 
             var mimeType = NormalizeMimeType(file.ContentType);
@@ -95,7 +94,7 @@ namespace chatbot.Ef.ValidatorService
                 Extension = extension,
                 ContentType = mimeType,
                 FileSize = file.Length,
-                Category = rule.Category
+                MediaType = rule.MediaType
             };
         }
         private static void ValidateBasicFile(IFormFile file, long maximumSize)
@@ -145,6 +144,19 @@ namespace chatbot.Ef.ValidatorService
                 throw new ValidationException("Invalid file content.");
             }
 
+            if (extension == ".docx")
+            {
+                var validDocx = IsZip(header, bytesRead) &&
+                    await IsDocxAsync(file, cancellationToken);
+
+                if (!validDocx)
+                {
+                    throw new ValidationException("File content is not a valid DOCX document.");
+                }
+
+                return;
+            }
+
             var isValid = extension switch
             {
                 ".jpg" or ".jpeg" =>
@@ -162,9 +174,6 @@ namespace chatbot.Ef.ValidatorService
 
                 ".pdf" =>
                     IsMatch(header,bytesRead ,0x25, 0x50, 0x44, 0x46),
-
-                ".docx" =>
-                    IsZip(header, bytesRead),
 
                 ".mp4" =>
                     IsMp4(header, bytesRead),
@@ -185,6 +194,28 @@ namespace chatbot.Ef.ValidatorService
                 throw new ValidationException($"File content does not match extension '{extension}'.");
             }
 
+        }
+
+        private static async Task<bool> IsDocxAsync(IFormFile file, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await using var stream = file.OpenReadStream();
+
+                using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var hasContentTypes = archive.GetEntry("[Content_Types].xml") != null;
+
+                var hasDocument = archive.GetEntry("word/document.xml") != null;
+
+                return hasContentTypes && hasDocument;
+            }
+            catch (InvalidDataException)
+            {
+                return false;
+            }
         }
         private static bool IsMatch( byte[] header, int bytesRead, params byte[] signature)
         {

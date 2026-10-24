@@ -12,35 +12,40 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IStorageService
     {
-        Task<StoredFile?> GetByIdAsync(Guid fileId,
-             CancellationToken cancellationToken = default);
+        // =====================================
+        // Upload
+        // =====================================
 
-        Task<UploadResultDto> UploadUserProfileImageAsync(IFormFile file, Guid userId,
-            CancellationToken cancellationToken = default);
-        Task<UploadResultDto> ReplaceUserProfileImageAsync(IFormFile newFile, Guid userId, Guid? oldFileId,
-            CancellationToken cancellationToken = default);
+        Task<StoredFile> UploadAsync(IFormFile file, ValidatedFileDto validatedFile, FileCategory category,
+                     Guid ownerId, Guid? uploadedById,  CancellationToken cancellationToken = default);
 
-        Task<UploadResultDto> UploadConversationImageAsync(IFormFile file, Guid conversationId, Guid uploadedBy,
-            CancellationToken cancellationToken = default);
-        Task<UploadResultDto> ReplaceConversationImageAsync(IFormFile newFile, Guid conversationId, Guid uploadedBy, Guid? oldFileId,
-            CancellationToken cancellationToken = default);
+        Task<StoredFile> UploadGeneratedAsync(Stream stream, string fileName, string contentType, FileCategory category,
+            MediaType mediaType, Guid? uploadedById,  CancellationToken cancellationToken = default);
 
-        Task<UploadResultDto> UploadMessageFileAsync(IFormFile file, Guid messageId, Guid uploadedBy,
-            CancellationToken cancellationToken = default);
 
-        Task<List<UploadResultDto>> UploadMessageFilesAsync(IEnumerable<IFormFile> files, Guid messageId, Guid uploadedBy,
-            CancellationToken cancellationToken = default);
+        // =====================================
+        // Download
+        // =====================================
 
-        Task<DownloadFileDto?> DownloadAsync(Guid fileId,
-            CancellationToken cancellationToken = default);
+        Task<Stream> DownloadAsync(string storageKey, StorageProviderType provider, CancellationToken cancellationToken = default);
 
-        Task<string?> GetFileUrlAsync(Guid fileId,
-            CancellationToken cancellationToken = default);
+        // ==============================
+        // Physical storage delete only
+        // ==============================
 
-        Task SoftDeleteAsync(Guid fileId,
-            CancellationToken cancellationToken = default);
+        Task DeleteAsync(string storageKey, StorageProviderType provider, CancellationToken cancellationToken = default);
 
-        Task<bool> DeletePhysicallyAsync(Guid fileId,
-            CancellationToken cancellationToken = default);
+
+        // ==============================
+        // StoredFile delete
+        // Physical + database state
+        // ==============================
+
+        Task DeleteAsync(StoredFile file, CancellationToken cancellationToken = default);
+
+        string GetFileUrl(string storageKey, StorageProviderType provider);
+
+
+       
     }
 }

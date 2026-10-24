@@ -8,9 +8,10 @@ namespace chatbot.Core.Enums
 {
     public enum FileProcessingStatus
     {
-        Pending = 1,
-        Processing = 2,
-        Completed = 3,
-        Failed = 4
+        NotRequired = 1,
+        Pending = 2,
+        Processing = 3,
+        Completed = 4,
+        Failed = 5
     }
 }

@@ -29,6 +29,12 @@ namespace chatbot.Ef.Repositories
         {
             return await userManager.FindByNameAsync(username);
         }
+        public async Task<ApplicationUser?>GetByIdWithProfileImageAsync(Guid userId)
+        {
+            return await context.Users
+                .Include(x => x.ProfileImage)
+                .FirstOrDefaultAsync(x => x.Id == userId);
+        }
         public async Task<IdentityResult> CreateUserAsync(ApplicationUser user, string password)
         {
             return await userManager.CreateAsync(user, password);

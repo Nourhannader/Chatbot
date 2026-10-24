@@ -11,21 +11,21 @@ namespace chatbot.Ef.Services.Media
 {
     public class FileProcessorFactory(IImageProcessorService imageProcessor,IAudioProcessorService audioProcessor,IVideoProcessorService videoProcessor) :IFileProcessorFactory
     {
-        public IFileProcessorService GetProcessor(FileCategory category)
+        public IFileProcessorService GetProcessor(MediaType mediaType)
         {
-            return category switch
+            return mediaType switch
             {
-                FileCategory.Image =>
+                MediaType.Image =>
                     imageProcessor,
 
-                FileCategory.Video =>
+                 MediaType.Video =>
                     videoProcessor,
 
-                FileCategory.Audio =>
+                MediaType.Audio =>
                     audioProcessor,
 
                 _ => throw new NotSupportedException(
-                    $"Processing category '{category}' is not supported.")
+                    $"Processing category '{mediaType}' is not supported.")
             };
         }
 

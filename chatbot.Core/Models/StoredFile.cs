@@ -11,72 +11,90 @@ namespace chatbot.Core.Models
 {
     public class StoredFile : BaseEntity
     {
-        // ==============================
-        // Original File Information
-        // ==============================
+        // =====================================
+        // File Information
+        // =====================================
 
         [Required]
         [MaxLength(255)]
         public string OriginalFileName { get; set; }
             = null!;
 
-
         [Required]
         [MaxLength(255)]
         public string StoredFileName { get; set; }
             = null!;
-
 
         [Required]
         [MaxLength(20)]
         public string Extension { get; set; }
             = null!;
 
-
         [Required]
         [MaxLength(150)]
         public string ContentType { get; set; }
             = null!;
 
-
         public long FileSize { get; set; }
 
+
+        // =====================================
+        // Classification
+        // =====================================
+
+        /// <summary>
+        /// Business purpose:
+        /// UserProfileImage,
+        /// ConversationImage,
+        /// MessageFile,
+        /// Thumbnail
+        /// </summary>
         public FileCategory Category { get; set; }
 
+        /// <summary>
+        /// Physical media type:
+        /// Image,
+        /// Video,
+        /// Audio,
+        /// Document,
+        /// Other
+        /// </summary>
+        public MediaType MediaType { get; set; }
 
-        // ==============================
+
+        // =====================================
         // Storage
-        // ==============================
+        // =====================================
 
         public StorageProviderType Provider { get; set; }
 
-
         [Required]
         [MaxLength(1000)]
-        public string StorageKey { get; set; }
-            = null!;
+        public string StorageKey { get; set; } = null!;
 
-
+        /// <summary>
+        /// Optional cached/public URL.
+        /// StorageKey remains the source of truth.
+        /// </summary>
         [MaxLength(2000)]
         public string? FileUrl { get; set; }
 
 
-        // ==============================
-        // Metadata
-        // ==============================
+        // =====================================
+        // Upload
+        // =====================================
 
         public DateTime CreatedAt { get; set; }
             = DateTime.UtcNow;
-
 
         public Guid? UploadedById { get; set; }
 
         public ApplicationUser? UploadedBy { get; set; }
 
 
-        // ==============================
-        // Image Metadata
-        // ==============================
+        // =====================================
+        // Media Metadata
+        // =====================================
 
         public int? Width { get; set; }
 
@@ -84,18 +102,21 @@ namespace chatbot.Core.Models
 
         public double? DurationSeconds { get; set; }
 
-        // ==============================
+
+        // =====================================
         // Thumbnail
-        // ==============================
+        // =====================================
 
         public Guid? ThumbnailFileId { get; set; }
 
         public StoredFile? ThumbnailFile { get; set; }
 
+        public StoredFile? ThumbnailOf { get; set; }
 
-        // ==============================
+
+        // =====================================
         // Processing
-        // ==============================
+        // =====================================
 
         public FileProcessingStatus ProcessingStatus { get; set; }
             = FileProcessingStatus.Pending;
@@ -107,9 +128,10 @@ namespace chatbot.Core.Models
 
         public DateTime? ProcessingCompletedAt { get; set; }
 
-        // ==============================
+
+        // =====================================
         // Soft Delete
-        // ==============================
+        // =====================================
 
         public bool IsDeleted { get; set; }
 
@@ -118,10 +140,11 @@ namespace chatbot.Core.Models
         public bool IsPhysicallyDeleted { get; set; }
 
 
-        // ==============================
-        // Message Attachments
-        // ==============================
+        // =====================================
+        // Relationships
+        // =====================================
 
-        public ICollection<MessageAttachment>MessageAttachments { get; set; }  = new List<MessageAttachment>();
+        public ICollection<MessageAttachment> MessageAttachments { get; set; }
+            = new List<MessageAttachment>();
     }
 }

@@ -18,7 +18,7 @@ namespace chatbot.Core.DTOs
         public string ContentType { get; set; }
             = string.Empty;
 
-        public FileCategory Category { get; set; }
+        public MediaType MediaType { get; set; }
 
         public long FileSize { get; set; }
     }

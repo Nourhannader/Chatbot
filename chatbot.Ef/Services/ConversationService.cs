@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
 using chatbot.Core.Authorization.Conversation;
@@ -12,14 +13,18 @@ using chatbot.Core.Enums;
 using chatbot.Core.Exceptions;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
+using chatbot.Core.Interfaces.Validators;
 using chatbot.Core.Models;
+using chatbot.Ef.UnitOfWork;
+using chatbot.Ef.ValidatorService;
 using Hangfire;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace chatbot.Ef.Services
 {
-    public class ConversationService(IUnitOfWork unitOfWork, IMapper mapper,IStorageService storageService
-        , IConversationAuthorizationService authorizationService,TimeProvider timeProvider) : IConversationService
+    public class ConversationService(IUnitOfWork unitOfWork, IMapper mapper,IStorageService storageService,IFileValidationService fileValidationService
+        , IConversationAuthorizationService authorizationService,TimeProvider timeProvider,ILogger<ConversationService> logger) : IConversationService
     {
         public async Task<ConversationDetailsDto> CreatePrivateAsync(ClaimsPrincipal user, CreatePrivateConversationDto dto)
         {
@@ -138,43 +143,49 @@ namespace chatbot.Ef.Services
         {
             await authorizationService.AuthorizeImageManagementAsync(user, conversationId);
 
-            var conversation = await unitOfWork.Conversations
-            .GetWithImageAsync(conversationId)
+            var conversation = await unitOfWork.Conversations .GetWithImageAsync(conversationId)
                 ?? throw new NotFoundException("Conversation not found.");
+
+            // Check permission before uploading
+
+            await authorizationService.AuthorizeImageManagementAsync(user, conversationId);
+
+            var currentUserId = user.GetUserId();
+            var validated = await fileValidationService.ValidateImageAsync(dto.Image);
 
             var oldImage = conversation.Image;
 
-            UploadResultDto? upload = null;
-
             StoredFile? newImage = null;
+
+            UploadResultDto? upload = null;
 
             var committed = false;
 
             try
             {
-               
-                    upload = await storageService.UploadConversationImageAsync(dto.Image,conversationId,user.GetUserId());
-                    newImage = new StoredFile
-                    {
-                        Id = Guid.NewGuid(),
-                        StorageKey = upload.StorageKey,
-                        OriginalFileName = dto.Image.FileName,
-                        StoredFileName = upload.FileName,
-                        ContentType = upload.ContentType,
-                        FileSize = upload.Size,
-                        CreatedAt = timeProvider.GetUtcNow().UtcDateTime
-                    };
-                    await unitOfWork.StoredFiles.AddAsync(newImage);
-                    conversation.ImageId = newImage.Id;
-                    conversation.Image = newImage;
+                newImage = await storageService.UploadAsync(dto.Image, validated, FileCategory.ConversationImage, conversationId, user.GetUserId());
+                upload = new UploadResultDto
+                {
+                    Success = true,
+                    FileId = newImage.Id,
+                    StorageKey = newImage.StorageKey,
+                    FileUrl = storageService.GetFileUrl(newImage.StorageKey, newImage.Provider),
+                    ContentType = newImage.ContentType,
+                    Size = newImage.FileSize,
+                    FileName = newImage.StoredFileName
+                };
+
+                await unitOfWork.StoredFiles.AddAsync(newImage);
+                conversation.ImageId = newImage.Id;
+                conversation.Image = newImage;
                 await unitOfWork.SaveChangesAsync();
                 committed = true;
             }
             catch
             {
-                if (!committed && upload is not null)
+                if (!committed && newImage is not null)
                 {
-                    await TryDeletePhysicalFileAsync(upload.StorageKey);
+                    await TryDeleteFileAsync(newImage);
                 }
 
                 throw;
@@ -184,7 +195,7 @@ namespace chatbot.Ef.Services
 
             if (oldImage is not null)
             {
-                await DeleteOldImageSafelyAsync(oldImage);
+                await TryDeleteFileAsync(oldImage);
             }
 
             return mapper.Map<ConversationImageDto>(newImage!);
@@ -194,21 +205,32 @@ namespace chatbot.Ef.Services
         {
             await authorizationService.AuthorizeImageManagementAsync(user,conversationId);
 
-            var conversation =
-                await unitOfWork.Conversations
-                    .GetWithImageAsync(conversationId)
+            var conversation =await unitOfWork.Conversations.GetWithImageAsync(conversationId)
                 ?? throw new NotFoundException("Conversation not found.");
 
             if (conversation.Image is null)
                 return;
 
-            var oldImage =
-                conversation.Image;
+            var oldImage =conversation.Image;
 
             conversation.ImageId = null;
             conversation.Image = null;
 
             await unitOfWork.SaveChangesAsync();
+
+            try
+            {
+                await storageService.DeleteAsync(oldImage,CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex,"Conversation image relation was removed, but old file {FileId} " + "could not be deleted from storage.",oldImage.Id);
+
+                // Do NOT throw.
+                //
+                // conversation image has already been removed successfully.
+                // Old orphan file can be cleaned later using Hangfire.
+            }
 
             //BackgroundJobClient.Enqueue<
             //    DeleteStoredFileJob>(
@@ -216,20 +238,71 @@ namespace chatbot.Ef.Services
             //            oldImage.Id));
         }
 
-
-        private async Task TryDeletePhysicalFileAsync(string storageKey)
+        public async Task<StoredFile>UpdateConversationImageAsync(Guid conversationId,ClaimsPrincipal currentUser,IFormFile image, CancellationToken cancellationToken = default)
         {
+            var conversation = await unitOfWork.Conversations.GetByIdAsync(conversationId)
+                     ?? throw new NotFoundException("Conversation not found.");
+
+            // Check permission before uploading
+
+           await authorizationService.AuthorizeImageManagementAsync(currentUser, conversationId);
+           
+            var currentUserId=currentUser.GetUserId();
+            var validated =await fileValidationService.ValidateImageAsync( image,cancellationToken);
+
+            var oldImage =conversation.Image;
+
+            StoredFile? newImage = null;
+
             try
             {
-                await storageService.DeleteAsync(storageKey);
+                newImage =await storageService.UploadAsync(
+                        image,
+                        validated,
+                        FileCategory.ConversationImage,
+
+                        // Important:
+                        // owner is Conversation
+                        conversationId,
+
+                        // uploader is current user
+                        currentUserId,
+
+                        cancellationToken);
+
+                conversation.ImageId =newImage.Id;
+                conversation.Image =newImage;
+
+                await unitOfWork.SaveChangesAsync();
             }
             catch
             {
-                // Log the error.
-                // Never hide the original exception.
-                //
-                // CleanupOrphanFilesJob can remove
-                // orphaned physical files later.
+                if (newImage is not null)
+                {
+                    await TryDeleteFileAsync( newImage);
+                }
+
+                throw;
+            }
+
+            if (oldImage is not null)
+            {
+                await TryDeleteFileAsync(oldImage);
+            }
+
+            return newImage;
+        }
+
+        private async Task TryDeleteFileAsync(StoredFile file)
+        {
+            try
+            {
+                await storageService.DeleteAsync(file, CancellationToken.None);
+
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to delete old file {FileId} " + "with storage key {StorageKey}.", file.Id, file.StorageKey);
             }
         }
     }

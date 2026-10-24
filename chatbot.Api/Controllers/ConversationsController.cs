@@ -49,8 +49,7 @@ namespace chatbot.Api.Controllers
         [RequestSizeLimit(5 * 1024 * 1024)]
         public async Task<ActionResult<ConversationImageDto>> AddOrUpdateImage(Guid conversationId,[FromForm] UpdateConversationImageDto dto)
         {
-            var result = await conversationService
-                    .AddOrUpdateImageAsync(User, conversationId, dto);
+            var result = await conversationService.AddOrUpdateImageAsync(User, conversationId, dto);
 
             return Ok(ApiResponse<ConversationImageDto>.Ok(result, "Conversation image updated successfully."));
         }

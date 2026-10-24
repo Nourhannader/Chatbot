@@ -17,349 +17,429 @@ using Microsoft.Extensions.Logging;
 
 namespace chatbot.Ef.Services
 {
-    public class StorageService(IWebHostEnvironment environment,IUnitOfWork unitOfWork,ILogger<StorageService> logger,
-        IFileValidationService validators,IEnumerable<IStorageProvider> providers) : IStorageService
+    public class StorageService(IUnitOfWork unitOfWork,ILogger<StorageService> logger, IEnumerable<IStorageProvider> providers) : IStorageService
     {
-        private static string GeneratePath(string folder,string fileName)
+
+        // =====================================
+        // Get Provider
+        // =====================================
+
+        private IStorageProvider GetProvider(StorageProviderType providerType)
         {
-            var extension =Path.GetExtension(fileName).ToLowerInvariant();
+            var provider = providers.SingleOrDefault(x => x.ProviderType == providerType);
+
+            return provider ?? throw new InvalidOperationException($"Storage provider '{providerType}' is not registered.");
+        }
+
+        // =====================================
+        // Generate Storage Key
+        // =====================================
+
+        private static string GenerateStorageKey(string folder, string extension)
+        {
+            if (string.IsNullOrWhiteSpace(folder))
+            {
+                throw new ArgumentException("Storage folder is required.", nameof(folder));
+            }
+
+            if (string.IsNullOrWhiteSpace(extension))
+            {
+                throw new ArgumentException("File extension is required.", nameof(extension));
+            }
+
+            extension = extension.Trim().ToLowerInvariant();
+
+            if (!extension.StartsWith('.'))
+            {
+                extension = $".{extension}";
+            }
 
             var now = DateTime.UtcNow;
 
-            var uniqueFileName =$"{Guid.NewGuid()}{extension}";
+            var fileName = $"{Guid.NewGuid():N}{extension}";
 
-            return Path.Combine(
-                folder,
-                now.Year.ToString(),
-                now.Month.ToString("00"),
-                now.Day.ToString("00"),
-                uniqueFileName)
-                .Replace("\\", "/");
+            return
+                $"{folder.TrimEnd('/')}/" +
+                $"{now:yyyy/MM/dd}/" +
+                $"{fileName}";
         }
-        private IStorageProvider GetProvider(StorageProviderType providerType)
-        {
-            var provider = providers.SingleOrDefault(
-                x => x.ProviderType == providerType);
 
-            return provider ?? throw new InvalidOperationException(
-                $"Storage provider '{providerType}' is not registered.");
-        }
-        private static string GetFolder(FileCategory category,Guid ownerId)
+        private static FileProcessingStatus GetInitialProcessingStatus(FileCategory category, MediaType mediaType)
         {
-            return category switch
+            if (category == FileCategory.Thumbnail)
             {
-                FileCategory.UserProfileImage =>
-                    $"images/users/{ownerId}",
+                return FileProcessingStatus.Completed;
+            }
 
-                FileCategory.ConversationImage =>
-                    $"images/conversations/{ownerId}",
+            return mediaType switch
+            {
+                MediaType.Image => FileProcessingStatus.Pending,
 
-                FileCategory.MessageFile =>
-                    $"messages/{ownerId}",
+                MediaType.Video => FileProcessingStatus.Pending,
 
-                _ => throw new ArgumentOutOfRangeException(
-                    nameof(category))
+                MediaType.Audio => FileProcessingStatus.Pending,
+
+                MediaType.Document => FileProcessingStatus.NotRequired,
+
+                MediaType.Other => FileProcessingStatus.NotRequired,
+
+                _ => FileProcessingStatus.NotRequired
             };
         }
 
-        private async Task<UploadResultDto> UploadInternalAsync(IFormFile file, FileCategory category,
-            Guid ownerId, Guid? uploadedBy, Guid? messageId, CancellationToken cancellationToken)
-        {
-            // Validation
-            if (category == FileCategory.UserProfileImage ||
-                category == FileCategory.ConversationImage)
-            {
-                await validators.ValidateImageAsync(file);
-            }
-            else
-            {
-                await validators.ValidateFileAsync(file);
-            }
-            cancellationToken.ThrowIfCancellationRequested();
-            var provider = GetProvider(StorageProviderType.Local);
-            var folder = GetFolder(category, ownerId);
-            var relativePath = GeneratePath(folder, file.FileName);
 
+        //=============================
+        //folder
+        //=============================
+        private static string GetFolder( FileCategory category,Guid? ownerId = null)
+        {
+            return category switch
+            {
+                FileCategory.UserProfileImage
+                    when ownerId.HasValue &&
+                         ownerId.Value != Guid.Empty
+                        => $"images/users/{ownerId.Value}",
+
+
+                FileCategory.ConversationImage
+                    when ownerId.HasValue &&
+                         ownerId.Value != Guid.Empty
+                        => $"images/conversations/{ownerId.Value}",
+
+
+                FileCategory.MessageFile
+                    when ownerId.HasValue &&
+                         ownerId.Value != Guid.Empty
+                        => $"messages/{ownerId.Value}",
+
+
+                // Thumbnail doesn't need a business owner folder.
+                FileCategory.Thumbnail
+                    => "messages/thumbnails",
+
+
+                FileCategory.UserProfileImage or
+                FileCategory.ConversationImage or
+                FileCategory.MessageFile
+                    => throw new ArgumentException($"Owner id is required for file category '{category}'.",nameof(ownerId)),
+
+
+                _ => throw new ArgumentOutOfRangeException(nameof(category), category,"Unsupported file category.")
+            };
+        }
+
+        //==============================
+        //upload
+        //===============================
+        public async Task<StoredFile> UploadAsync(IFormFile file, ValidatedFileDto validatedFile, FileCategory category,
+                     Guid ownerId, Guid? uploadedById, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(file);
+            ArgumentNullException.ThrowIfNull(validatedFile);
+
+            if (ownerId == Guid.Empty)
+            {
+                throw new ArgumentException("Owner id cannot be empty.", nameof(ownerId));
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var provider = GetProvider(StorageProviderType.Local);
+
+            var folder = GetFolder(category, ownerId);
+
+            var storageKey = GenerateStorageKey(folder, validatedFile.Extension);
+
+            var uploaded = false;
 
             try
             {
-                // Physical upload
                 await using var stream = file.OpenReadStream();
 
-                await provider.UploadAsync(stream, relativePath, file.ContentType, cancellationToken);
+                await provider.UploadAsync(stream, storageKey, validatedFile.ContentType, cancellationToken);
 
-                // DB entity
+                uploaded = true;
+
+                var status = GetInitialProcessingStatus(category, validatedFile.MediaType);
+
                 var storedFile =
                     new StoredFile
                     {
                         Id = Guid.NewGuid(),
-
-                        OriginalName = Path.GetFileName(file.FileName),
-
-                        StoredName = Path.GetFileName(relativePath),
-
-                        Path = relativePath,
-
-                        ContentType = file.ContentType,
-
-                        Size = file.Length,
-
+                        OriginalFileName = validatedFile.OriginalFileName,
+                        StoredFileName = Path.GetFileName(storageKey),
+                        Extension = validatedFile.Extension,
+                        ContentType = validatedFile.ContentType,
+                        FileSize = validatedFile.FileSize,
                         Category = category,
-
+                        MediaType = validatedFile.MediaType,
                         Provider = provider.ProviderType,
-
-                        UploadedByUserId = uploadedBy,
-
-                        MessageId = messageId,
-
+                        StorageKey = storageKey,
+                        UploadedById = uploadedById,
+                        CreatedAt = DateTime.UtcNow,
+                        ProcessingStatus = status,
+                        ProcessingCompletedAt =
+                            status is
+                                FileProcessingStatus.Completed or
+                                FileProcessingStatus.NotRequired
+                                    ? DateTime.UtcNow
+                                    : null,
+                        ProcessingStartedAt = null,
+                        ProcessingError=null,
                         IsDeleted = false,
+                        DeletedAt = null,
+                        IsPhysicallyDeleted = false
+                    };
 
-                        IsPhysicallyDeleted = false,
+                await unitOfWork.StoredFiles.AddAsync(storedFile);
+                await unitOfWork.SaveChangesAsync();
+                return storedFile;
+            }
+            catch
+            {
+                // -----------------------------------------
+                // Compensation
+                // -----------------------------------------
+                //
+                // Physical upload may succeed,
+                // while database save fails.
+                //
 
-                        CreatedAt = DateTime.UtcNow
+                if (uploaded)
+                {
+                    await TryCleanupAsync(provider, storageKey);
+                }
+
+                throw;
+            }
+
+        }
+        
+        // =====================================
+        // Upload Generated File
+        // Thumbnail etc.
+        // =====================================
+
+        public async Task<StoredFile> UploadGeneratedAsync(Stream stream, string fileName, string contentType,
+            FileCategory category, MediaType mediaType,
+            Guid? uploadedById, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(stream);
+
+            if (!stream.CanRead)
+            {
+                throw new ArgumentException("Stream must be readable.", nameof(stream));
+            }
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                throw new ArgumentException("File name is required.", nameof(fileName));
+            }
+
+            if (string.IsNullOrWhiteSpace(contentType))
+            {
+                throw new ArgumentException("Content type is required.", nameof(contentType));
+            }
+
+            var safeFileName = Path.GetFileName(fileName);
+
+            var extension = Path.GetExtension(safeFileName).ToLowerInvariant();
+
+            if (string.IsNullOrWhiteSpace(extension))
+            {
+                throw new ArgumentException("Generated file extension is required.", nameof(fileName));
+            }
+
+            if (stream.CanSeek)
+            {
+                stream.Position = 0;
+            }
+
+            var provider = GetProvider(StorageProviderType.Local);
+            var folder =
+            category switch
+            {
+                FileCategory.Thumbnail =>
+                    GetFolder(
+                        FileCategory.Thumbnail),
+
+                _ =>
+                    throw new ArgumentException(
+                        $"Generated file category '{category}' is not supported.",
+                        nameof(category))
+            };
+
+            var storageKey = GenerateStorageKey(folder, extension);
+
+            var uploaded = false;
+
+            try
+            {
+                await provider.UploadAsync(stream, storageKey, contentType, cancellationToken);
+
+                uploaded = true;
+                var status = GetInitialProcessingStatus(category, mediaType);
+
+                var storedFile =
+                    new StoredFile
+                    {
+                        Id = Guid.NewGuid(),
+                        OriginalFileName = safeFileName,
+                        StoredFileName = Path.GetFileName(storageKey),
+                        Extension = extension,
+                        ContentType = contentType,
+                        FileSize = stream.CanSeek ? stream.Length : 0,
+                        Category = category,
+                        MediaType = mediaType,
+                        Provider = provider.ProviderType,
+                        StorageKey = storageKey,
+                        UploadedById = uploadedById,
+                        CreatedAt = DateTime.UtcNow,
+                        ProcessingStatus = status,
+                        ProcessingCompletedAt =
+                            status is
+                                FileProcessingStatus.Completed or
+                                FileProcessingStatus.NotRequired
+                                    ? DateTime.UtcNow
+                                    : null,
+                        ProcessingStartedAt =null,
+                        ProcessingError=null,
+                        IsDeleted = false,
+                        IsPhysicallyDeleted = false
                     };
 
                 await unitOfWork.StoredFiles.AddAsync(storedFile);
 
                 await unitOfWork.SaveChangesAsync();
 
-                return new UploadResultDto
-                {
-                    Success = true,
-
-                    FileId = storedFile.Id,
-
-                    FileName = storedFile.OriginalName,
-
-                    FileUrl = provider.GetFileUrl(storedFile.Path),
-
-                    ContentType = storedFile.ContentType,
-
-                    Size = storedFile.Size
-                };
+                return storedFile;
             }
             catch
             {
-                // If DB failed after physical upload,
-                // try deleting the physical file.
-                try
+                if (uploaded)
                 {
-                    await provider.DeleteAsync(relativePath, CancellationToken.None);
-                }
-                catch (Exception cleanupException)
-                {
-                    logger.LogError(
-                        cleanupException,
-                        "Failed to clean up uploaded file {FilePath}",
-                        relativePath);
+                    await TryCleanupAsync(provider, storageKey);
                 }
 
                 throw;
             }
         }
-        public async Task<StoredFile?> GetByIdAsync(Guid fileId, CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
 
-            return await unitOfWork.StoredFiles
-                .GetByIdAsync(fileId);
+        // =====================================
+        // Download by StorageKey
+        // =====================================
+
+        public async Task<Stream> DownloadAsync(string storageKey, StorageProviderType provider, CancellationToken cancellationToken = default)
+        {
+            ValidateStorageKey(storageKey);
+
+            var storageProvider = GetProvider(provider);
+
+            var stream = await storageProvider.DownloadAsync(storageKey, cancellationToken);
+
+            return stream ?? throw new FileNotFoundException(
+                    $"Storage object '{storageKey}' was not found.");
         }
-        // ============================
-        // USER PROFILE IMAGE
-        // ============================
 
-        public async Task<UploadResultDto> UploadUserProfileImageAsync(IFormFile file, Guid userId,
-                CancellationToken cancellationToken = default)
+        // =====================================
+        // Physical Delete Only
+        //
+        // Used internally when we only know
+        // StorageKey + Provider
+        // =====================================
+
+        public async Task DeleteAsync(string storageKey, StorageProviderType provider, CancellationToken cancellationToken = default)
         {
-            return await UploadInternalAsync(file, FileCategory.UserProfileImage, userId, userId, null, cancellationToken);
+            ValidateStorageKey(storageKey);
+
+            var storageProvider = GetProvider(provider);
+
+            await storageProvider.DeleteAsync(storageKey, cancellationToken);
         }
 
-        public async Task<UploadResultDto> ReplaceUserProfileImageAsync(IFormFile newFile, Guid userId, Guid? oldFileId,
-                CancellationToken cancellationToken = default)
-        {
-            // Upload new file first
-            var result =
-                await UploadUserProfileImageAsync(newFile, userId, cancellationToken);
+        // =====================================================
+        // Delete StoredFile
+        //
+        // Physical delete + StoredFile state
+        // =====================================================
 
-            // Delete old file after successful upload
-            if (oldFileId.HasValue)
+        public async Task DeleteAsync(StoredFile file, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(file);
+
+            // Idempotency
+            if (file.IsPhysicallyDeleted)
             {
-                await DeletePhysicallyAsync(oldFileId.Value, cancellationToken);
-            }
+                if (!file.IsDeleted)
+                {
+                    file.IsDeleted = true;
 
-            return result;
-        }
+                    file.DeletedAt ??= DateTime.UtcNow;
 
-        // ============================
-        // CONVERSATION IMAGE
-        // ============================
+                    unitOfWork.StoredFiles.Update(file);
 
-        public async Task<UploadResultDto> UploadConversationImageAsync(IFormFile file, Guid conversationId, Guid uploadedBy,
-                CancellationToken cancellationToken = default)
-        {
-            return await UploadInternalAsync(file, FileCategory.ConversationImage, conversationId, uploadedBy, null, cancellationToken);
-        }
+                    await unitOfWork.SaveChangesAsync();
+                }
 
-        public async Task<UploadResultDto> ReplaceConversationImageAsync(IFormFile newFile, Guid conversationId, Guid uploadedBy, Guid? oldFileId,
-                CancellationToken cancellationToken = default)
-        {
-            var result = await UploadConversationImageAsync(newFile, conversationId, uploadedBy, cancellationToken);
-
-            if (oldFileId.HasValue)
-            {
-                await DeletePhysicallyAsync(oldFileId.Value, cancellationToken);
-            }
-
-            return result;
-        }
-
-        // ============================
-        // MESSAGE FILE
-        // ============================
-
-        public async Task<UploadResultDto> UploadMessageFileAsync(IFormFile file, Guid messageId, Guid uploadedBy,
-                CancellationToken cancellationToken = default)
-        {
-            return await UploadInternalAsync(file, FileCategory.MessageFile, messageId, uploadedBy, messageId, cancellationToken);
-        }
-
-        public async Task<List<UploadResultDto>> UploadMessageFilesAsync(IEnumerable<IFormFile> files, Guid messageId, Guid uploadedBy,
-                CancellationToken cancellationToken = default)
-        {
-            ArgumentNullException.ThrowIfNull(files);
-
-            var filesList = files.ToList();
-
-            if (filesList.Count == 0)
-                throw new ArgumentException( "At least one file is required.", nameof(files));
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var results = new List<UploadResultDto>(filesList.Count);
-
-            foreach (var file in filesList)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (file == null || file.Length == 0)
-                    throw new ArgumentException("Files cannot be null or empty.",nameof(files));
-
-                var result =
-                    await UploadMessageFileAsync(file, messageId, uploadedBy, cancellationToken);
-
-                results.Add(result);
-            }
-
-            return results;
-        }
-
-        // ============================
-        // DOWNLOAD
-        // ============================
-
-        public async Task<DownloadFileDto?> DownloadAsync(Guid fileId, CancellationToken cancellationToken = default)
-        {
-            var storedFile = await unitOfWork.StoredFiles.GetByIdAsync(fileId);
-
-            if (storedFile == null ||
-                storedFile.IsDeleted ||
-                storedFile.IsPhysicallyDeleted)
-            {
-                return null;
-            }
-
-            var provider = GetProvider(storedFile.Provider);
-
-            var stream = await provider.DownloadAsync(storedFile.Path, cancellationToken);
-
-            if (stream == null)
-                return null;
-
-            return new DownloadFileDto
-            {
-                stream = stream,
-
-                FileName = storedFile.OriginalName,
-
-                ContentType =
-                    string.IsNullOrWhiteSpace(
-                        storedFile.ContentType)
-                    ? "application/octet-stream"
-                    : storedFile.ContentType
-            };
-        }
-
-        // ============================
-        // URL
-        // ============================
-
-        public async Task<string?> GetFileUrlAsync(Guid fileId, CancellationToken cancellationToken = default)
-        {
-            var storedFile = await unitOfWork.StoredFiles.GetByIdAsync(fileId);
-
-            if (storedFile == null ||
-                storedFile.IsDeleted ||
-                storedFile.IsPhysicallyDeleted)
-            {
-                return null;
-            }
-
-            var provider = GetProvider(storedFile.Provider);
-
-            return provider.GetFileUrl(storedFile.Path);
-        }
-        // ============================
-        // SOFT DELETE
-        // ============================
-
-        public async Task SoftDeleteAsync(Guid fileId, CancellationToken cancellationToken = default)
-        {
-            var storedFile = await unitOfWork.StoredFiles.GetByIdAsync(fileId);
-
-            if (storedFile == null)
-                throw new KeyNotFoundException("File not found.");
-
-            if (storedFile.IsDeleted)
                 return;
+            }
 
-            storedFile.IsDeleted = true;
 
-            storedFile.DeletedAt = DateTime.UtcNow;
+            // -----------------------------------------
+            // Physical storage
+            // -----------------------------------------
 
-           await unitOfWork.StoredFiles.UpdateAsync(storedFile);
+            await DeleteAsync(file.StorageKey, file.Provider, cancellationToken);
+
+
+            // -----------------------------------------
+            // Database state
+            // -----------------------------------------
+
+            file.IsDeleted = true;
+
+            file.IsPhysicallyDeleted = true;
+
+            file.DeletedAt = DateTime.UtcNow;
+
+            unitOfWork.StoredFiles.Update(file);
 
             await unitOfWork.SaveChangesAsync();
         }
 
-        // ============================
-        // PHYSICAL DELETE
-        // ============================
+        // =====================================
+        // URL by StorageKey
+        // =====================================
 
-        public async Task<bool> DeletePhysicallyAsync(Guid fileId, CancellationToken cancellationToken = default)
+        public string GetFileUrl(string storageKey, StorageProviderType provider)
         {
-            var storedFile = await unitOfWork.StoredFiles.GetByIdAsync(fileId);
+            ValidateStorageKey(storageKey);
 
-            if (storedFile == null)
-                return false;
+            var storageProvider = GetProvider(provider);
 
-            if (storedFile.IsPhysicallyDeleted)
-                return true;
-
-            var provider = GetProvider(storedFile.Provider);
-
-            await provider.DeleteAsync(storedFile.Path, cancellationToken);
-
-            storedFile.IsDeleted = true;
-
-            storedFile.IsPhysicallyDeleted = true;
-
-            storedFile.DeletedAt = DateTime.UtcNow;
-
-            await unitOfWork.StoredFiles.UpdateAsync(storedFile);
-
-            await unitOfWork.SaveChangesAsync();
-
-            return true;
+            return storageProvider.GetFileUrl(storageKey);
         }
+
+
+        private async Task TryCleanupAsync(IStorageProvider provider, string storageKey)
+        {
+            try
+            {
+                await provider.DeleteAsync(storageKey, CancellationToken.None);
+            }
+            catch (Exception cleanupException)
+            {
+                logger.LogError(cleanupException, "Failed to cleanup storage object {StorageKey}.", storageKey);
+            }
+        }
+
+        private static void ValidateStorageKey(string storageKey)
+        {
+            if (string.IsNullOrWhiteSpace(storageKey))
+            {
+                throw new ArgumentException("Storage key is required.", nameof(storageKey));
+            }
+        }
+
 
     }
     

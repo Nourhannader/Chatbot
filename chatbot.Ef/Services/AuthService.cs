@@ -13,6 +13,7 @@ using chatbot.Core.Helper;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
+using chatbot.Core.Interfaces.Validators;
 using chatbot.Core.Models;
 using chatbot.Ef.Repositories;
 using FirebaseAdmin.Messaging;
@@ -29,15 +30,18 @@ namespace chatbot.Ef.Services
         private readonly IJwtService jwtService;
         private readonly ITokenHashService hashService;
         private readonly IStorageService storageService;
+        private readonly IFileValidationService fileValidation;
         public AuthService(IUnitOfWork unitOfWork,
-            IOptions<JwtSettings> jwt,IJwtService jwtService, ITokenHashService hashService, IStorageService storageService)
+            IOptions<JwtSettings> jwt,IJwtService jwtService, ITokenHashService hashService, IStorageService storageService,IFileValidationService fileValidation)
         {
             this.unitOfWork = unitOfWork;
             this.jwt = jwt.Value;
             this.jwtService = jwtService;
             this.hashService = hashService;
             this.storageService = storageService;
+            this.fileValidation = fileValidation;
         }
+   
         
         private void RevokeDeviceSession(DeviceSession session, string? ipAddress)
         {
@@ -153,21 +157,22 @@ namespace chatbot.Ef.Services
                 throw new BadRequestException(errors);
             }
 
-            //add image 
-            Guid? uploadedImageId = null; 
+          
+            
             try
             { 
                 if (dto.ImageFile is not null && dto.ImageFile.Length > 0) 
                 {
-                    var image = await storageService.UploadUserProfileImageAsync( dto.ImageFile, user.Id); 
+                    var validatedFile = await fileValidation.ValidateImageAsync(dto.ImageFile);
+                    var image = await storageService.UploadAsync( dto.ImageFile,validatedFile,FileCategory.UserProfileImage, user.Id,user.Id); 
                     
-                    if (!image.Success) 
+                    if (!image.IsDeleted) 
                     {
                         throw new BadRequestException( "Failed to upload profile image.");
                     }
-                    uploadedImageId = image.FileId;
                     
-                    user.ProfileImageId = image.FileId;
+                    
+                    user.ProfileImageId = image.Id;
                     
                     await unitOfWork.Auth.updateState(user); 
                 } 
@@ -184,18 +189,7 @@ namespace chatbot.Ef.Services
             }
             catch { 
                 
-                // Cleanup uploaded image if registration fails
-                    if (uploadedImageId.HasValue) {
-                    try
-                    {
-                        await storageService.SoftDeleteAsync(uploadedImageId.Value);
-                    }
-                    catch
-                    {
-                        // Do not hide the original exception
-
-                    } 
-                } throw; 
+                 throw; 
             
             }
         }
@@ -382,6 +376,9 @@ namespace chatbot.Ef.Services
             }
             await unitOfWork.SaveChangesAsync();
         }
+
+        
+
 
     }
 }

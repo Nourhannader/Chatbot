@@ -9,6 +9,6 @@ namespace chatbot.Core.Interfaces.Services.Media
 {
     public interface IFileProcessorFactory
     {
-        IFileProcessorService GetProcessor(FileCategory category);
+        IFileProcessorService GetProcessor(MediaType mediaType);
     }
 }

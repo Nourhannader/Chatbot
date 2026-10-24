@@ -37,7 +37,7 @@ namespace chatbot.Ef.Services.Media
             var file = await _unitOfWork.StoredFiles
                     .GetForProcessingAsync(storedFileId);
 
-            if (file is null || file.IsDeleted)
+            if (file is null || file.IsDeleted || file.IsPhysicallyDeleted)
             {
                 return;
             }
@@ -48,11 +48,14 @@ namespace chatbot.Ef.Services.Media
                 return;
             }
 
-            if (file.Category is FileCategory.Document or FileCategory.Other)
+            // No processing required
+            if (file.MediaType is MediaType.Document or MediaType.Other)
             {
-                file.ProcessingStatus = FileProcessingStatus.Completed;
+                file.ProcessingStatus = FileProcessingStatus.NotRequired;
 
                 file.ProcessingCompletedAt = DateTime.UtcNow;
+
+                file.ProcessingError = null;
 
                 await _unitOfWork.SaveChangesAsync();
 
@@ -63,15 +66,18 @@ namespace chatbot.Ef.Services.Media
 
             file.ProcessingStartedAt = DateTime.UtcNow;
 
+            file.ProcessingCompletedAt = null;
+
             file.ProcessingError = null;
 
             await _unitOfWork.SaveChangesAsync();
 
             try
             {
-                await using var stream = await _storageService.DownloadAsync(file.StorageKey, cancellationToken);
+                await using var stream = await _storageService.DownloadAsync(file.StorageKey,file.Provider,cancellationToken)
+                ?? throw new FileNotFoundException($"Stored file '{file.Id}' was not found.");
 
-                var processor = _processorFactory.GetProcessor(file.Category);
+                var processor = _processorFactory.GetProcessor(file.MediaType);
 
                 var result = await processor.ProcessAsync(stream, file.ContentType, cancellationToken);
 
@@ -104,21 +110,9 @@ namespace chatbot.Ef.Services.Media
             }
             catch (Exception ex)
             {
-                file.ProcessingStatus =FileProcessingStatus.Failed;
-
-                file.ProcessingError =ex.Message;
-
-                try
-                {
-                    await _unitOfWork.SaveChangesAsync();
-                }
-                catch (Exception saveException)
-                {
-                    _logger.LogError(saveException, "Failed to save processing failure for file {FileId}.", file.Id);
-                }
+                await MarkAsFailedAsync(file, ex);
 
                 throw;
-                
             }
         }
 
@@ -130,15 +124,25 @@ namespace chatbot.Ef.Services.Media
                 return;
 
             var file =voiceNote.File;
+            if (file.IsDeleted || file.IsPhysicallyDeleted)
+            {
+                return;
+            }
 
             if (file.ProcessingStatus == FileProcessingStatus.Completed)
             {
                 return;
             }
+            if (file.MediaType != MediaType.Audio)
+            {
+                throw new InvalidOperationException("Voice note file must be an audio file.");
+            }
 
             file.ProcessingStatus =FileProcessingStatus.Processing;
 
             file.ProcessingStartedAt = DateTime.UtcNow;
+
+            file.ProcessingCompletedAt = null;
 
             file.ProcessingError = null;
 
@@ -146,22 +150,23 @@ namespace chatbot.Ef.Services.Media
 
             try
             {
-                await using var stream = await _storageService.DownloadAsync( file.StorageKey,cancellationToken);
+                await using var stream = await _storageService.DownloadAsync(file.StorageKey, file.Provider, cancellationToken )
+                ?? throw new FileNotFoundException($"Voice file '{file.Id}' was not found.");
 
-                var processor = _processorFactory.GetProcessor( FileCategory.Audio);
+                var processor = _processorFactory.GetProcessor(MediaType.Audio);
+
 
                 var result =await processor.ProcessAsync(stream,file.ContentType,cancellationToken);
 
                 var duration = result.DurationSeconds ?? 0;
-
+                // Exact metadata
                 file.DurationSeconds = duration;
 
-                voiceNote.DurationSeconds = duration;
+                // VoiceNote entity currently uses int
+                voiceNote.DurationSeconds = (int)Math.Round(duration, MidpointRounding.AwayFromZero);
 
-                voiceNote.Waveform = JsonSerializer.Serialize(
-                        result.Waveform ?? new List<double>());
+                voiceNote.Waveform = JsonSerializer.Serialize(result.Waveform ?? new List<double>());
 
-                file.DurationSeconds =result.DurationSeconds;
 
                 file.ProcessingStatus =FileProcessingStatus.Completed;
 
@@ -175,32 +180,23 @@ namespace chatbot.Ef.Services.Media
             }
             catch (Exception ex)
             {
-                file.ProcessingStatus =FileProcessingStatus.Failed;
-
-                file.ProcessingError = ex.Message;
-
-
-                try
-                {
-                    await _unitOfWork.SaveChangesAsync();
-                }
-                catch (Exception saveException)
-                {
-                    _logger.LogError( saveException, "Failed to save voice processing failure for {VoiceNoteId}.",voiceNoteId);
-                }
+                await MarkAsFailedAsync(file, ex);
 
                 throw;
             }
         }
-
-        private async Task CreateThumbnailAsync(StoredFile originalFile,MediaProcessingResultDto result,CancellationToken cancellationToken)
+        //thumbnail
+        
+        private async Task CreateThumbnailAsync(StoredFile originalFile, MediaProcessingResultDto result, CancellationToken cancellationToken)
         {
-            if (result.ThumbnailStream == null)
+            if (result.ThumbnailStream is null)
+            {
                 return;
+            }
 
+            // Hangfire retry idempotency
             if (originalFile.ThumbnailFileId.HasValue)
             {
-                // Important for Hangfire retries.
                 return;
             }
 
@@ -209,47 +205,52 @@ namespace chatbot.Ef.Services.Media
                 result.ThumbnailStream.Position = 0;
             }
 
-            var fileName =
-                $"{Guid.NewGuid():N}.jpg";
-
-            var upload =await _storageService.UploadAsync(
-                    result.ThumbnailStream,fileName,result.ThumbnailContentType
-                        ?? "image/jpeg",$"messages/thumbnails/{DateTime.UtcNow:yyyy/MM}",
-                    cancellationToken);
-
-            var thumbnail =new StoredFile
-                {
-                    Id = Guid.NewGuid(),
-
-                    OriginalFileName =fileName,
-
-                    StoredFileName =fileName,
-
-                    Extension =".jpg",
-
-                    ContentType =result.ThumbnailContentType ?? "image/jpeg",
-
-                    FileSize =result.ThumbnailStream.CanSeek
-                            ? result.ThumbnailStream.Length : 0,
-
-                    Category =FileCategory.Image,
-
-                    Provider =upload.Provider,
-
-                    StorageKey =upload.StorageKey,
-
-                    CreatedAt =DateTime.UtcNow,
-
-                    ProcessingStatus = FileProcessingStatus.Completed,
-
-                    ProcessingCompletedAt =DateTime.UtcNow
-                };
-
-            await _unitOfWork.StoredFiles.AddAsync(thumbnail );
+            var thumbnail = await _storageService
+                    .UploadGeneratedAsync(
+                        result.ThumbnailStream,
+                        $"{Guid.NewGuid():N}.jpg",
+                        result.ThumbnailContentType
+                            ?? "image/jpeg",
+                        FileCategory.Thumbnail,
+                        MediaType.Image,
+                        originalFile.UploadedById,
+                        cancellationToken);
 
             originalFile.ThumbnailFileId = thumbnail.Id;
 
             originalFile.ThumbnailFile = thumbnail;
+        }
+
+        //failed processing
+        private async Task MarkAsFailedAsync(StoredFile file, Exception exception)
+        {
+            file.ProcessingStatus = FileProcessingStatus.Failed;
+
+            file.ProcessingCompletedAt = null;
+
+            file.ProcessingError = TruncateError(exception.Message);
+
+            try
+            {
+                await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Exception saveException)
+            {
+                _logger.LogError(saveException, "Failed to save processing failure for file {FileId}.", file.Id);
+            }
+        }
+
+
+        private static string TruncateError(string error)
+        {
+            const int maxLength = 2000;
+
+            if (string.IsNullOrWhiteSpace(error))
+            {
+                return "Unknown media processing error.";
+            }
+
+            return error.Length <= maxLength ? error : error[..maxLength];
         }
     }
 }
