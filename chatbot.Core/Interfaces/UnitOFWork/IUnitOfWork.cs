@@ -33,9 +33,13 @@ namespace chatbot.Core.Interfaces.UnitOFWork
         IGroupInviteRepository GroupInvite { get; }
         IGroupRepository Groups { get; }
 
-        IMessageAttachmentRepository messageAttachments { get; }
+        IMessageAttachmentRepository MessageAttachments { get; }
+        public IOutboxRepository OutboxMessages { get; }
+
+        public IProcessedEventRepository ProcessedEvents { get; }
 
         Task<int> SaveChangesAsync();
+        Task<int> SaveChangesAsync(CancellationToken cancellationToken);
         Task BeginTransactionAsync();
         Task CommitAsync();
         Task RollbackAsync();

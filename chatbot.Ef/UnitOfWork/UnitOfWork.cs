@@ -50,7 +50,11 @@ namespace chatbot.Ef.UnitOfWork
 
         public IGroupRepository Groups { get; private set; }
 
-        public IMessageAttachmentRepository messageAttachments { get; private set; }
+        public IMessageAttachmentRepository MessageAttachments { get; private set; }
+
+        public IOutboxRepository OutboxMessages { get; }
+
+        public IProcessedEventRepository ProcessedEvents { get; }
 
         public UnitOfWork(ApplicationDbContext _context, UserManager<ApplicationUser> _userManager)
         {
@@ -77,7 +81,9 @@ namespace chatbot.Ef.UnitOfWork
             this.ConversationMember = new ConversationMemberRepository(context);
             this.GroupInvite = new GroupInviteRepository(context);
             this.Groups = new GroupRepository(context);
-            this.messageAttachments = new MessageAttachmentRepository(context);
+            this.MessageAttachments = new MessageAttachmentRepository(context);
+            this.OutboxMessages = new OutboxRepository(context);
+            this.ProcessedEvents = new ProcessedEventRepository(context);
         }
 
         public void Dispose()
@@ -113,6 +119,11 @@ namespace chatbot.Ef.UnitOfWork
                 return;
             }
             await transaction.RollbackAsync();
+        }
+
+        public async Task<int> SaveChangesAsync(CancellationToken cancellationToken)
+        {
+            return await context.SaveChangesAsync(cancellationToken);
         }
     }
 }

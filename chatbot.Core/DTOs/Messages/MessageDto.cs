@@ -37,10 +37,7 @@ namespace chatbot.Core.DTOs.Messages
 
 
         // Reply
-        public Guid? ReplyToMessageId { get; set; }
-
-        public ReplyPreviewDto? ReplyToMessage { get; set; }
-
+        public ReplyPreviewDto? ReplyTo { get; set; }
 
         // Forward
         public bool IsForwarded { get; set; }

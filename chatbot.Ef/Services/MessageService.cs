@@ -7,10 +7,13 @@ using AutoMapper;
 using chatbot.Core.DTOs;
 using chatbot.Core.DTOs.Messages;
 using chatbot.Core.Enums;
+using chatbot.Core.Events.Messages;
+using chatbot.Core.Exceptions;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Interfaces.Validators;
 using chatbot.Core.Models;
+using chatbot.Ef.Outbox;
 using chatbot.Ef.UnitOfWork;
 using Microsoft.AspNetCore.Http;
 
@@ -117,6 +120,38 @@ namespace chatbot.Ef.Services
             };
         }
 
+        public async Task<MessageDto> EditAsync(Guid userId, Guid messageId, EditMessageDto dto)
+        {
+            var message = await unitOfWork.Messages.GetByIdAsync(dto.MessageId);
+
+            if (message == null)
+                throw new NotFoundException("Message not found.");
+
+            if (message.SenderId != userId)
+                throw new ForbiddenException("You cannot edit this message.");
+
+            if (message.IsDeletedForEveryone)
+                throw new BadRequestException("Deleted message cannot be edited.");
+
+            message.Content = dto.Content.Trim();
+            message.IsEdited = true;
+            message.EditedAt = DateTime.UtcNow;
+
+            var @event = new MessageEditedEvent
+            (
+                MessageId: message.Id,
+                ConversationId: message.ConversationId,
+                UserId: userId,
+                Content: message.Content,
+                EditedAt: message.EditedAt.Value
+            );
+
+            await unitOfWork.OutboxMessages.AddAsync(OutboxMessageFactory.Create(@event));
+            await unitOfWork.SaveChangesAsync();
+
+            return mapper.Map<MessageDto>(message);
+        }
+
         public async Task<PagedResultDto<MessageDto>> GetMessagesAsyns(Guid userId, Guid conversationId, int page = 1, int pageSize = 20)
         {
             if (page < 1)
@@ -209,8 +244,7 @@ namespace chatbot.Ef.Services
                 Content = message.Content,
                 MessageType = message.MessageType,
                 CreatedAt = message.SendAt,
-                ReplyToMessageId = original.Id,
-                ReplyToMessage =
+                ReplyTo =
                 new ReplyPreviewDto
                 {
                     Id = original.Id,

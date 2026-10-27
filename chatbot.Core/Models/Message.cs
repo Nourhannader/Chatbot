@@ -51,9 +51,10 @@ namespace chatbot.Core.Models
 
         public DateTime? EditedAt { get; set; }
 
+        public DateTime? UpdatedAt { get; set; }
+
         // Time
-        public DateTime SendAt { get; set; }
-            = DateTime.UtcNow;
+        public DateTime SendAt { get; set; } = DateTime.UtcNow;
 
         // Delete For Everyone Feature
         public bool IsDeletedForEveryone { get; set; } = false;

@@ -17,6 +17,8 @@ namespace chatbot.Core.Interfaces.Services
 
         Task<MessageDto> ReplyAsync(Guid senderId, ReplyMessageDto dto);
         Task<MessageDto> SendFileAsync(Guid senderId,SendFileDto filedto);
+
+        Task<MessageDto> EditAsync(Guid userId,Guid messageId, EditMessageDto dto);
         Task<DeleteMessageResultDto> DeleteForEveryoneAsync(Guid messageId, Guid userId);
 
         Task<DeleteForMeResultDto> DeleteForMeAsync(Guid messageId, Guid userId);

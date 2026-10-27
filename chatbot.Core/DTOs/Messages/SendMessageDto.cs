@@ -19,5 +19,7 @@ namespace chatbot.Core.DTOs.Messages
 
         // Optional: message is a reply
         public Guid? ReplyToMessageId { get; set; }
+
+        public DateTime? SendAt { get; set; }
     }
 }

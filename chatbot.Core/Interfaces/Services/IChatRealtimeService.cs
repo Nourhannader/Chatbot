@@ -13,7 +13,10 @@ namespace chatbot.Core.Interfaces.Services
     public interface IChatRealtimeService
     {
         Task MediaProcessedAsync(Guid conversationId, Guid messageId, CancellationToken cancellationToken);
+        Task MessageCreatedAsync(Guid conversationId, object value, CancellationToken cancellationToken);
         Task MessageSentAsync(Guid conversationId, MessageDto resultDto, CancellationToken cancellationToken);
+        Task SendToConversationAsync(Guid conversationId, string v, object value, CancellationToken cancellationToken);
+        Task SendToUserAsync(Guid userId, string v, object payload, CancellationToken cancellationToken);
         Task VoiceNoteProcessedAsync(Guid conversationId, Guid messageId, CancellationToken cancellationToken);
 
         public interface IChatRealtimeService
