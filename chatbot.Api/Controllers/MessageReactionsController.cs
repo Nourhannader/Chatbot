@@ -10,12 +10,12 @@ namespace chatbot.Api.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class MessageReactionsController(IMessageReactionService reactionService) : ControllerBase
+    public class MessageReactionsController(IMessageReactionService reactionService,ICurrentUser currentUser) : ControllerBase
     {
         [HttpGet("{messageId:guid}")]
         public async Task<ActionResult<List<MessageReactionDto>>> GetReactions(Guid messageId)
         {
-            var userId = User.GetUserId();
+            var userId = currentUser.UserId;
 
             var result = await reactionService.GetByMessageIdAsync(userId, messageId);
 
@@ -25,7 +25,7 @@ namespace chatbot.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<ReactionResultDto>> ToggleReaction([FromBody] AddReactionDto dto)
         {
-            var userId = User.GetUserId();
+            var userId = currentUser.UserId;
 
             var result = await reactionService.ToggleReactionAsync(userId, dto);
 

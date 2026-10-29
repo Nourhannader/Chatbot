@@ -22,7 +22,7 @@ namespace chatbot.Core.DTOs.Messages
 
         public bool IsDeletedForEveryone { get; set; }
 
-        public List<FileMetadataDto> Files { get; set; }
-            = new();
+        //public List<FileMetadataDto> Files { get; set; }
+         //   = new();
     }
 }

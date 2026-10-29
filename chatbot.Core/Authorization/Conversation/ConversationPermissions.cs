@@ -19,6 +19,10 @@ namespace chatbot.Core.Authorization.Conversation
 
         public const string Reply ="conversation.message.reply";
 
+        public const string ForwardMessage = "conversation.message.forward";
+
+        public const string EditMessage = "conversation.message.Edit";
+
         public const string React = "conversation.message.react";
 
         public const string UploadFile ="conversation.file.upload";

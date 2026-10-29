@@ -6,10 +6,12 @@ using System.Threading.Tasks;
 using AutoMapper;
 using chatbot.Core.DTOs.MessageStatus;
 using chatbot.Core.Enums;
+using chatbot.Core.Events.Messages;
 using chatbot.Core.Exceptions;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Models;
+using chatbot.Ef.Outbox;
 using chatbot.Ef.UnitOfWork;
 using MimeKit;
 using static chatbot.Core.Interfaces.Services.IChatRealtimeService;
@@ -17,7 +19,7 @@ using IChatRealtimeService = chatbot.Core.Interfaces.Services.IChatRealtimeServi
 
 namespace chatbot.Ef.Services
 {
-    public class MessageStatusService(IUnitOfWork unitOfWork,IChatRealtimeService chatRealtimeService,IMapper mapper) : IMessageStatusService
+    public class MessageStatusService(IUnitOfWork unitOfWork,IMapper mapper,OutboxMessageFactory outboxMessageFactory) : IMessageStatusService
     {
         public async Task CreateRecipientsAsync(Message message)
         {
@@ -43,8 +45,11 @@ namespace chatbot.Ef.Services
         public async Task<List<MessageRecipientStatusDto>> GetReceiptsAsync(Guid messageId, Guid currentUserId)
         {
             var message = await unitOfWork.Messages.GetByIdAsync(messageId);
-            if (message == null)
-                throw new NotFoundException("Message not found.");
+            if (message is null ||  message.IsDeletedForEveryone)
+            {
+                throw new NotFoundException(
+                    "Message not found.");
+            }
 
             var isMember = await unitOfWork.ConversationMember
                     .IsActiveMemberAsync(message.ConversationId, currentUserId);
@@ -52,6 +57,13 @@ namespace chatbot.Ef.Services
             if (!isMember)
             {
                 throw new ForbiddenException("You are not a member of this conversation.");
+            }
+
+            var deletedForUser = await unitOfWork.Messages.IsDeletedForUserAsync(messageId,currentUserId);
+
+            if (deletedForUser)
+            {
+                throw new NotFoundException("Message not found.");
             }
 
             var recipients = await unitOfWork.MessageStatuses
@@ -65,7 +77,7 @@ namespace chatbot.Ef.Services
         {
             var message = await unitOfWork.Messages.GetByIdAsync(messageId);
 
-            if (message == null)
+            if (message is null || message.IsDeletedForEveryone)
             {
                 throw new NotFoundException("Message not found.");
             }
@@ -78,8 +90,15 @@ namespace chatbot.Ef.Services
             {
                 throw new ForbiddenException("You are not a member of this conversation.");
             }
-            var summary = await unitOfWork.MessageStatuses
-                .GetSummaryAsync(messageId);
+
+            var deletedForUser = await unitOfWork.Messages.IsDeletedForUserAsync(messageId, currentUserId);
+
+            if (deletedForUser)
+            {
+                throw new NotFoundException("Message not found.");
+            }
+
+            var summary = await unitOfWork.MessageStatuses.GetSummaryAsync(messageId);
 
             return summary ?? new MessageStatusSummaryDto
             {
@@ -115,24 +134,12 @@ namespace chatbot.Ef.Services
 
             recipient.Status = MessageStatus.Delivered;
 
-            var userName = recipient.Recipient?.UserName;
+            var @event =new MessageRecipientStatusChangedEvent(MessageId: recipient.MessageId, ConversationId:recipient.Message.ConversationId,
+           UserId: recipient.RecipientId,Status: MessageStatus.Delivered, StatusChangedAt:now);
 
-
+            await unitOfWork.OutboxMessages.AddAsync( outboxMessageFactory.Create(@event));
             await unitOfWork.SaveChangesAsync();
-
-            var dto = new MessageRecipientStatusDto
-            {
-                MessageId = recipient.MessageId,
-                UserId = recipient.RecipientId,
-                UserName=userName,
-                Status = MessageStatus.Delivered,
-                SentAt = recipient.SentAt,
-                DeliveredAt = recipient.DeliveredAt,
-                ReadAt = recipient.ReadAt
-            };
-
-            await chatRealtimeService
-                .MessageDeliveredAsync(recipient.Message.ConversationId, dto);
+            
         }
 
         public async Task MarkAsReadAsync(Guid userId, Guid conversationId, Guid lastMessageId)
@@ -166,16 +173,13 @@ namespace chatbot.Ef.Services
                 recipient.Status =MessageStatus.Read;
             }
 
-            await unitOfWork.SaveChangesAsync();
+            //outbox
+            var @event = new MessagesReadEvent( ConversationId:conversationId, UserId: userId,
+            LastMessageId: lastMessageId, ReadAt: now);
 
-            await chatRealtimeService.MessagesReadAsync(conversationId,
-                    new MessagesReadEventDto
-                    {
-                        UserId = userId,
-                        ConversationId = conversationId,
-                        LastMessageId = lastMessageId,
-                        ReadAt = now
-                    });
+            await unitOfWork.OutboxMessages.AddAsync(outboxMessageFactory.Create(@event));
+
+            await unitOfWork.SaveChangesAsync();
 
         }
     }

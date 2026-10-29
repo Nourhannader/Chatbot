@@ -6,23 +6,20 @@ using System.Threading.Tasks;
 using chatbot.Core.Events.Messages;
 using chatbot.Core.Interfaces.Events;
 using chatbot.Core.Interfaces.Services;
+using Microsoft.Extensions.Logging;
 
 namespace chatbot.Ef.Events.Handlers.Messages
 {
-    public sealed class MessageForwardedSignalRHandler(IChatRealtimeService realtimeService) : IEventHandler<MessageForwardedEvent>
+    public sealed class MessageForwardedSignalRHandler(ILogger<MessageForwardedSignalRHandler> logger) : IEventHandler<MessageForwardedEvent>
     {
-        public async Task HandleAsync( MessageForwardedEvent @event, CancellationToken cancellationToken = default)
+        public async Task HandleAsync(MessageForwardedEvent @event, CancellationToken cancellationToken = default)
         {
-            await realtimeService.SendToConversationAsync( @event.TargetConversationId,"MessageForwarded",
-                new
-                {
-                    @event.MessageId,
-                    @event.OriginalMessageId,
-                    @event.TargetConversationId,
-                    @event.ForwardedByUserId,
-                    @event.ForwardedAt
-                },
-                cancellationToken);
+            logger.LogInformation(
+            "Message {MessageId} was forwarded from conversation {SourceConversationId} to {TargetConversationId} by user {UserId}.",
+            @event.MessageId,
+            @event.SourceConversationId,
+            @event.TargetConversationId,
+            @event.ForwardedByUserId);
         }
     }
 }

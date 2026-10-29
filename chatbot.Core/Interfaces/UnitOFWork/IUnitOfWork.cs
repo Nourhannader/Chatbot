@@ -34,9 +34,10 @@ namespace chatbot.Core.Interfaces.UnitOFWork
         IGroupRepository Groups { get; }
 
         IMessageAttachmentRepository MessageAttachments { get; }
-        public IOutboxRepository OutboxMessages { get; }
+        IMessageVersionRepository MessageVersions { get; }
+        IOutboxRepository OutboxMessages { get; }
 
-        public IProcessedEventRepository ProcessedEvents { get; }
+        IProcessedEventRepository ProcessedEvents { get; }
 
         Task<int> SaveChangesAsync();
         Task<int> SaveChangesAsync(CancellationToken cancellationToken);

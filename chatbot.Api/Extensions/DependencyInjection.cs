@@ -51,6 +51,7 @@ namespace chatbot.Api.Extensions
     {
         public static IServiceCollection AddApplicationServices(this IServiceCollection Services,IConfiguration Configuration)
         {
+            Services.AddHttpContextAccessor();
             
             Services.Configure<MailSettings>(Configuration.GetSection("MailSettings"));
             Services.AddIdentity<ApplicationUser, IdentityRole>()
@@ -112,6 +113,7 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IVideoProcessorService,VideoProcessorService>();
             Services.AddScoped< IAudioProcessorService,AudioProcessorService>();
             Services.AddScoped<IFileProcessorFactory,FileProcessorFactory>();
+            Services.AddScoped<ICurrentUser, CurrentUser>();
 
 
             //outbox

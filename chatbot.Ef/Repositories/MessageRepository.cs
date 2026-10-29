@@ -39,6 +39,7 @@ namespace chatbot.Ef.Repositories
         {
             return await context.Messages
                 .Include(m => m.Sender)
+                .Include(m => m.Versions.Where(v => v.MessageId == id))
                 .Include(m => m.Reactions)
                     .ThenInclude(r => r.User)
                 .Include(m => m.RecipientStatuses)
@@ -145,7 +146,7 @@ namespace chatbot.Ef.Repositories
                     .ThenInclude(r => r!.Sender)
                 .Include(m => m.RecipientStatuses)
                     .ThenInclude(rs => rs.Recipient)
-                .FirstOrDefaultAsync(m => m.Id == messageId);
+                .FirstOrDefaultAsync(m => m.Id == messageId );
         }
 
         public async Task<int> CountByConversationAsync(Guid conversationId,Guid userId)

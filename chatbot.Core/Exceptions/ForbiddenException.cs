@@ -8,6 +8,10 @@ namespace chatbot.Core.Exceptions
 {
     public class ForbiddenException:AppException
     {
+        public ForbiddenException()
+        {
+        }
+
         public ForbiddenException(string message):base(message)
         {
             

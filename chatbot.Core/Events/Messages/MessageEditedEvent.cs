@@ -9,6 +9,6 @@ using chatbot.Core.Interfaces.Events;
 namespace chatbot.Core.Events.Messages
 {
     public sealed record MessageEditedEvent(Guid MessageId, Guid ConversationId,
-        Guid UserId,string Content, DateTime EditedAt) : DomainEvent;
+        Guid UserId,string Content, int Version,DateTime EditedAt) : DomainEvent;
     
 }

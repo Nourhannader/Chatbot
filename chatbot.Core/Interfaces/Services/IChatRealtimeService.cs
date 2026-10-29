@@ -12,15 +12,6 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IChatRealtimeService
     {
-        Task MediaProcessedAsync(Guid conversationId, Guid messageId, CancellationToken cancellationToken);
-        Task MessageCreatedAsync(Guid conversationId, object value, CancellationToken cancellationToken);
-        Task MessageSentAsync(Guid conversationId, MessageDto resultDto, CancellationToken cancellationToken);
-        Task SendToConversationAsync(Guid conversationId, string v, object value, CancellationToken cancellationToken);
-        Task SendToUserAsync(Guid userId, string v, object payload, CancellationToken cancellationToken);
-        Task VoiceNoteProcessedAsync(Guid conversationId, Guid messageId, CancellationToken cancellationToken);
-
-        public interface IChatRealtimeService
-        {
             // =========================
             // Conversation
             // =========================
@@ -67,12 +58,11 @@ namespace chatbot.Core.Interfaces.Services
 
             Task MessageEditedAsync(Guid conversationId,MessageDto message);
 
-            Task MessageDeletedAsync(Guid conversationId, Guid messageId);
+            Task MessageDeletedAsync(Guid conversationId,string title,DeleteMessageResultDto dto);
 
-            Task MessageReactionAddedAsync(Guid conversationId,Guid messageId, MessageReactionDto reaction);
+            Task MessageReactionChangedAsync(Guid conversationId,chatbot.Core.DTOs.Reactions.ReactionResultDto dto);
 
-            Task MessageReactionRemovedAsync( Guid conversationId, Guid messageId,Guid userId);
-
+            
 
             // =========================
             // Read
@@ -83,6 +73,13 @@ namespace chatbot.Core.Interfaces.Services
             Task MessagesReadAsync(Guid conversationId, MessagesReadEventDto messagesReadEventDto);
             Task NewMessageAsync(Guid conversationId, MessageDto message);
 
-        }
+
+        //======================
+        //Media
+        //======================
+        Task MediaProcessedAsync(Guid conversationId, Guid messageId, CancellationToken cancellationToken);
+        Task VoiceNoteProcessedAsync(Guid conversationId, Guid messageId, CancellationToken cancellationToken);
+        Task MessageDeletedForUserAsync(Guid userId, MessageDeletedForUserDto dto);
     }
 }
+

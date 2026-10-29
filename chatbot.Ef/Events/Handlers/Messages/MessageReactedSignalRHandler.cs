@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.DTOs.Reactions;
 using chatbot.Core.Events.Messages;
 using chatbot.Core.Interfaces.Events;
 using chatbot.Core.Interfaces.Services;
@@ -13,17 +14,17 @@ namespace chatbot.Ef.Events.Handlers.Messages
     {
         public async Task HandleAsync( MessageReactedEvent @event, CancellationToken cancellationToken = default)
         {
-            await realtimeService.SendToConversationAsync( @event.ConversationId, "MessageReactionChanged",
-                new
-                {
-                    @event.MessageId,
-                    @event.ConversationId,
-                    @event.UserId,
-                    @event.ReactionType,
-                    @event.IsRemoved,
-                    @event.ReactedAt
-                },
-                cancellationToken);
+            var dto = new ReactionResultDto
+            {
+                MessageId = @event.MessageId,
+                ConversationId = @event.ConversationId,
+                UserId = @event.UserId,
+                ReactionType = @event.ReactionType,
+                IsRemoved = @event.IsRemoved,
+                ReactedAt = @event.ReactedAt
+            };
+
+            await realtimeService.MessageReactionChangedAsync(@event.ConversationId, dto);
         }
     }
 }

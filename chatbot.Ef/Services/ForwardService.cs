@@ -1,105 +1,151 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
+using chatbot.Core.Authorization.Conversation;
 using chatbot.Core.DTOs.Messages;
+using chatbot.Core.Events.Messages;
+using chatbot.Core.Exceptions;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Models;
+using chatbot.Ef.Outbox;
+using chatbot.Ef.UnitOfWork;
+using Microsoft.AspNetCore.Authorization;
 
 namespace chatbot.Ef.Services
 {
-    public class ForwardService(IUnitOfWork unitOfWork,IMapper mapper) : IForwardService
+    public class ForwardService(IUnitOfWork unitOfWork, IMapper mapper, OutboxMessageFactory outboxMessageFactory, IMessageStatusService messageStatusService,
+        IAuthorizationService authorizationService, ICurrentUser CurrentUser) : IForwardService
     {
         public async Task<List<MessageDto>> ForwardAsync(Guid senderId, ForwardMessageDto dto)
         {
-            var original = await unitOfWork.Messages.GetWithDetailsAsync(dto.MessageId);
-            if(original ==null || original.IsDeletedForEveryone)
+            //  Validate source message
+            var source = await unitOfWork.Messages.GetWithDetailsAsync(dto.MessageId);
+            if (source == null || source.IsDeletedForEveryone)
                 throw new KeyNotFoundException("Message not found.");
 
-            var sourceMember = await unitOfWork.ConversationMember
-                .ExistsAsync(original.ConversationId, senderId);
+            // Authorization on source message
+            var sourceResource = new ConversationResource(source.ConversationId, messageId: source.Id);
+            var sourceAuth = await authorizationService.AuthorizeAsync(CurrentUser.Principal, sourceResource, ConversationPermissions.ForwardMessage);
 
-            if (!sourceMember)
-            {
-                throw new UnauthorizedAccessException("You do not have access to the original message.");
-            }
+            if (!sourceAuth.Succeeded)
+                throw new ForbiddenException("You cannot forward this message.");
 
-            var deletedForUser = await unitOfWork.Messages
-                .IsDeletedForUserAsync(original.Id, senderId);
+            //check delete for Me
+            var deletedForUser =
+            await unitOfWork.Messages.IsDeletedForUserAsync(source.Id, senderId);
 
             if (deletedForUser)
             {
-                throw new KeyNotFoundException("Message not found.");
+                throw new NotFoundException("Message not found.");
             }
 
-            //get valid target conversations 
-            var validConversationIds = await unitOfWork.ForwardMessages
-                .GetValidConversationIdsAsync(senderId, dto.ConversationIds);
+            // Validate target conversations
 
+            var conversationIds = dto.ConversationIds
+                   .Where(x => x != Guid.Empty)
+                   .Distinct()
+                   .ToList();
 
-            if (validConversationIds.Count == 0)
+            if (conversationIds.Count == 0)
             {
-                throw new InvalidOperationException("No valid target conversations were found.");
+                throw new BadRequestException("At least one target conversation is required.");
             }
 
-            //create forwarded messages
 
-            var forwardedMessages = new List<Message>();
-            foreach (var conversationId in validConversationIds)
+            var result = new List<Message>();
+
+            var originalMessageId = source.IsForwarded ? source.OriginalMessageId ?? source.Id : source.Id;
+
+            //create forward messages
+
+            foreach (var conversationId in conversationIds)
             {
-                // THIS is forwardedMessage
-                var forwardedMessage =
-                    new Message
-                    {
-                        Id = Guid.NewGuid(),
+                var resource = new ConversationResource(conversationId);
 
-                        SenderId =senderId,
+                var authorizationResult =await authorizationService.AuthorizeAsync( CurrentUser.Principal, resource, ConversationPermissions.SendMessage);
 
-                        ConversationId = conversationId,
-
-                        Content =original.Content,
-
-                        MessageType = original.MessageType,
-
-                        OriginalMessageId =original.Id,
-
-                        IsForwarded = true,
-
-                        SendAt = DateTime.UtcNow
-                    };
-
-
-                // Copy attachment REFERENCES
-                foreach (var attachment in original.Attachments)
+                if (!authorizationResult.Succeeded)
                 {
-                    forwardedMessage.Attachments.Add(
-                        new MessageAttachment
-                        {
-                            Id = Guid.NewGuid(),
-
-                            StoredFileId =attachment.StoredFileId,
-
-                            Order =attachment.Order,
-
-                            Caption =attachment.Caption
-                        });
+                    throw new ForbiddenException( $"Cannot send messages to conversation {conversationId}.");
                 }
 
+                var now = DateTime.UtcNow;
 
-                //  Add to collection
-                forwardedMessages.Add(forwardedMessage);
+                var forwarded = new Message
+                {
+                    Id = Guid.NewGuid(),
+                    SenderId =senderId,
+                    ConversationId =conversationId,
+                    Content = source.Content,
+                    MessageType = source.MessageType,
+                    IsForwarded =true,
+                    OriginalMessageId = originalMessageId,
+                    SendAt =now
+                };
+
+
+                CopyAttachments( source,forwarded);
+
+                result.Add(forwarded);
+            }
+            //  Add all forwarded messages
+
+            await unitOfWork.ForwardMessages.AddRangeAsync(result);
+
+            // Recipients + Outbox Events
+
+            foreach (var forwarded in result)
+            {
+                await messageStatusService.CreateRecipientsAsync(forwarded);
+
+                var messageCreatedEvent =new MessageCreatedEvent(MessageId:forwarded.Id,ConversationId: forwarded.ConversationId,
+                        SenderId: forwarded.SenderId, Content:forwarded.Content,MessageType: forwarded.MessageType, ReplyToMessageId:null,SentAt:forwarded.SendAt);
+
+                await unitOfWork.OutboxMessages.AddAsync( outboxMessageFactory.Create(messageCreatedEvent));
+
+                // Forward-specific event.
+                var messageForwardedEvent = new MessageForwardedEvent(MessageId:forwarded.Id,OriginalMessageId: originalMessageId,
+                        SourceConversationId:source.ConversationId, TargetConversationId:forwarded.ConversationId, ForwardedByUserId:senderId,ForwardedAt:forwarded.SendAt);
+
+                await unitOfWork.OutboxMessages.AddAsync(outboxMessageFactory.Create(messageForwardedEvent));
             }
 
+            // ONE COMMIT
+            //
+            // Forwarded Messages
+            // Attachments
+            // Recipient Statuses
+            // MessageCreatedEvents
+            // MessageForwardedEvents
+            //
+            // All saved atomically.
+            // ==========================================
 
-            await unitOfWork.ForwardMessages.AddRangeAsync(forwardedMessages);
             await unitOfWork.SaveChangesAsync();
 
-       
-            return mapper.Map<List<MessageDto>>(forwardedMessages);
-
+            return mapper.Map<List<MessageDto>>(result);
         }
+
+        private static void CopyAttachments( Message source,Message forwarded)
+        {
+            foreach (var attachment in source.Attachments)
+            {
+                forwarded.Attachments.Add(
+                    new MessageAttachment
+                    {
+                        Id = Guid.NewGuid(),
+                        StoredFileId =attachment.StoredFileId,
+                        Order =attachment.Order
+                    });
+            }
+        }
+
     }
 }
+
+ 

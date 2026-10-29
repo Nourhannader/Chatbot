@@ -15,7 +15,7 @@ namespace chatbot.Core.Interfaces.Services
         public Task<MessageDto> SendMessageAsync(Guid senderId,SendMessageDto dto,CancellationToken cancellationToken = default);
         Task<PagedResultDto<MessageDto>> GetMessagesAsyns(Guid userId,Guid conversationId, int page=1, int pageSize=20);
 
-        Task<MessageDto> ReplyAsync(Guid senderId, ReplyMessageDto dto);
+        //Task<MessageDto> ReplyAsync(Guid senderId, ReplyMessageDto dto);
         Task<MessageDto> SendFileAsync(Guid senderId,SendFileDto filedto);
 
         Task<MessageDto> EditAsync(Guid userId,Guid messageId, EditMessageDto dto);

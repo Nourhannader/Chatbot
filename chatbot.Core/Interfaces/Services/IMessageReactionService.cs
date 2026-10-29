@@ -11,7 +11,7 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IMessageReactionService
     {
-        Task<ReactionResultDto> ToggleReactionAsync(Guid userId, AddReactionDto dto);
+        Task<MessageReactionDto> ToggleReactionAsync(Guid userId, AddReactionDto dto);
 
         Task<List<MessageReactionDto>> GetByMessageIdAsync(Guid userId,Guid messageId);
 

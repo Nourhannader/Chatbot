@@ -3,34 +3,40 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.DTOs.Messages;
 using chatbot.Core.Enums;
 using chatbot.Core.Events.Messages;
 using chatbot.Core.Interfaces.Events;
 using chatbot.Core.Interfaces.Services;
+using MimeKit;
 
 namespace chatbot.Ef.Events.Handlers.Messages
 {
-    public sealed class MessageDeletedSignalRHandler( IChatRealtimeService realtimeService): IEventHandler<MessageDeletedEvent>
+    public sealed class MessageDeletedSignalRHandler(IChatRealtimeService realtimeService) : IEventHandler<MessageDeletedEvent>
     {
-        public async Task HandleAsync(MessageDeletedEvent @event,CancellationToken cancellationToken = default)
+        public async Task HandleAsync(MessageDeletedEvent @event, CancellationToken cancellationToken = default)
         {
-            var payload = new
-            {
-                @event.MessageId,
-                @event.ConversationId,
-                @event.UserId,
-                @event.DeleteType,
-                @event.DeletedAt
-            };
-
             if (@event.DeleteType == MessageDeleteType.ForEveryone)
             {
-                await realtimeService.SendToConversationAsync( @event.ConversationId,"MessageDeleted", payload, cancellationToken);
+                var deleteMessageDto = new DeleteMessageResultDto
+                {
+                    MessageId = @event.MessageId,
+                    ConversationId = @event.ConversationId,
+                    DeletedByUserId = @event.UserId,
+                    DeletedAt = @event.DeletedAt
+                };
+                await realtimeService.MessageDeletedAsync(@event.ConversationId, "MessageDeleted", deleteMessageDto);
 
                 return;
             }
+            var messageDeletedForUserDto = new MessageDeletedForUserDto
+            {
+                MessageId = @event.MessageId,
+                ConversationId = @event.ConversationId,
+                DeletedAt = @event.DeletedAt
+            };
 
-            await realtimeService.SendToUserAsync(@event.UserId,"MessageDeleted",payload, cancellationToken);
+            await realtimeService.MessageDeletedForUserAsync(@event.UserId, messageDeletedForUserDto);
         }
     }
 }

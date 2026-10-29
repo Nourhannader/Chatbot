@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using chatbot.Core.Enums;
+using chatbot.Core.Events.Messages;
 
 
 namespace chatbot.Core.Models
@@ -65,10 +66,13 @@ namespace chatbot.Core.Models
 
         public Guid? OriginalMessageId { get; set; }
         public Message? OriginalMessage { get; set; }
-        //
+        //idempotency
+        public string? ClientMessageId { get; set; }
         public bool IsSystemMessage { get; set; }
 
         public SystemMessageType? SystemMessageType { get; set; }
+
+        public int Version { get; set; }
 
         //navigation property for message forwardies
         public ICollection<Message> ForwardMessages { get; set; } = new List<Message>();
@@ -83,6 +87,22 @@ namespace chatbot.Core.Models
         public ICollection<MessageRecipientStatus> RecipientStatuses { get; set; } = new List<MessageRecipientStatus>();
         public ICollection<MessageReaction> Reactions { get; set; } = new List<MessageReaction>();
         public ICollection<MessageAttachment> Attachments { get; set; } = new List<MessageAttachment>();
+
+        public ICollection<MessageVersion> Versions { get; set; } = new List<MessageVersion>();
+        public void AddDomainEvent(MessageReactedEvent messageReactedEvent)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void AddDomainEvent(MessageCreatedEvent messageCreatedEvent)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void AddDomainEvent(MessageEditedEvent messageEditedEvent)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
 

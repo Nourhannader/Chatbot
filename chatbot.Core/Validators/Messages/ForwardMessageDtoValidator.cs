@@ -9,8 +9,7 @@ using FluentValidation;
 
 namespace chatbot.Core.Validators.Messages
 {
-    public class ForwardMessageDtoValidator
-     : AbstractValidator<ForwardMessageDto>
+    public class ForwardMessageDtoValidator : AbstractValidator<ForwardMessageDto>
     {
         public ForwardMessageDtoValidator()
         {

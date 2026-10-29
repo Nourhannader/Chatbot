@@ -22,9 +22,9 @@ namespace chatbot.Core.Interfaces.Services
 
         Task<int> GetUnreadCountAsync( Guid userId);
         Task NotifyNewMessageAsync(Guid messageId, Guid conversationId, Guid senderId, CancellationToken cancellationToken);
-        Task CreateNewMessageNotificationsAsync(Guid messageId, Guid conversationId, Guid senderId, CancellationToken cancellationToken);
+       // Task CreateNewMessageNotificationsAsync(Guid messageId, Guid conversationId, Guid senderId, CancellationToken cancellationToken);
         Task CreateReactionNotificationAsync(Guid messageId, Guid userId, ReactionType reactionType, CancellationToken cancellationToken);
-        Task CreateReplyNotificationAsync(Guid messageId, Guid replyToMessageId, Guid conversationId, Guid senderId, Guid originalMessageSenderId, CancellationToken cancellationToken);
+        //Task CreateReplyNotificationAsync(Guid messageId, Guid replyToMessageId, Guid conversationId, Guid senderId, Guid originalMessageSenderId, CancellationToken cancellationToken);
         Task CreateMemberAddedNotificationAsync(Guid conversationId, Guid userId, Guid addedByUserId, CancellationToken cancellationToken);
         Task CreateMemberRemovedNotificationAsync(Guid conversationId, Guid userId, Guid value, MemberRemovalType removalType, CancellationToken cancellationToken);
         Task CreateRoleChangedNotificationAsync(Guid conversationId, Guid userId, Guid changedByUserId, ConversationRole oldRole, ConversationRole newRole, CancellationToken cancellationToken);

@@ -61,6 +61,8 @@ namespace chatbot.Ef.Data
         public DbSet<NotificationPreferences> NotificationPreferences => Set<NotificationPreferences>();
         public DbSet<GroupInvite> GroupInvites => Set<GroupInvite>();
         public DbSet<MessageAttachment> MessageAttachments => Set<MessageAttachment>();
+
+        public DbSet<MessageVersion> MessageVersions => Set<MessageVersion>();
         public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
         public DbSet<ProcessedEvent> ProcessedEvents => Set<ProcessedEvent>();

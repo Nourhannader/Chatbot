@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using chatbot.Core.DTOs;
@@ -245,8 +246,6 @@ namespace chatbot.Ef.Services
                 logger.LogError(ex,"Failed to delete old file {FileId} " +"with storage key {StorageKey}.", file.Id,file.StorageKey);
             }
         }
-
-
 
     }
 }

@@ -33,9 +33,6 @@ namespace chatbot.Core.DTOs.Messages
         // Edit
         public bool IsEdited { get; set; }
 
-        public DateTime? EditedAt { get; set; }
-
-
         // Reply
         public ReplyPreviewDto? ReplyTo { get; set; }
 
@@ -45,8 +42,6 @@ namespace chatbot.Core.DTOs.Messages
 
         // Delete For Everyone
         public bool IsDeletedForEveryone { get; set; }
-
-        public DateTime? DeletedForEveryoneAt { get; set; }
 
 
         // Encryption

@@ -56,6 +56,8 @@ namespace chatbot.Ef.UnitOfWork
 
         public IProcessedEventRepository ProcessedEvents { get; }
 
+        public IMessageVersionRepository MessageVersions { get; }
+
         public UnitOfWork(ApplicationDbContext _context, UserManager<ApplicationUser> _userManager)
         {
             this.context = _context;
@@ -84,6 +86,7 @@ namespace chatbot.Ef.UnitOfWork
             this.MessageAttachments = new MessageAttachmentRepository(context);
             this.OutboxMessages = new OutboxRepository(context);
             this.ProcessedEvents = new ProcessedEventRepository(context);
+            this.MessageVersions = new MessageVersionRepository(context);
         }
 
         public void Dispose()

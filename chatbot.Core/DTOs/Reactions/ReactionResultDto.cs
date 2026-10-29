@@ -11,10 +11,13 @@ namespace chatbot.Core.DTOs.Reactions
     {
         public Guid MessageId { get; set; }
 
+        public Guid ConversationId {  get; set; }
+
         public Guid UserId { get; set; }
 
         public ReactionType? ReactionType { get; set; }
 
         public bool IsRemoved { get; set; }
+        public DateTime ReactedAt { get; set; }
     }
 }

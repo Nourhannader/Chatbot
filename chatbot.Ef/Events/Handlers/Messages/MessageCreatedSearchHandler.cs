@@ -9,7 +9,7 @@ using chatbot.Core.Interfaces.Services;
 
 namespace chatbot.Ef.Events.Handlers.Messages
 {
-    public sealed class MessageCreatedSearchHandler(ISearchService searchService) : IEventHandler<MessageCreatedEvent>
+    public sealed class MessageCreatedSearchHandler(ISearchService searchService) : IEventHandler<MessageCreatedEvent> //IMessageSearchIndexer searchIndexer
     {
         public async Task HandleAsync(MessageCreatedEvent @event,CancellationToken cancellationToken = default)
         {

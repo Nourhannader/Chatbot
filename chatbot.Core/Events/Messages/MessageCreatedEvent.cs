@@ -13,7 +13,8 @@ namespace chatbot.Core.Events.Messages
         Guid SenderId,
         string? Content,
         MessageType MessageType,
+        Guid? ReplyToMessageId,
         DateTime SentAt
-        ):DomainEvent;
+        ) : DomainEvent;
     
 }

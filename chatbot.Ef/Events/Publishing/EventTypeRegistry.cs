@@ -30,6 +30,8 @@ namespace chatbot.Ef.Events.Publishing
 
                 ["chat.message.recipient-status-changed.v1"] = typeof(MessageRecipientStatusChangedEvent),
 
+                ["chat.message.read.v1"] =typeof(MessagesReadEvent),
+
                 ["chat.conversation.created.v1"] = typeof(ConversationCreatedEvent),
 
                 ["chat.conversation.member-added.v1"] = typeof(MemberAddedEvent),
