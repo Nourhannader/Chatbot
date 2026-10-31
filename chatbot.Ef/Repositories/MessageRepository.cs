@@ -154,5 +154,13 @@ namespace chatbot.Ef.Repositories
             return await context.Messages.CountAsync(m => m.ConversationId == conversationId && 
             !m.Deletions.Any(d => d.UserId == userId));
         }
+
+        public async Task<Message?> GetForSearchAsync(Guid messageId)
+        {
+            return await context.Messages
+              .AsNoTracking()
+              .Include(m => m.Sender)
+              .FirstOrDefaultAsync( m => m.Id == messageId);
+        }
     }
 }

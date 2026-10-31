@@ -11,6 +11,7 @@ using chatbot.Core.Helper;
 using chatbot.Core.Interfaces.Events;
 using chatbot.Core.Interfaces.Outbox;
 using chatbot.Core.Interfaces.Repositories;
+using chatbot.Core.Interfaces.Search;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.Services.Helper;
 using chatbot.Core.Interfaces.Services.Media;
@@ -28,6 +29,7 @@ using chatbot.Ef.Events.Publishing;
 using chatbot.Ef.Jobs;
 using chatbot.Ef.Outbox;
 using chatbot.Ef.Repositories;
+using chatbot.Ef.Search.Providers;
 using chatbot.Ef.Services;
 using chatbot.Ef.Services.Helper;
 using chatbot.Ef.Services.Media;
@@ -113,6 +115,7 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IVideoProcessorService,VideoProcessorService>();
             Services.AddScoped< IAudioProcessorService,AudioProcessorService>();
             Services.AddScoped<IFileProcessorFactory,FileProcessorFactory>();
+            Services.AddScoped< IMessageSearchIndex,SqlMessageSearchIndex>();
             Services.AddScoped<ICurrentUser, CurrentUser>();
 
 
@@ -146,8 +149,6 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IEventHandler<MessageReactedEvent>,MessageReactedSignalRHandler>();
 
             Services.AddScoped<IEventHandler<MessageReactedEvent>, MessageReactedNotificationHandler>();
-
-            Services.AddScoped<IEventHandler<MessageReplyCreatedEvent>, MessageReplyNotificationHandler>();
 
             Services.AddScoped<IEventHandler<MessageForwardedEvent>,MessageForwardedSignalRHandler>();
 

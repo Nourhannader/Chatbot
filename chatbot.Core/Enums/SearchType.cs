@@ -8,9 +8,11 @@ namespace chatbot.Core.Enums
 {
     public enum SearchType
     {
-        Users = 1,
-        Messages = 2,
+        All = 1,
+        Users = 2,
         Conversations = 3,
-        Files = 4
+        Messages = 4,
+        Files = 5,
+        Groups = 6
     }
 }

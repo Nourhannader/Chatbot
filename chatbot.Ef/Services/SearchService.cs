@@ -2,122 +2,84 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
 using chatbot.Core.DTOs;
+using chatbot.Core.DTOs.Search;
 using chatbot.Core.Enums;
 using chatbot.Core.Interfaces.Repositories;
+using chatbot.Core.Interfaces.Search;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Ef.Repositories;
 
 namespace chatbot.Ef.Services
 {
-    public class SearchService(IUnitOfWork unitOfWork,IMapper mapper) : ISearchService
+    public class SearchService(IUnitOfWork unitOfWork, IMessageSearchIndex messageSearchIndex) : ISearchService
     {
-        private async Task<SearchResultDto> SearchUserAsync(SearchDto dto)
+        public async Task<PagedResultDto<SearchResultDto>> SearchAsync(Guid userId, SearchRequestDto request)
         {
-            var result= await unitOfWork.Searches.SearchUsersAsync(dto.Keyword,dto.PageNumber,dto.PageSize);
-            return new SearchResultDto
-            {
-                Type = SearchType.Users,
-
-                TotalCount = result.TotalCount,
-
-                PageNumber = dto.PageNumber,
-
-                PageSize = dto.PageSize,
-
-                Data = mapper.Map<
-            List<UserSearchDto>>(result.Items)
-            };
-        }
-
-        private async Task<SearchResultDto>SearchConversationsAsync(Guid userId,SearchDto dto)
-        {
-            var result =
-                await unitOfWork.Searches
-                    .SearchConversationsAsync(userId,dto.Keyword,dto.PageNumber,dto.PageSize);
-
-            return new SearchResultDto
-            {
-                Type = SearchType.Conversations,
-
-                TotalCount = result.TotalCount,
-
-                PageNumber = dto.PageNumber,
-
-                PageSize = dto.PageSize,
-
-                Data = mapper.Map<
-                    List<ConversationSearchDto>>(
-                        result.Items)
-            };
-        }
-
-        private async Task<SearchResultDto> SearchMessagesAsync(Guid userId,SearchDto dto)
-        {
-            var result = await unitOfWork.Searches
-                    .SearchMessagesAsync(userId,dto.Keyword,dto.PageNumber,dto.PageSize,dto.MessageType,dto.From,dto.To);
-
-            return new SearchResultDto
-            {
-                Type = SearchType.Messages,
-
-                TotalCount = result.TotalCount,
-
-                PageNumber = dto.PageNumber,
-
-                PageSize = dto.PageSize,
-
-                Data = mapper.Map<
-                    List<MessageSearchDto>>(
-                        result.Items)
-            };
-        }
-        
-        private async Task<SearchResultDto> SearchFilesAsync(Guid userId,SearchDto dto)
-        {
-            var result =
-                await unitOfWork.Searches
-                    .SearchFilesAsync(userId, dto.Keyword, dto.PageNumber, dto.PageSize);
-
-            return new SearchResultDto
-            {
-                Type = SearchType.Messages,
-
-                TotalCount = result.TotalCount,
-
-                PageNumber = dto.PageNumber,
-
-                PageSize = dto.PageSize,
-
-                Data = mapper.Map<
-                    List<FileSearchDto>>(
-                        result.Items)
-            };
-        }
-        public async Task<SearchResultDto> SearchAsync(Guid userId, SearchDto dto)
-        {
-            if (dto.PageNumber < 1)
-                dto.PageNumber = 1;
-            if (dto.PageSize < 1)
-                dto.PageSize = 20;
-            if (dto.PageSize > 100)
-                dto.PageSize = 100;
-            return dto.SearchType switch
+            return request.Type switch
             {
                 SearchType.Users =>
-                    await SearchUserAsync(dto),
-                SearchType.Conversations => 
-                    await SearchConversationsAsync(userId,dto),
-                SearchType.Messages =>
-                    await SearchMessagesAsync(userId,dto),
-                SearchType.Files =>
-                       await SearchFilesAsync(userId,dto),
+                    await unitOfWork.Searches.SearchUsersAsync(userId, request),
 
-                _ => throw new ArgumentException("Invalid search type")
+                SearchType.Conversations =>
+                    await unitOfWork.Searches.SearchConversationsAsync(userId, request),
+                SearchType.Messages =>
+                    await SearchMessagesAsync(userId, request),
+                SearchType.Files =>
+                    await unitOfWork.Searches.SearchFilesAsync(userId, request),
+
+                SearchType.Groups =>
+                    await unitOfWork.Searches.SearchGroupsAsync(userId, request),
+
+                SearchType.All =>
+                     throw new NotImplementedException("Search All will use a separate aggregated response."),
+
+                _ => throw new ArgumentOutOfRangeException(nameof(request.Type), "Invalid search type.")
             };
         }
+
+        private async Task<PagedResultDto<SearchResultDto>> SearchMessagesAsync(Guid userId, SearchRequestDto request)
+        {
+            var messageQuery =new MessageSearchQuery
+                {
+                    Keyword =request.Keyword,
+                    ConversationId = request.ConversationId,
+                    SenderId = request.SenderId,
+                    MessageType =request.MessageType,
+                    From = request.From,
+                    To =request.To,
+                    Page = request.Page,
+                    PageSize =request.PageSize
+                };
+
+
+            var result = await messageSearchIndex.SearchAsync( userId, messageQuery);
+
+
+            return new PagedResultDto<SearchResultDto>
+            {
+                Items = result.Items
+                    .Select(message =>
+                        new SearchResultDto
+                        {
+                            Type = SearchType.Messages,
+                            Id =message.MessageId,
+                            ConversationId =message.ConversationId,
+                            Title = message.SenderName ?? string.Empty,
+                            Description = message.Content,
+                            CreatedAt = message.CreatedAt
+                        })
+                    .ToList(),
+                PageNumber = result.PageNumber,
+                PageSize = result.PageSize,
+                TotalCount =result.TotalCount
+            };
+        }
+
+
     }
 }

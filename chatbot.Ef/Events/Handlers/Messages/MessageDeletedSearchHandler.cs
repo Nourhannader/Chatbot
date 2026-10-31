@@ -6,11 +6,12 @@ using System.Threading.Tasks;
 using chatbot.Core.Enums;
 using chatbot.Core.Events.Messages;
 using chatbot.Core.Interfaces.Events;
+using chatbot.Core.Interfaces.Search;
 using chatbot.Core.Interfaces.Services;
 
 namespace chatbot.Ef.Events.Handlers.Messages
 {
-    public sealed class MessageDeletedSearchHandler(ISearchService searchService) : IEventHandler<MessageDeletedEvent>
+    public sealed class MessageDeletedSearchHandler(IMessageSearchIndex searchIndex) : IEventHandler<MessageDeletedEvent>
     {
         public async Task HandleAsync( MessageDeletedEvent @event, CancellationToken cancellationToken = default)
         {
@@ -19,7 +20,7 @@ namespace chatbot.Ef.Events.Handlers.Messages
                 return;
             }
 
-            await searchService.DeleteAsync( @event.MessageId, cancellationToken);
+            await searchIndex.DeleteAsync( @event.MessageId);
         }
     }
 }
