@@ -7,6 +7,7 @@ using chatbot.Core.Events.Conversations;
 using chatbot.Core.Events.Messages;
 using chatbot.Core.Events.Notifications;
 using chatbot.Core.Interfaces.Events;
+using Microsoft.Win32;
 
 namespace chatbot.Ef.Events.Publishing
 {
@@ -40,7 +41,21 @@ namespace chatbot.Ef.Events.Publishing
 
                 ["chat.conversation.member-role-changed.v1"] =typeof(MemberRoleChangedEvent),
 
-                ["chat.notification.created.v1"] = typeof(NotificationCreatedEvent)
+                ["chat.notification.created.v1"] = typeof(NotificationCreatedEvent),
+
+                ["chat.conversation.read.v1"] = typeof(ConversationReadEvent),
+
+                ["chat.conversation.deleted.v1"] = typeof(ConversationDeletedEvent),
+
+                ["chat.conversation.updated.v1"]=typeof(ConversationUpdatedEvent),
+
+                ["chat.conversation.member-unbanned.v1"]=typeof(MemberUnbannedEvent),
+
+                ["chat.conversation.member-muted.v1"] =typeof(MemberMutedEvent),
+
+                ["chat.conversation.member-unmuted.v1"]=typeof(MemberUnmutedEvent),
+
+                ["chat.conversation.member-joined-by-invite.v1"] = typeof(MemberJoinedByInviteEvent),
             };
 
             _nameToType = registrations;

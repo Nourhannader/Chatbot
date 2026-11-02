@@ -8,14 +8,16 @@ using AutoMapper;
 using chatbot.Core.Authorization.Conversation;
 using chatbot.Core.Common;
 using chatbot.Core.DTOs;
+using chatbot.Core.Events.Conversations;
 using chatbot.Core.Exceptions;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
+using chatbot.Ef.Outbox;
 
 namespace chatbot.Ef.Services
 {
     public sealed class ConversationMemberService(IUnitOfWork unitOfWork, IConversationAuthorizationService authorizationService
-        , IMapper mapper, IChatRealtimeService realtimeService, TimeProvider timeProvider) : IConversationMemberService
+        , IMapper mapper, TimeProvider timeProvider,OutboxMessageFactory outboxMessageFactory) : IConversationMemberService
     {
         public async Task<ConversationMemberDetailsDto> GetCurrentMemberAsync(ClaimsPrincipal user, Guid conversationId)
         {
@@ -55,9 +57,11 @@ namespace chatbot.Ef.Services
             // If you add LastReadMessageId later:
             // member.LastReadMessageId = lastReadMessageId;
 
+            var domainEvent = new ConversationReadEvent( ConversationId: conversationId, UserId: userId, ReadAt: now);
+            await unitOfWork.OutboxMessages.AddAsync(outboxMessageFactory.Create(domainEvent));
+
             await unitOfWork.SaveChangesAsync();
 
-            await realtimeService.ConversationReadAsync(conversationId, userId, now);
         }
     }
 }

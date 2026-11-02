@@ -7,14 +7,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
 using chatbot.Core.Authorization.Conversation;
-using chatbot.Core.Common;
 using chatbot.Core.DTOs;
 using chatbot.Core.Enums;
+using chatbot.Core.Events.Conversations;
 using chatbot.Core.Exceptions;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Interfaces.Validators;
 using chatbot.Core.Models;
+using chatbot.Ef.Outbox;
 using chatbot.Ef.UnitOfWork;
 using chatbot.Ef.ValidatorService;
 using Hangfire;
@@ -24,19 +25,21 @@ using Microsoft.Extensions.Logging;
 namespace chatbot.Ef.Services
 {
     public class ConversationService(IUnitOfWork unitOfWork, IMapper mapper,IStorageService storageService,IFileValidationService fileValidationService
-        , IConversationAuthorizationService authorizationService,TimeProvider timeProvider,ILogger<ConversationService> logger) : IConversationService
+        , IConversationAuthorizationService authorizationService,TimeProvider timeProvider,ILogger<ConversationService> logger,
+        OutboxMessageFactory outboxMessageFactory,ICurrentUser currentUser) : IConversationService
     {
         public async Task<ConversationDetailsDto> CreatePrivateAsync(ClaimsPrincipal user, CreatePrivateConversationDto dto)
         {
-            var currentUserId = user.GetUserId();
-            Guid.TryParse(dto.UserId.ToString(), out var TargetUserId);
+            var currentUserId =currentUser.UserId;
+            var targetUserId = dto.UserId;
 
-            // Verify dto.UserId exists here.
+            if (targetUserId == Guid.Empty)
+                throw new BadRequestException("Target user is required.");
+
             var targetUser = await unitOfWork.Auth
-                    .GetByIdAsync(TargetUserId)
-                ?? throw new NotFoundException("User not found.");
+                .GetByIdAsync(targetUserId) ?? throw new NotFoundException("User not found.");
 
-            var privateKey = CreatePrivateKey(currentUserId, TargetUserId);
+            var privateKey = CreatePrivateKey(currentUserId, targetUserId);
 
             var existing = await unitOfWork.Conversations.GetPrivateByKeyAsync(privateKey);
 
@@ -46,7 +49,7 @@ namespace chatbot.Ef.Services
             }
 
 
-            var now = DateTime.UtcNow;
+            var now = timeProvider.GetUtcNow().UtcDateTime;
             var conversation =
                 new Conversation
                 {
@@ -75,11 +78,15 @@ namespace chatbot.Ef.Services
                 {
                     Id = Guid.NewGuid(),
                     ConversationId =conversation.Id,
-                    UserId =TargetUserId,
+                    UserId =targetUserId,
                     Role =ConversationRole.Member,
                     JoinedAt = now
                 }
                 ]);
+
+            var domainEvent = new ConversationCreatedEvent(ConversationId: conversation.Id,CreatedByUserId: currentUserId, ConversationType: conversation.Type,CreatedAt: now);
+
+            await unitOfWork.OutboxMessages.AddAsync(outboxMessageFactory.Create(domainEvent));
 
             await unitOfWork.SaveChangesAsync();
 
@@ -100,7 +107,7 @@ namespace chatbot.Ef.Services
 
             var currentMember = conversation.Members
                        .FirstOrDefault(x => x.UserId ==
-                            user.GetUserId() &&
+                            currentUser.UserId &&
                         x.LeftAt == null && !x.IsBanned);
 
             dto.CurrentUserRole = currentMember?.Role;
@@ -111,17 +118,7 @@ namespace chatbot.Ef.Services
         public async Task<List<ConversationDto>> GetMineAsync(ClaimsPrincipal user)
         {
             var conversations = await unitOfWork.Conversations
-                    .GetUserConversationsAsync(user.GetUserId());
-
-            return mapper.Map<List<ConversationDto>>(conversations);
-        }
-      
-        public async Task<List<ConversationDto>> GetMyConversationsAsync(ClaimsPrincipal user)
-        {
-            var userId = user.GetUserId();
-
-            var conversations = await unitOfWork.Conversations
-                    .GetUserConversationsAsync(userId);
+                    .GetUserConversationsAsync(currentUser.UserId);
 
             return mapper.Map<List<ConversationDto>>(conversations);
         }
@@ -150,7 +147,7 @@ namespace chatbot.Ef.Services
 
             await authorizationService.AuthorizeImageManagementAsync(user, conversationId);
 
-            var currentUserId = user.GetUserId();
+            var currentUserId = currentUser.UserId;
             var validated = await fileValidationService.ValidateImageAsync(dto.Image);
 
             var oldImage = conversation.Image;
@@ -163,7 +160,7 @@ namespace chatbot.Ef.Services
 
             try
             {
-                newImage = await storageService.UploadAsync(dto.Image, validated, FileCategory.ConversationImage, conversationId, user.GetUserId());
+                newImage = await storageService.UploadAsync(dto.Image, validated, FileCategory.ConversationImage, conversationId, currentUser.UserId);
                 upload = new UploadResultDto
                 {
                     Success = true,
@@ -238,16 +235,16 @@ namespace chatbot.Ef.Services
             //            oldImage.Id));
         }
 
-        public async Task<StoredFile>UpdateConversationImageAsync(Guid conversationId,ClaimsPrincipal currentUser,IFormFile image, CancellationToken cancellationToken = default)
+        public async Task<StoredFile>UpdateConversationImageAsync(Guid conversationId,ClaimsPrincipal user,IFormFile image, CancellationToken cancellationToken = default)
         {
             var conversation = await unitOfWork.Conversations.GetByIdAsync(conversationId)
                      ?? throw new NotFoundException("Conversation not found.");
 
             // Check permission before uploading
 
-           await authorizationService.AuthorizeImageManagementAsync(currentUser, conversationId);
+           await authorizationService.AuthorizeImageManagementAsync(user, conversationId);
            
-            var currentUserId=currentUser.GetUserId();
+            var currentUserId=currentUser.UserId;
             var validated =await fileValidationService.ValidateImageAsync( image,cancellationToken);
 
             var oldImage =conversation.Image;
@@ -269,6 +266,7 @@ namespace chatbot.Ef.Services
                         currentUserId,
 
                         cancellationToken);
+                await unitOfWork.StoredFiles.AddAsync(newImage);
 
                 conversation.ImageId =newImage.Id;
                 conversation.Image =newImage;

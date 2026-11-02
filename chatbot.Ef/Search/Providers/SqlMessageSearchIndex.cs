@@ -16,12 +16,16 @@ namespace chatbot.Ef.Search.Providers
     {
         public Task DeleteAsync(Guid messageId)
         {
-            throw new NotImplementedException();
+            // No separate index exists.
+            // SearchAsync excludes deleted messages.
+            return Task.CompletedTask;
         }
 
         public Task IndexAsync(MessageSearchDocument document)
         {
-            throw new NotImplementedException();
+            // Message is already saved in SQL Server.
+            // No separate search index needs updating.
+            return Task.CompletedTask;
         }
 
         public async Task<PagedResultDto<MessageSearchResultDto>> SearchAsync( Guid userId,MessageSearchQuery request)
@@ -31,7 +35,8 @@ namespace chatbot.Ef.Search.Providers
 
         public Task UpdateContentAsync(Guid messageId, string content)
         {
-            throw new NotImplementedException();
+            // Message content is already updated in SQL Server.
+            return Task.CompletedTask;
         }
     }
 }

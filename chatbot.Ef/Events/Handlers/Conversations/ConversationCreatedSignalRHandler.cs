@@ -7,18 +7,22 @@ using chatbot.Core.Events.Conversations;
 using chatbot.Core.Interfaces.Events;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
+using chatbot.Core.Interfaces.UnitOFWork;
 
 namespace chatbot.Ef.Events.Handlers.Conversations
 {
-    public sealed class ConversationCreatedSignalRHandler(IConversationMemberRepository memberRepository, IChatRealtimeService realtimeService) : IEventHandler<ConversationCreatedEvent>
+    public sealed class ConversationCreatedSignalRHandler(IUnitOfWork unitOfWork, IChatRealtimeService realtimeService) : IEventHandler<ConversationCreatedEvent>
     {
         public async Task HandleAsync(ConversationCreatedEvent @event, CancellationToken cancellationToken = default)
         {
-            var memberIds = await memberRepository.GetActiveMemberIdsAsync( @event.ConversationId);
+            var memberIds = await unitOfWork.ConversationMember
+             .GetActiveMemberIdsAsync(@event.ConversationId);
 
             foreach (var userId in memberIds)
             {
-                await realtimeService.SendToUserAsync(userId,"ConversationCreated",
+                await realtimeService.SendToUserAsync(
+                    userId,
+                    "ConversationCreated",
                     new
                     {
                         @event.ConversationId,

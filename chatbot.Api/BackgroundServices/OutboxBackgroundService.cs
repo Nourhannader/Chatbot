@@ -2,33 +2,33 @@
 
 namespace chatbot.Api.BackgroundServices
 {
+
     public sealed class OutboxBackgroundService(IServiceScopeFactory scopeFactory,ILogger<OutboxBackgroundService> logger): BackgroundService
     {
-        private static readonly TimeSpan Interval = TimeSpan.FromSeconds(5);
-
-        protected override async Task ExecuteAsync( CancellationToken stoppingToken)
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
-                    using var scope = scopeFactory.CreateScope();
+                    await using var scope =scopeFactory.CreateAsyncScope();
 
                     var processor = scope.ServiceProvider.GetRequiredService<IOutboxProcessor>();
 
                     await processor.ProcessAsync(stoppingToken);
                 }
-                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                catch (OperationCanceledException)when (stoppingToken.IsCancellationRequested)
                 {
                     break;
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError( ex,"Error processing outbox.");
+                    logger.LogError( ex, "Error while processing outbox messages.");
                 }
 
-                await Task.Delay(Interval,stoppingToken);
+                await Task.Delay(TimeSpan.FromSeconds(5),stoppingToken);
             }
         }
     }
+
 }

@@ -7,6 +7,7 @@ using chatbot.Core.Enums;
 using chatbot.Core.Events.Conversations;
 using chatbot.Core.Interfaces.Events;
 using chatbot.Core.Interfaces.Services;
+using chatbot.Core.Models;
 
 namespace chatbot.Ef.Events.Handlers.Conversations
 {
@@ -15,19 +16,18 @@ namespace chatbot.Ef.Events.Handlers.Conversations
         public async Task HandleAsync( MemberRemovedEvent @event,CancellationToken cancellationToken = default)
         {
             if (@event.RemovalType == MemberRemovalType.Left)
+                return;
+
+            var (type, title, body) = @event.RemovalType switch
             {
-                return;
-            }
+                MemberRemovalType.Removed => (NotificationType.MemberRemoved,"Removed from group", "You have been removed from a group."),
 
-            if (@event.RemovedByUserId is null)
-                return;
+                MemberRemovalType.Banned => (NotificationType.MemberBanned, "Banned from group","You have been banned from a group."),
 
-            await notificationService.CreateMemberRemovedNotificationAsync(
-                @event.ConversationId,
-                @event.UserId,
-                @event.RemovedByUserId.Value,
-                @event.RemovalType,
-                cancellationToken);
+                _ => throw new ArgumentOutOfRangeException()
+            };
+
+            await notificationService.SendAsync(@event.UserId,type,title,body, @event.ConversationId, cancellationToken: cancellationToken);
         }
     }
 }

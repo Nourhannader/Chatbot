@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.Events.Messages;
 using chatbot.Core.Interfaces.Events;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Models;
 using chatbot.Ef.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace chatbot.Ef.Events.Publishing
 {
@@ -20,7 +22,7 @@ namespace chatbot.Ef.Events.Publishing
 
             var enumerableType = typeof(IEnumerable<>) .MakeGenericType(handlerType);
 
-            var handlers = (IEnumerable<object>?)serviceProvider.GetService(enumerableType);
+            var handlers = serviceProvider.GetServices<IEventHandler<MessageCreatedEvent>>();
 
             if (handlers is null)
                 return;

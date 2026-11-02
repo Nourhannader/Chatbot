@@ -12,18 +12,20 @@ using chatbot.Core.Common;
 using chatbot.Core.DTOs;
 using chatbot.Core.DTOs.InviteGroup;
 using chatbot.Core.Enums;
+using chatbot.Core.Events.Conversations;
 using chatbot.Core.Exceptions;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Models;
+using chatbot.Ef.Outbox;
 using chatbot.Ef.Services.Helper;
 using chatbot.Ef.UnitOfWork;
 
 namespace chatbot.Ef.Services
 {
-    public sealed class GroupInviteService(IUnitOfWork unitOfWork,
+    public sealed class GroupInviteService(IUnitOfWork unitOfWork,CurrentUser currentUser,
     IConversationAuthorizationService authorizationService,
-    IMapper mapper,
+    IMapper mapper,OutboxMessageFactory outboxMessageFactory,
     TimeProvider timeProvider) : IGroupInviteService
     {
         public async Task<GroupInviteDto> GenerateAsync(ClaimsPrincipal user, Guid conversationId, CreateGroupInviteDto dto)
@@ -64,7 +66,7 @@ namespace chatbot.Ef.Services
 
                 CreatedAt = now,
 
-                CreatedById = user.GetUserId(),
+                CreatedById = currentUser.UserId,
 
                 ExpiresAt = expiresAt,
 
@@ -108,7 +110,7 @@ namespace chatbot.Ef.Services
 
             var valid = IsInviteValid(invite, now);
 
-            var userId = user.GetUserId();
+            var userId = currentUser.UserId;
 
             var member = await unitOfWork.ConversationMember
                     .GetAsync(invite.ConversationId, userId);
@@ -145,52 +147,37 @@ namespace chatbot.Ef.Services
         public async Task<ConversationDetailsDto> JoinAsync(ClaimsPrincipal user, string code)
         {
             if (string.IsNullOrWhiteSpace(code))
-            {
                 throw new BadRequestException("Invite code is required.");
-            }
 
             var userId = user.GetUserId();
 
-            var invite = await unitOfWork.GroupInvite
-                    .GetByCodeAsync(code)
-                ?? throw new NotFoundException("Invite not found.");
+            var invite = await unitOfWork.GroupInvite.GetByCodeAsync(code) ?? throw new NotFoundException("Invite not found.");
 
             var now = timeProvider.GetUtcNow().UtcDateTime;
 
             ValidateInvite(invite, now);
 
             if (invite.Conversation.Type != ConversationType.Group)
-            {
                 throw new BadRequestException("Invalid group invite.");
-            }
 
             if (invite.Conversation.IsDeleted)
-            {
                 throw new NotFoundException("Group not found.");
-            }
 
-            var member =
-                await unitOfWork.ConversationMember
-                    .GetAsync(invite.ConversationId, userId);
+            var member = await unitOfWork.ConversationMember.GetAsync(invite.ConversationId, userId);
 
             if (member is not null)
             {
                 if (member.IsBanned)
-                {
                     throw new ForbiddenException("You are banned from this group.");
-                }
 
                 if (member.LeftAt is null)
-                {
                     throw new ConflictException("You are already a member of this group.");
-                }
 
-                // Rejoin old membership row
+                // Reactivate previous membership.
                 member.LeftAt = null;
                 member.JoinedAt = now;
                 member.Role = ConversationRole.Member;
 
-                // Clear stale moderation state if your domain policy requires it.
                 member.IsMutedByAdmin = false;
                 member.MutedUntil = null;
                 member.MutedById = null;
@@ -200,13 +187,9 @@ namespace chatbot.Ef.Services
                 member = new ConversationMember
                 {
                     Id = Guid.NewGuid(),
-
                     ConversationId = invite.ConversationId,
-
                     UserId = userId,
-
                     Role = ConversationRole.Member,
-
                     JoinedAt = now
                 };
 
@@ -216,14 +199,15 @@ namespace chatbot.Ef.Services
             invite.UsedCount++;
 
             if (invite.UsedCount >= invite.MaxUses)
-            {
                 invite.IsActive = false;
-            }
+
+            // Event for the successful join.
+            var domainEvent = new MemberJoinedByInviteEvent(ConversationId: invite.ConversationId, UserId: userId,
+                InviteId: invite.Id, InvitedByUserId: invite.CreatedById,JoinedAt: now);
+
+            await unitOfWork.OutboxMessages.AddAsync(outboxMessageFactory.Create(domainEvent));
 
             await unitOfWork.SaveChangesAsync();
-
-            // Realtime AFTER successful DB commit.
-            var memberDto = mapper.Map<ConversationMemberDto>(member);
 
             var result = mapper.Map<ConversationDetailsDto>(invite.Conversation);
 

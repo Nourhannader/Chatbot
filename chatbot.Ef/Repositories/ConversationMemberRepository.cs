@@ -52,6 +52,7 @@ namespace chatbot.Ef.Repositories
         public async Task<List<Guid>> GetActiveMemberIdsAsync(Guid conversationId)
         {
             return await context.ConversationMembers
+                .AsNoTracking()
             .Where(x =>
                 x.ConversationId == conversationId &&
                 x.LeftAt == null &&

@@ -13,17 +13,19 @@ namespace chatbot.Ef.Events.Handlers.Conversations
     {
         public async Task HandleAsync(MemberRoleChangedEvent @event, CancellationToken cancellationToken = default)
         {
-            await realtimeService.SendToConversationAsync(@event.ConversationId, "MemberRoleChanged",
-                new
-                {
-                    @event.ConversationId,
-                    @event.UserId,
-                    @event.OldRole,
-                    @event.NewRole,
-                    @event.ChangedByUserId,
-                    @event.ChangedAt
-                },
-                cancellationToken);
+            var payload = new
+            {
+                @event.ConversationId,
+                @event.UserId,
+                @event.OldRole,
+                @event.NewRole,
+                @event.ChangedByUserId,
+                @event.ChangedAt
+            };
+
+            await realtimeService.SendToConversationAsync(@event.ConversationId, "MemberRoleChanged", payload, cancellationToken);
+
+            await realtimeService.SendToUserAsync(@event.UserId,"YourRoleChanged",payload,cancellationToken);
         }
     }
 }

@@ -12,11 +12,23 @@ namespace chatbot.Core.Interfaces.Services
 {
     public interface IChatRealtimeService
     {
-            // =========================
-            // Conversation
-            // =========================
 
-            Task ConversationAddedAsync(Guid userId,ConversationDetailsDto conversation);
+        Task SendToConversationAsync(
+        Guid conversationId,
+        string method,
+        object payload,
+        CancellationToken cancellationToken = default);
+
+        Task SendToUserAsync(
+            Guid userId,
+            string method,
+            object payload,
+            CancellationToken cancellationToken = default);
+        // =========================
+        // Conversation
+        // =========================
+
+        Task ConversationAddedAsync(Guid userId,ConversationDetailsDto conversation);
 
             Task ConversationUpdatedAsync(Guid conversationId,ConversationDetailsDto conversation);
 

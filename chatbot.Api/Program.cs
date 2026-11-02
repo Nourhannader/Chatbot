@@ -58,6 +58,8 @@ namespace chatbot.Api
 
             // Add services to the container.
             builder.Services.AddApplicationServices(builder.Configuration);
+
+            builder.Services.AddEventHandlers();
             //firebase
             builder.Services.AddFirebase();
 

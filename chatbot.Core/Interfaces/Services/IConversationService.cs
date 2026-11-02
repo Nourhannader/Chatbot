@@ -16,8 +16,6 @@ namespace chatbot.Core.Interfaces.Services
 
         Task<List<ConversationDto>> GetMineAsync(ClaimsPrincipal user);
 
-        Task<List<ConversationDto>> GetMyConversationsAsync(ClaimsPrincipal user);
-
         Task<ConversationDetailsDto> GetDetailsAsync(ClaimsPrincipal user, Guid conversationId);
 
         Task<ConversationImageDto> AddOrUpdateImageAsync(ClaimsPrincipal user,Guid conversationId,UpdateConversationImageDto dto);
