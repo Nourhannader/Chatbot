@@ -31,7 +31,7 @@ namespace chatbot.Ef.Events.Handlers.Messages
                 ReadAt = recipient.ReadAt
             };
 
-            await realtimeService.MessageDeliveredAsync(@event.ConversationId, dto);
+            await realtimeService.SendToConversationAsync(@event.ConversationId, "MessageStatusChanged", dto, cancellationToken);
         }
     }
 }

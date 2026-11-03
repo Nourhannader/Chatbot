@@ -13,11 +13,13 @@ using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using chatbot.Ef.Outbox;
+using chatbot.Core.Events.Notifications;
 
 namespace chatbot.Ef.Services
 {
-    public class NotificationService(IUnitOfWork unitOfWork,IPushNotificationFactory pushFactory
-        ,IRealtimeNotificationService realtimeService,INotificationDecisionService decisionService,ILogger logger) : INotificationService
+    public class NotificationService(IUnitOfWork unitOfWork,INotificationDecisionService decisionService,ILogger logger,
+        OutboxMessageFactory outboxMessageFactory,TimeProvider timeProvider) : INotificationService
     {
         public async Task<PagedResultDto<NotificationDto>> GetAsync(Guid userId, int pageNumber, int pageSize)
         {
@@ -36,6 +38,7 @@ namespace chatbot.Ef.Services
                     Type = n.Type,
                     Title = n.Title,
                     Body = n.Body,
+                    ReferenceId = n.ReferenceId,
                     Data = n.Data,
                     IsRead = n.IsRead,
                     ReadAt = n.ReadAt,
@@ -65,80 +68,58 @@ namespace chatbot.Ef.Services
         public async Task SendAsync(Guid userId, NotificationType type, string title, string body, NotificationOptions? options = null)
         {
             options ??= new NotificationOptions();
+            var now = timeProvider.GetUtcNow().UtcDateTime;
+
             var decision = await decisionService.GetOptionsAsync(userId, type, options.ConversationId, options.MessageId);
 
             var saveToDatabase = decision.SaveToDatabase && options.SaveToDatabase;
 
-            var sendSignalR = decision.SendRealtimeNotification && options.SendRealtimeNotification;
+            var sendRealtime = decision.SendRealtimeNotification && options.SendRealtimeNotification;
 
             var sendPush = decision.SendPush && options.SendPush;
 
-            Notification? notification = null;
+            //nothing to do, return early
+            if (!saveToDatabase && !sendRealtime && !sendPush)
+                return;
+
+            var notificationId = Guid.NewGuid();
+
+            var serializedData = options.Data is not null
+                ? JsonSerializer.Serialize(options.Data) : null;
 
             if (saveToDatabase)
             {
-                notification = new Notification
+               var notification = new Notification
                 {
-                    Id = Guid.NewGuid(),
+                    Id = notificationId,
                     UserId = userId,
                     Type = type,
                     Title = title,
                     Body = body,
                     ReferenceId = options.MessageId?.ToString(),
-                    Data = options.Data is not null
-                        ? JsonSerializer.Serialize(options.Data)
-                        : null,
+                    Data = serializedData,
                     IsRead = false,
                     CreatedAt = DateTime.UtcNow
                 };
 
                 await unitOfWork.Notifications.AddAsync(notification);
 
-                await unitOfWork.SaveChangesAsync();
             }
 
-
-            var dto = new NotificationDto
+            if (sendRealtime || sendPush)
             {
-                Id = notification?.Id ?? Guid.NewGuid(),
-                Type = type,
-                Title = title,
-                Body = body,
-                ReferenceId = options.MessageId?.ToString(),
-                Data = options.Data is not null
-                ? JsonSerializer.Serialize(options.Data)
-                : null,
-                IsRead = false,
-                CreatedAt = notification?.CreatedAt ?? DateTime.UtcNow
-            };
+                var domainEvent = new NotificationCreatedEvent(notificationId, userId, type,
+                    title, body, options.ConversationId, options.MessageId,serializedData, now,sendRealtime, sendPush,options.SoundEnabled);
 
-            if (sendSignalR)
-            {
-                await realtimeService.SendAsync(userId, dto);
+                var outboxMessage =outboxMessageFactory.Create(domainEvent);
+
+                await unitOfWork.OutboxMessages.AddAsync(outboxMessage);
             }
 
-            if (!sendPush)
-                return;
-
-            var devices = await unitOfWork.UserDevices.GetActiveDevicesAsync(userId);
-
-            foreach(var device in devices)
-            {
-                try
-                {
-                    var pushService =  pushFactory.Get(device.Provider);
-
-                    await pushService.SendAsync( device.PushToken,title,body,options.Data);
-                }
-                catch
-                {
-                    // Add ILogger later.
-                    // Failure on one device should not
-                    // prevent the remaining devices.
-                    logger.Log(LogLevel.Information, "Failure on one device should not prevent the remaining devices. ");
-                }
-            }
-
+            await unitOfWork.SaveChangesAsync();
+            logger.LogInformation(
+            "Notification {NotificationId} created for user {UserId}. Database: {SaveToDatabase}, Realtime: {SendRealtime}, Push: {SendPush}",
+            notificationId, userId,saveToDatabase, sendRealtime, sendPush);
         }
     }
 }

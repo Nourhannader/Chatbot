@@ -13,78 +13,10 @@ namespace chatbot.Core.Interfaces.Services
     public interface IChatRealtimeService
     {
 
-        Task SendToConversationAsync(
-        Guid conversationId,
-        string method,
-        object payload,
-        CancellationToken cancellationToken = default);
+        Task SendToConversationAsync( Guid conversationId, string method,object payload,CancellationToken cancellationToken = default);
 
-        Task SendToUserAsync(
-            Guid userId,
-            string method,
-            object payload,
-            CancellationToken cancellationToken = default);
-        // =========================
-        // Conversation
-        // =========================
-
-        Task ConversationAddedAsync(Guid userId,ConversationDetailsDto conversation);
-
-            Task ConversationUpdatedAsync(Guid conversationId,ConversationDetailsDto conversation);
-
-            Task ConversationDeletedAsync( Guid conversationId);
-
-            Task ConversationImageUpdatedAsync(Guid conversationId,ConversationImageDto image);
-
-            Task ConversationImageRemovedAsync(Guid conversationId);
-
-
-            // =========================
-            // Members
-            // =========================
-
-            Task MemberAddedAsync(Guid conversationId, ConversationMemberDto member);
-
-            Task MemberRemovedAsync( Guid conversationId,Guid userId);
-
-            Task MemberRoleChangedAsync(Guid conversationId, Guid userId,ConversationRole role);
-
-            Task MemberMutedAsync(Guid conversationId,Guid userId,DateTime? until);
-
-            Task MemberUnmutedAsync( Guid conversationId,Guid userId);
-
-            Task MemberBannedAsync(Guid conversationId,Guid userId);
-
-            Task MemberUnbannedAsync( Guid conversationId,Guid userId);
-
-            Task OwnershipTransferredAsync(Guid conversationId,Guid oldOwnerId, Guid newOwnerId);
-
-            Task RemoveUserFromConversationAsync( Guid conversationId,Guid userId);
-
-
-            // =========================
-            // Messages
-            // =========================
-
-            Task MessageSentAsync( Guid conversationId,MessageDto message);
-
-            Task MessageEditedAsync(Guid conversationId,MessageDto message);
-
-            Task MessageDeletedAsync(Guid conversationId,string title,DeleteMessageResultDto dto);
-
-            Task MessageReactionChangedAsync(Guid conversationId,chatbot.Core.DTOs.Reactions.ReactionResultDto dto);
-
-            
-
-            // =========================
-            // Read
-            // =========================
-
-            Task ConversationReadAsync( Guid conversationId,Guid userId, DateTime readAt);
-            Task MessageDeliveredAsync(Guid conversationId, MessageRecipientStatusDto dto);
-            Task MessagesReadAsync(Guid conversationId, MessagesReadEventDto messagesReadEventDto);
-            Task NewMessageAsync(Guid conversationId, MessageDto message);
-
+        Task SendToUserAsync( Guid userId,string method,object payload, CancellationToken cancellationToken = default);
+        
 
         //======================
         //Media

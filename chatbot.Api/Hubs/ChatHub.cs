@@ -1,113 +1,121 @@
-﻿using chatbot.Core.Authorization.Conversation;
+﻿using System.Security.Claims;
+using chatbot.Core.Authorization.Conversation;
 using chatbot.Core.Common;
 using chatbot.Core.Helper;
 using chatbot.Core.Interfaces.Manager;
 using chatbot.Core.Interfaces.Services;
+using chatbot.Core.Interfaces.UnitOFWork;
+using chatbot.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace chatbot.Api.Hubs
 {
     [Authorize]
+    [Authorize]
     public sealed class ChatHub(
-    IConversationAuthorizationService authorizationService,
-    IUserConnectionManager connectionManager)
-    : Hub<IChatClient>
+    IUnitOfWork unitOfWork,
+    ILogger<ChatHub> logger)
+    : Hub
     {
+        private const string ConversationGroupPrefix = "conversation:";
+
         public override async Task OnConnectedAsync()
         {
-            if (!Context.User!
-                .TryGetUserId(out var userId))
-            {
-                Context.Abort();
-                return;
-            }
+            var userId = GetCurrentUserId();
 
-            await connectionManager
-                .AddConnectionAsync(
-                    userId,
-                    Context.ConnectionId);
+            var connection = new UserConnection
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                ConnectionId = Context.ConnectionId,
+                IsOnline = true,
+                ConnectedAt = DateTime.UtcNow
+            };
+
+            await unitOfWork.UserConnections.AddAsync(connection);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation(
+                "User {UserId} connected. ConnectionId: {ConnectionId}",
+                userId,
+                Context.ConnectionId);
 
             await base.OnConnectedAsync();
         }
 
-        public override async Task OnDisconnectedAsync(
-            Exception? exception)
+        public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            if (Context.User!
-                .TryGetUserId(out var userId))
+            var connection = await unitOfWork.UserConnections
+                .GetByConnectionIdAsync(Context.ConnectionId);
+
+            if (connection is not null)
             {
-                await connectionManager
-                    .RemoveConnectionAsync(
-                        userId,
-                        Context.ConnectionId);
+                connection.IsOnline = false;
+                connection.DisconnectedAt = DateTime.UtcNow;
+
+                await unitOfWork.SaveChangesAsync();
             }
 
-            await base.OnDisconnectedAsync(
-                exception);
+            if (exception is not null)
+            {
+                logger.LogWarning(
+                    exception,
+                    "Connection {ConnectionId} disconnected unexpectedly.",
+                    Context.ConnectionId);
+            }
+
+            await base.OnDisconnectedAsync(exception);
         }
 
-        public async Task JoinConversation(
-            Guid conversationId)
+        public async Task JoinConversation(Guid conversationId)
         {
-            await authorizationService.AuthorizeAsync(
-                Context.User!,
-                conversationId,
-                ConversationPermissions.View);
+            var userId = GetCurrentUserId();
+
+            var isMember = await unitOfWork.ConversationMember
+                .ExistsAsync(conversationId, userId);
+
+            if (!isMember)
+                throw new HubException("You are not a member of this conversation.");
 
             await Groups.AddToGroupAsync(
                 Context.ConnectionId,
-                ConversationGroup.Name(
-                    conversationId));
+                GetConversationGroup(conversationId));
+
+            logger.LogInformation(
+                "User {UserId} joined conversation {ConversationId}",
+                userId,
+                conversationId);
         }
 
-        public Task LeaveConversation(
-            Guid conversationId)
+        public async Task LeaveConversation(Guid conversationId)
         {
-            return Groups.RemoveFromGroupAsync(
+            var userId = GetCurrentUserId();
+
+            await Groups.RemoveFromGroupAsync(
                 Context.ConnectionId,
-                ConversationGroup.Name(
-                    conversationId));
+                GetConversationGroup(conversationId));
+
+            logger.LogInformation(
+                "User {UserId} left conversation {ConversationId}",
+                userId,
+                conversationId);
         }
 
-        public async Task TypingStarted(
-            Guid conversationId)
+        private Guid GetCurrentUserId()
         {
-            await authorizationService.AuthorizeAsync(
-                Context.User!,
-                conversationId,
-                ConversationPermissions.SendMessage);
+            var userId = Context.User?
+                .FindFirstValue(ClaimTypes.NameIdentifier);
 
-            var userId =
-                Context.User!.GetUserId();
+            if (!Guid.TryParse(userId, out var parsedUserId))
+                throw new HubException("Invalid user identity.");
 
-            await Clients
-                .OthersInGroup(
-                    ConversationGroup.Name(
-                        conversationId))
-                .UserTyping(
-                    conversationId,
-                    userId);
+            return parsedUserId;
         }
 
-        public async Task TypingStopped(
-            Guid conversationId)
+        private static string GetConversationGroup(Guid conversationId)
         {
-            await authorizationService.AuthorizeAsync(
-                Context.User!,
-                conversationId,
-                ConversationPermissions.SendMessage);
-
-            var userId =
-                Context.User!.GetUserId();
-
-            await Clients
-                .OthersInGroup(
-                    ConversationGroup.Name(
-                        conversationId))
-                .UserStoppedTyping(
-                    conversationId,
-                    userId);
+            return $"{ConversationGroupPrefix}{conversationId}";
         }
     }
 }

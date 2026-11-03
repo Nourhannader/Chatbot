@@ -3,6 +3,7 @@ using System.Text;
 using System.Threading.Tasks;
 using chatbot.Api.Extensions;
 using chatbot.Api.Hubs;
+using chatbot.Api.Services;
 using chatbot.Core.Helper;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Services;
@@ -19,6 +20,7 @@ using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,9 +35,13 @@ namespace chatbot.Api
         {
             var builder = WebApplication.CreateBuilder(args);
 
-           
+
 
             builder.Services.AddSignalR();
+
+            builder.Services.AddSingleton<IUserIdProvider, ChatUserIdProvider>();
+
+            builder.Services.AddScoped<IChatRealtimeService, ChatRealtimeService>();
 
             builder.Services.AddAutoMapper(cfg => cfg.AddMaps(typeof(MappingProfile).Assembly));
 
@@ -104,7 +110,7 @@ namespace chatbot.Api
 
             app.UseStaticFiles();
 
-            app.MapHub<ChatHub>("/chathub");
+            app.MapHub<Hubs.ChatHub>("/chathub");
 
             app.UseHangfireDashboard("/hangfire");
 

@@ -16,7 +16,12 @@ namespace chatbot.Core.Enums
         MemberDemoted = 6,
         OwnershipTransferred = 7,
         MemberMuted = 8,
-        MemberUnmuted = 9
+        MemberUnmuted = 9,
+        NewMessage = 10,
+        MessageReaction = 11,
+        MessageReply = 12,
+        Mention = 13
+
 
     }
 }

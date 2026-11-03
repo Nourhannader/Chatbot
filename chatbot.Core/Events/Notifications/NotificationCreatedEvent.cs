@@ -8,6 +8,7 @@ using chatbot.Core.Interfaces.Events;
 
 namespace chatbot.Core.Events.Notifications
 {
-    public sealed record NotificationCreatedEvent( Guid NotificationId, Guid UserId,
-    NotificationType Type, string Title,string Body, Guid? ConversationId, Guid? MessageId,DateTime CreatedAt) : DomainEvent;
+    public sealed record NotificationCreatedEvent(Guid NotificationId, Guid UserId,
+    NotificationType Type, string Title, string Body, Guid? ConversationId,Guid? MessageId, string? Data,
+    DateTime CreatedAt, bool SendRealtime, bool SendPush, bool SoundEnabled) : DomainEvent;
 }

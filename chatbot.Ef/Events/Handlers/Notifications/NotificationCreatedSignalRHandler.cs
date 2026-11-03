@@ -9,22 +9,29 @@ using chatbot.Core.Interfaces.Services;
 
 namespace chatbot.Ef.Events.Handlers.Notifications
 {
-    public sealed class NotificationCreatedSignalRHandler( IChatRealtimeService realtimeService) : IEventHandler<NotificationCreatedEvent>
+    public sealed class NotificationCreatedSignalRHandler(
+    IChatRealtimeService realtimeService)
+    : IEventHandler<NotificationCreatedEvent>
     {
-        public async Task HandleAsync(NotificationCreatedEvent @event, CancellationToken cancellationToken = default)
+        public async Task HandleAsync( NotificationCreatedEvent @event, CancellationToken cancellationToken = default)
         {
-            await realtimeService.SendToUserAsync(@event.UserId,"NotificationCreated",
-                new
-                {
-                    @event.NotificationId,
-                    @event.Type,
-                    @event.Title,
-                    @event.Body,
-                    @event.ConversationId,
-                    @event.MessageId,
-                    @event.CreatedAt
-                },
-                cancellationToken);
+            if (!@event.SendRealtime)
+                return;
+
+            var dto = new
+            {
+                @event.NotificationId,
+                @event.Type,
+                @event.Title,
+                @event.Body,
+                @event.ConversationId,
+                @event.MessageId,
+                @event.Data,
+                @event.CreatedAt,
+                @event.SoundEnabled
+            };
+
+            await realtimeService.SendToUserAsync(@event.UserId, "NotificationCreated", dto, cancellationToken);
         }
     }
 }

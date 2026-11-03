@@ -24,7 +24,7 @@ namespace chatbot.Ef.Events.Handlers.Messages
                 ReactedAt = @event.ReactedAt
             };
 
-            await realtimeService.MessageReactionChangedAsync(@event.ConversationId, dto);
+            await realtimeService.SendToConversationAsync(@event.ConversationId, "MessageReactionChanged", dto, cancellationToken);
         }
     }
 }

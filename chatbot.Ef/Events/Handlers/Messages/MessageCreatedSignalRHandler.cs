@@ -24,7 +24,7 @@ namespace chatbot.Ef.Events.Handlers.Messages
 
             var dto = mapper.Map<MessageDto>(message);
 
-            await realtimeService.MessageSentAsync(@event.ConversationId, dto);
+            await realtimeService.SendToConversationAsync(@event.ConversationId, "MessageSent", dto, cancellationToken);
         }
     }
 }

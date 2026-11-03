@@ -18,25 +18,27 @@ namespace chatbot.Ef.Events.Handlers.Messages
         {
             if (@event.DeleteType == MessageDeleteType.ForEveryone)
             {
-                var deleteMessageDto = new DeleteMessageResultDto
+                var dto = new DeleteMessageResultDto
                 {
                     MessageId = @event.MessageId,
                     ConversationId = @event.ConversationId,
                     DeletedByUserId = @event.UserId,
                     DeletedAt = @event.DeletedAt
                 };
-                await realtimeService.MessageDeletedAsync(@event.ConversationId, "MessageDeleted", deleteMessageDto);
+
+                await realtimeService.SendToConversationAsync(@event.ConversationId, "MessageDeleted", dto, cancellationToken);
 
                 return;
             }
-            var messageDeletedForUserDto = new MessageDeletedForUserDto
+
+            var userDto = new MessageDeletedForUserDto
             {
                 MessageId = @event.MessageId,
                 ConversationId = @event.ConversationId,
                 DeletedAt = @event.DeletedAt
             };
 
-            await realtimeService.MessageDeletedForUserAsync(@event.UserId, messageDeletedForUserDto);
+            await realtimeService.SendToUserAsync(@event.UserId, "MessageDeletedForUser", userDto, cancellationToken);
         }
     }
 }

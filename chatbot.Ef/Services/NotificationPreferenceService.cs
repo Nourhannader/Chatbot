@@ -20,18 +20,7 @@ namespace chatbot.Ef.Services
 
             if (preference is null)
             {
-                preference =
-                    new NotificationPreferences
-                    {
-                        Id = Guid.NewGuid(),
-                        UserId = userId,
-                        NewMessages = true,
-                        MessageReactions = true,
-                        MessageReplies = true,
-                        Mentions = true,
-                        PushNotifications = true,
-                        SoundEnabled = true
-                    };
+                preference = CreateDefaultPreferences(userId);
 
                 await unitOfWork.NotificationPreference.AddAsync(preference);
 
@@ -48,12 +37,7 @@ namespace chatbot.Ef.Services
 
             if (preference is null)
             {
-                preference =
-                    new NotificationPreferences
-                    {
-                        Id = Guid.NewGuid(),
-                        UserId = userId
-                    };
+                preference = CreateDefaultPreferences(userId);
 
                 await unitOfWork.NotificationPreference.AddAsync(preference);
             }
@@ -66,5 +50,21 @@ namespace chatbot.Ef.Services
             preference.SoundEnabled = dto.SoundEnabled;
             await unitOfWork.SaveChangesAsync();
         }
+
+        private static NotificationPreferences CreateDefaultPreferences( Guid userId)
+        {
+            return new NotificationPreferences
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                NewMessages = true,
+                MessageReactions = true,
+                MessageReplies = true,
+                Mentions = true,
+                PushNotifications = true,
+                SoundEnabled = true
+            };
+        }
+
     }
 }

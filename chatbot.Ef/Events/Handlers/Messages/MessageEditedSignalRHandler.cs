@@ -22,7 +22,7 @@ namespace chatbot.Ef.Events.Handlers.Messages
                 EditedAt =@event.EditedAt
             };
 
-            await realtimeService.MessageEditedAsync( @event.ConversationId, dto);
+            await realtimeService.SendToConversationAsync(@event.ConversationId, "MessageEdited", dto, cancellationToken);
         }
     }
 }

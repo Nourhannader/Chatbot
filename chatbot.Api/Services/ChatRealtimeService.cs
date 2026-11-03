@@ -10,240 +10,81 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace chatbot.Api.Services
 {
-    public sealed class ChatRealtimeService: IChatRealtimeService
+    public sealed class ChatRealtimeService : IChatRealtimeService
     {
         private readonly IHubContext<ChatHub, IChatClient> hubContext;
         private readonly IUserConnectionManager connectionManager;
-        public ChatRealtimeService(IHubContext<ChatHub,IChatClient> hubContext,IUserConnectionManager connectionManager)
+
+        public ChatRealtimeService(IHubContext<ChatHub, IChatClient> hubContext, IUserConnectionManager connectionManager)
         {
-            this.hubContext=hubContext;
-            this.connectionManager=connectionManager;
+            this.hubContext = hubContext;
+            this.connectionManager = connectionManager;
         }
 
-        // ==========================================
-        // Conversation
-        // ==========================================
+        public Task MediaProcessedAsync(Guid conversationId, Guid messageId, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
 
-        public Task ConversationAddedAsync(Guid userId,ConversationDetailsDto conversation)
+        public Task MessageDeletedForUserAsync(Guid userId, MessageDeletedForUserDto dto)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SendToConversationAsync(Guid conversationId, string method, object payload, CancellationToken cancellationToken = default)
+        {
+            return hubContext.Clients
+                .Group($"conversation:{conversationId}")
+                .SendAsync(method, payload, cancellationToken);
+        }
+
+        public Task SendToUserAsync(Guid userId, string method, object payload, CancellationToken cancellationToken = default)
         {
             return hubContext.Clients
                 .User(userId.ToString())
-                .ConversationAdded(conversation);
+                .SendAsync(method, payload, cancellationToken);
         }
 
-        public Task ConversationUpdatedAsync(Guid conversationId,ConversationDetailsDto conversation)
+        public Task VoiceNoteProcessedAsync(Guid conversationId, Guid messageId, CancellationToken cancellationToken)
         {
-            return hubContext.Clients
-                .Group(ConversationGroup.Name(
-                    conversationId))
-                .ConversationUpdated(conversation);
+            throw new NotImplementedException();
+        }
+    }
+    public sealed class ChatHub : Hub<IChatClient>
+    {
+        private const string ConversationGroupPrefix = "conversation:";
+
+        public override Task OnConnectedAsync()
+        {
+            // Implementation here
+            return base.OnConnectedAsync();
         }
 
-        public Task ConversationDeletedAsync(Guid conversationId)
+        public override Task OnDisconnectedAsync(Exception? exception)
         {
-            return hubContext.Clients
-                .Group(ConversationGroup.Name(
-                    conversationId))
-                .ConversationDeleted(
-                    conversationId);
+            // Implementation here
+            return base.OnDisconnectedAsync(exception);
         }
 
-        public Task ConversationImageUpdatedAsync(Guid conversationId,ConversationImageDto image)
+        public Task JoinConversation(Guid conversationId)
         {
-            return hubContext.Clients
-                .Group(ConversationGroup.Name(
-                    conversationId))
-                .ConversationImageUpdated(
-                    conversationId,
-                    image);
+            return Groups.AddToGroupAsync(Context.ConnectionId, GetConversationGroup(conversationId));
         }
 
-        public Task ConversationImageRemovedAsync(Guid conversationId)
+        public Task LeaveConversation(Guid conversationId)
         {
-            return hubContext.Clients
-                .Group(ConversationGroup.Name(
-                    conversationId))
-                .ConversationImageRemoved(
-                    conversationId);
+            return Groups.RemoveFromGroupAsync(Context.ConnectionId, GetConversationGroup(conversationId));
         }
 
-
-        // ==========================================
-        // Members
-        // ==========================================
-
-        public Task MemberAddedAsync(Guid conversationId,ConversationMemberDto member)
+        private Guid GetCurrentUserId()
         {
-            return hubContext.Clients
-                .Group(ConversationGroup.Name(
-                    conversationId))
-                .MemberAdded(member);
+            // Implementation to retrieve current user ID
+            throw new NotImplementedException();
         }
 
-        public Task MemberRemovedAsync(Guid conversationId,Guid userId)
+        private static string GetConversationGroup(Guid conversationId)
         {
-            return hubContext.Clients
-                .Group(ConversationGroup.Name(
-                    conversationId))
-                .MemberRemoved(userId);
-        }
-
-        public Task MemberRoleChangedAsync(Guid conversationId,Guid userId,ConversationRole role)
-        {
-            return hubContext.Clients
-                .Group(ConversationGroup.Name(
-                    conversationId))
-                .MemberRoleChanged(
-                    userId,
-                    role);
-        }
-
-        public Task MemberMutedAsync(Guid conversationId,Guid userId,DateTime? until)
-        {
-            return hubContext.Clients
-                .Group(ConversationGroup.Name(
-                    conversationId))
-                .MemberMuted(
-                    userId,
-                    until);
-        }
-
-        public Task MemberUnmutedAsync( Guid conversationId,Guid userId)
-        {
-            return hubContext.Clients
-                .Group(ConversationGroup.Name(
-                    conversationId))
-                .MemberUnmuted(userId);
-        }
-
-        public Task MemberBannedAsync(Guid conversationId,Guid userId)
-        {
-            return hubContext.Clients
-                .Group(ConversationGroup.Name(
-                    conversationId))
-                .MemberBanned(userId);
-        }
-
-        public Task MemberUnbannedAsync( Guid conversationId,Guid userId)
-        {
-            return hubContext.Clients
-                .Group(ConversationGroup.Name(
-                    conversationId))
-                .MemberUnbanned(userId);
-        }
-
-        public Task OwnershipTransferredAsync( Guid conversationId,Guid oldOwnerId,Guid newOwnerId)
-        {
-            return hubContext.Clients
-                .Group(ConversationGroup.Name(
-                    conversationId))
-                .OwnershipTransferred(
-                    oldOwnerId,
-                    newOwnerId);
-        }
-
-
-        // ==========================================
-        // Messages
-        // ==========================================
-
-        public Task MessageSentAsync(Guid conversationId,MessageDto message)
-        {
-            return hubContext.Clients
-                .Group(ConversationGroup.Name(
-                    conversationId))
-                .ReceiveMessage(message);
-        }
-
-        public Task MessageEditedAsync( Guid conversationId,MessageDto message)
-        {
-            return hubContext.Clients
-                .Group(ConversationGroup.Name(
-                    conversationId))
-                .MessageEdited(message);
-        }
-
-        public Task MessageDeletedAsync(Guid conversationId,Guid messageId)
-        {
-            return hubContext.Clients
-                .Group(ConversationGroup.Name(
-                    conversationId))
-                .MessageDeleted(messageId);
-        }
-
-        public Task MessageReactionAddedAsync(Guid conversationId,Guid messageId,MessageReactionDto reaction)
-        {
-            return hubContext.Clients
-                .Group(ConversationGroup.Name(
-                    conversationId))
-                .MessageReactionAdded(
-                    messageId,
-                    reaction);
-        }
-
-        public Task MessageReactionRemovedAsync(Guid conversationId,Guid messageId, Guid userId)
-        {
-            return hubContext.Clients
-                .Group(ConversationGroup.Name(
-                    conversationId))
-                .MessageReactionRemoved(
-                    messageId,
-                    userId);
-        }
-
-
-        // ==========================================
-        // Read
-        // ==========================================
-
-        public Task ConversationReadAsync(Guid conversationId, Guid userId,DateTime readAt)
-        {
-            return hubContext.Clients
-                .Group(ConversationGroup.Name( conversationId))
-                .ConversationRead(conversationId, userId,readAt);
-        }
-
-        public async Task MessageDeliveredAsync(Guid conversationId, MessageRecipientStatusDto dto)
-        {
-            await hubContext.Clients
-            .Group(conversationId.ToString())
-            .SendAsync(
-                "MessageDelivered",
-                dto);
-        }
-        public async Task MessagesReadAsync(Guid conversationId, MessagesReadEventDto messagesReadEventDto)
-        {
-            await hubContext.Clients
-            .Group(conversationId.ToString())
-            .SendAsync(
-                "MessagesRead",
-                messagesReadEventDto);
-        }
-        public async Task NewMessageAsync(Guid conversationId, MessageDto message)
-        {
-            await hubContext.Clients
-            .Group(conversationId.ToString())
-            .SendAsync("ReceiveMessage", message);
-        }
-
-
-        // ==========================================
-        // Force remove user
-        // ==========================================
-
-        public async Task RemoveUserFromConversationAsync( Guid conversationId, Guid userId)
-        {
-            var connections =
-                await connectionManager.GetConnectionsAsync(userId);
-
-            var groupName = ConversationGroup.Name(conversationId);
-
-            foreach (var connectionId in connections)
-            {
-                await hubContext.Groups.RemoveFromGroupAsync(connectionId,groupName);
-            }
-
-            await hubContext.Clients.User(userId.ToString()).RemovedFromConversation( conversationId);
+            return $"{ConversationGroupPrefix}{conversationId}";
         }
     }
 }
