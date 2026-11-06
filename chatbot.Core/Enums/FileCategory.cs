@@ -11,6 +11,8 @@ namespace chatbot.Core.Enums
         UserProfileImage = 1,
         ConversationImage = 2,
         MessageFile = 3,
-        Thumbnail = 4
+        Thumbnail = 4,
+        VoiceNote = 5
+
     }
 }

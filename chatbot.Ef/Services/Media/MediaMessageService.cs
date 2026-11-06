@@ -8,6 +8,8 @@ using AutoMapper;
 using chatbot.Core.DTOs;
 using chatbot.Core.DTOs.Messages;
 using chatbot.Core.Enums;
+using chatbot.Core.Events.Media;
+using chatbot.Core.Events.Messages;
 using chatbot.Core.Exceptions;
 using chatbot.Core.Interfaces.BackgroundJobs;
 using chatbot.Core.Interfaces.Services;
@@ -15,6 +17,7 @@ using chatbot.Core.Interfaces.Services.Media;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Interfaces.Validators;
 using chatbot.Core.Models;
+using chatbot.Ef.Outbox;
 using chatbot.Ef.UnitOfWork;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -30,8 +33,9 @@ namespace chatbot.Ef.Services
         private readonly IMediaJobDispatcher _jobDispatcher;
         private readonly IMapper _mapper;
         private readonly IMediaDtoEnricher _dtoEnricher;
-        private readonly IChatRealtimeService _realtimeService;
         private readonly ILogger<MediaMessageService> _logger;
+        private readonly OutboxMessageFactory _outboxMessageFactory;
+        private readonly TimeProvider _timeProvider;
 
         public MediaMessageService(
         IUnitOfWork unitOfWork,
@@ -40,7 +44,8 @@ namespace chatbot.Ef.Services
         IMediaJobDispatcher jobDispatcher,
         IMapper mapper,
         IMediaDtoEnricher dtoEnricher,
-        IChatRealtimeService realtimeService,
+        OutboxMessageFactory outboxMessageFactory,
+        TimeProvider timeProvider,
         ILogger<MediaMessageService> logger)
         {
             _unitOfWork = unitOfWork;
@@ -49,8 +54,9 @@ namespace chatbot.Ef.Services
             _jobDispatcher = jobDispatcher;
             _mapper = mapper;
             _dtoEnricher = dtoEnricher;
-            _realtimeService = realtimeService;
+            _outboxMessageFactory = outboxMessageFactory;
             _logger = logger;
+            _timeProvider = timeProvider;
         }
 
         
@@ -60,6 +66,10 @@ namespace chatbot.Ef.Services
             cancellationToken.ThrowIfCancellationRequested();
 
             // 1. Validate files
+
+            if (dto.ConversationId == Guid.Empty)
+                throw new ArgumentException("ConversationId is required.");
+
             var files = dto.Files?.ToList() ?? throw new ArgumentException("At least one file is required.");
 
             if (files.Count == 0)
@@ -75,36 +85,31 @@ namespace chatbot.Ef.Services
             var isMember =await _unitOfWork.ConversationMember.ExistsAsync(dto.ConversationId, userId);
 
             if (!isMember)
-            {
-               
-                throw new UnauthorizedAccessException("You are not a member of this conversation.");
-            }
-           
+                throw new UnauthorizedAccessException("You are not an active member of this conversation.");
+
             // 3. Validate Reply
-           
+
 
             if (dto.ReplyToMessageId.HasValue)
             {
                 var replyMessage = await _unitOfWork.Messages.GetByIdAsync(dto.ReplyToMessageId.Value);
 
-                if (replyMessage is null)
+                if (replyMessage is null || replyMessage.ConversationId != dto.ConversationId ||
+                          replyMessage.IsDeletedForEveryone)
                 {
-                    throw new NotFoundException("Reply message was not found.");
-                }
-
-                if (replyMessage.ConversationId != dto.ConversationId)
-                {
-                    throw new ValidationException("Reply message does not belong to this conversation.");
+                    throw new NotFoundException("Reply message was not found in this conversation.");
                 }
             }
             //4.validated all files
             var validatedFiles = new List<ValidatedFileDto>(files.Count);
             foreach ( var file in files)
             {
-               var validated= await _validationService.ValidateFileAsync(file, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                var validated= await _validationService.ValidateFileAsync(file, cancellationToken);
                 validatedFiles.Add(validated);
             }
             //5.create message
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
             var message = new Message
             {
                 Id = Guid.NewGuid(),
@@ -113,7 +118,7 @@ namespace chatbot.Ef.Services
                 Content = dto.Content?.Trim() ?? string.Empty,
                 ReplyToMessageId = dto.ReplyToMessageId,
                 MessageType = ResolveMessageType(validatedFiles),
-                SendAt = DateTime.UtcNow
+                SendAt = now
             };
             // 6. Upload files
 
@@ -159,6 +164,22 @@ namespace chatbot.Ef.Services
                 // 7. Save Message
 
                 await _unitOfWork.Messages.AddAsync(message);
+                var messageCreatedEvent = new MessageCreatedEvent(message.Id, message.ConversationId, message.SenderId, message.Content,
+                     message.MessageType, message.ReplyToMessageId, message.SendAt);
+
+                await _unitOfWork.OutboxMessages.AddAsync(_outboxMessageFactory.Create(messageCreatedEvent));
+
+                var pendingFileIds = uploadedFiles
+                    .Where(x => x.ProcessingStatus == FileProcessingStatus.Pending)
+                    .Select(x => x.Id)
+                    .ToArray();
+
+                if (pendingFileIds.Length > 0)
+                {
+                    var processingEvent = new MediaProcessingRequestedEvent(message.Id, pendingFileIds);
+
+                    await _unitOfWork.OutboxMessages.AddAsync(_outboxMessageFactory.Create(processingEvent));
+                }
 
                 await _unitOfWork.SaveChangesAsync();
             }
@@ -172,26 +193,14 @@ namespace chatbot.Ef.Services
             }
 
 
-            // 8. Queue media processing
-
-            foreach (var file in uploadedFiles)
-            {
-                if (file.ProcessingStatus == FileProcessingStatus.Pending)
-                {
-                    _jobDispatcher.EnqueueAttachmentProcessing(file.Id);
-                }
-            }
 
 
-            // 9. Map response
+            // 8. Map response
 
             var result = _mapper.Map<MessageDto>(message);
 
             await _dtoEnricher.EnrichAsync(message, result, cancellationToken);
 
-            // 10. SignalR
-
-            await _realtimeService.MessageSentAsync(message.ConversationId, result, cancellationToken);
 
             return result;
         }
@@ -246,35 +255,17 @@ namespace chatbot.Ef.Services
 
         public async Task<MediaDownloadResultDto> GetAttachmentAsync(Guid messageId, Guid attachmentId, Guid userId, CancellationToken cancellationToken = default)
         {
-            // 1. Get attachment
 
-        var attachment = await _unitOfWork.messageAttachments.GetWithFileAsync(attachmentId);
+        var attachment = await _unitOfWork.MessageAttachments.GetWithFileAsync(attachmentId);
 
-            if (attachment is null)
-            {
+            if (attachment is null || attachment.MessageId != messageId)
                 throw new NotFoundException("Attachment was not found.");
-            }
-
-
-            // 2. Make sure attachment belongs to message
-
-            if (attachment.MessageId != messageId)
-            {
-                throw new NotFoundException("Attachment was not found for this message.");
-            }
-
-
-            // 3. Get message
 
             var message = await _unitOfWork.Messages.GetByIdAsync(messageId);
 
-            if (message is null)
-            {
+            if (message is null || message.IsDeletedForEveryone)
                 throw new NotFoundException("Message was not found.");
-            }
 
-
-            // 4. Authorization
 
             var isMember = await _unitOfWork.ConversationMember.ExistsAsync(message.ConversationId, userId);
 
@@ -284,22 +275,15 @@ namespace chatbot.Ef.Services
             }
 
 
-            // 5. Check StoredFile
-
             var storedFile = attachment.StoredFile;
 
-            if (storedFile.IsDeleted || storedFile.IsPhysicallyDeleted)
+            if (storedFile is null || storedFile.IsDeleted || storedFile.IsPhysicallyDeleted)
             {
                 throw new NotFoundException("File is no longer available.");
             }
 
-
-            // 6. Download using StorageKey + Provider
-
             var stream = await _storageService.DownloadAsync( storedFile.StorageKey, storedFile.Provider, cancellationToken);
 
-
-            // 7. Return
 
             return new MediaDownloadResultDto
             {

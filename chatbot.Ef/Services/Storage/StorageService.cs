@@ -112,6 +112,10 @@ namespace chatbot.Ef.Services
                          ownerId.Value != Guid.Empty
                         => $"messages/{ownerId.Value}",
 
+                FileCategory.VoiceNote
+                    when ownerId.HasValue &&
+                         ownerId.Value != Guid.Empty
+                        => $"messages/voices/{ownerId.Value}",
 
                 // Thumbnail doesn't need a business owner folder.
                 FileCategory.Thumbnail

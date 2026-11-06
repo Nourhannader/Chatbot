@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using chatbot.Core.Events.Conversations;
+using chatbot.Core.Events.Media;
 using chatbot.Core.Events.Messages;
 using chatbot.Core.Events.Notifications;
 using chatbot.Core.Interfaces.Events;
@@ -56,6 +57,16 @@ namespace chatbot.Ef.Events.Publishing
                 ["chat.conversation.member-unmuted.v1"]=typeof(MemberUnmutedEvent),
 
                 ["chat.conversation.member-joined-by-invite.v1"] = typeof(MemberJoinedByInviteEvent),
+
+                ["chat.media.processing-requested.v1"] = typeof(MediaProcessingRequestedEvent),
+
+                ["chat.voice.processing-requested.v1"] = typeof(VoiceNoteProcessingRequestedEvent),
+
+                ["chat.media.processed.v1"] = typeof(MediaProcessedEvent),
+
+                ["chat.voice.processed.v1"] = typeof(VoiceNoteProcessedEvent),
+
+                ["chat.media.processing-failed.v1"] = typeof(MediaProcessingFailedEvent)
             };
 
             _nameToType = registrations;

@@ -1,10 +1,12 @@
 ﻿using chatbot.Api.BackgroundServices;
 using chatbot.Core.Events.Conversations;
+using chatbot.Core.Events.Media;
 using chatbot.Core.Events.Messages;
 using chatbot.Core.Events.Notifications;
 using chatbot.Core.Interfaces.Events;
 using chatbot.Core.Interfaces.Outbox;
 using chatbot.Ef.Events.Handlers.Conversations;
+using chatbot.Ef.Events.Handlers.Media;
 using chatbot.Ef.Events.Handlers.Messages;
 using chatbot.Ef.Events.Handlers.Notifications;
 using chatbot.Ef.Events.Publishing;
@@ -145,6 +147,20 @@ namespace chatbot.Api.Extensions
             services.AddScoped< IEventHandler<NotificationCreatedEvent>, NotificationCreatedSignalRHandler>();
 
             services.AddScoped< IEventHandler<NotificationCreatedEvent>, NotificationCreatedPushHandler>();
+
+            //=========================================
+            // Media Processing
+            //=========================================
+
+            services.AddScoped<IEventHandler<MediaProcessedEvent>, MediaProcessedSignalRHandler>();
+
+            services.AddScoped<IEventHandler<VoiceNoteProcessedEvent>,VoiceNoteProcessedSignalRHandler>();
+
+            services.AddScoped< IEventHandler<MediaProcessingFailedEvent>, MediaProcessingFailedSignalRHandler>();
+
+            services.AddScoped<IEventHandler<MediaProcessingRequestedEvent>, MediaProcessingRequestedHandler>();
+
+            services.AddScoped<IEventHandler<VoiceNoteProcessingRequestedEvent>,VoiceNoteProcessingRequestedHandler>();
 
             // =========================================
             // Background Processing

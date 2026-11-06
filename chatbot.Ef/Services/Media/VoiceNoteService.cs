@@ -7,12 +7,16 @@ using AutoMapper;
 using chatbot.Core.DTOs;
 using chatbot.Core.DTOs.Messages;
 using chatbot.Core.Enums;
+using chatbot.Core.Events.Media;
+using chatbot.Core.Events.Messages;
+using chatbot.Core.Exceptions;
 using chatbot.Core.Interfaces.BackgroundJobs;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.Services.Media;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Interfaces.Validators;
 using chatbot.Core.Models;
+using chatbot.Ef.Outbox;
 using chatbot.Ef.UnitOfWork;
 using Microsoft.Extensions.Logging;
 
@@ -22,30 +26,30 @@ namespace chatbot.Ef.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IFileValidationService _validationService;
-        private readonly IMediaStorageService _mediaStorage;
-        private readonly IMediaJobDispatcher _jobDispatcher;
         private readonly IMapper _mapper;
         private readonly IMediaDtoEnricher _dtoEnricher;
-        private readonly IChatRealtimeService _realtimeService;
+        private readonly IStorageService _storageService;
+        private readonly OutboxMessageFactory _outboxMessageFactory;
+        private readonly TimeProvider _timeProvider;
         private readonly ILogger<VoiceNoteService> _logger;
 
         public VoiceNoteService(
             IUnitOfWork unitOfWork,
             IFileValidationService validationService,
-            IMediaStorageService mediaStorage,
-            IMediaJobDispatcher jobDispatcher,
             IMapper mapper,
             IMediaDtoEnricher dtoEnricher,
-            IChatRealtimeService realtimeService,
+            IStorageService storageService,
+            OutboxMessageFactory outboxMessageFactory,
+            TimeProvider timeProvider,
             ILogger<VoiceNoteService> logger)
         {
             _unitOfWork = unitOfWork;
             _validationService = validationService;
-            _mediaStorage = mediaStorage;
-            _jobDispatcher = jobDispatcher;
             _mapper = mapper;
             _dtoEnricher = dtoEnricher;
-            _realtimeService = realtimeService;
+            _storageService = storageService;
+            _outboxMessageFactory = outboxMessageFactory;
+            _timeProvider = timeProvider;
             _logger = logger;
         }
 
@@ -53,77 +57,109 @@ namespace chatbot.Ef.Services
         public async Task<MessageDto> SendAsync(SendVoiceNoteDto dto,Guid userId, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(dto);
+            if (dto.ConversationId == Guid.Empty)
+                throw new ArgumentException("ConversationId is required.");
 
-            //validate Conversation
-            var isMember=await _unitOfWork.ConversationMember.ExistsAsync(dto.ConversationId,userId);
+
+            var isMember = await _unitOfWork.ConversationMember.ExistsAsync(dto.ConversationId, userId);
+
             if (!isMember)
+                throw new UnauthorizedAccessException("You are not an active member of this conversation.");
+
+            // Validate reply
+            if (dto.ReplyToMessageId.HasValue)
             {
-                throw new UnauthorizedAccessException("You are not a member of this conversation.");
+                var replyMessage = await _unitOfWork.Messages.GetByIdAsync(dto.ReplyToMessageId.Value);
+
+                if (replyMessage is null ||
+                    replyMessage.ConversationId != dto.ConversationId ||
+                    replyMessage.IsDeletedForEveryone)
+                {
+                    throw new NotFoundException("Reply message was not found in this conversation.");
+                }
             }
 
             var validated = await _validationService.ValidateVoiceAsync(dto.File, cancellationToken);
 
             StoredFile? uploadedFile = null;
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+            var message = new Message
+            {
+                Id = Guid.NewGuid(),
+                SenderId = userId,
+                ConversationId = dto.ConversationId,
+                Content = string.Empty,
+                ReplyToMessageId = dto.ReplyToMessageId,
+                MessageType = MessageType.Voice,
+                SendAt = now
+            };
+            var voiceNote = new VoiceNote
+            {
+                Id = Guid.NewGuid(),
+                MessageId = message.Id,
+                Message = message,
+                DurationSeconds = 0,
+                Waveform = "[]",
+                CreatedAt = now
+            };
 
             try
             {
-                uploadedFile = await _mediaStorage.UploadAsync(dto.File, validated, userId,
-                        $"messages/voice/{DateTime.UtcNow:yyyy/MM}", cancellationToken);
+                uploadedFile = await _storageService.UploadAsync(
+                    dto.File,
+                    validated,
+                    FileCategory.VoiceNote,
+                    message.Id,
+                    userId,
+                    cancellationToken);
 
-                await _unitOfWork.StoredFiles.AddAsync(uploadedFile);
-
-                var message = new Message
-                {
-                    Id = Guid.NewGuid(),
-                    SenderId = userId,
-                    ConversationId = dto.ConversationId,
-                    Content = string.Empty,
-                    ReplyToMessageId = dto.ReplyToMessageId,
-                    MessageType = MessageType.Voice,
-                    SendAt = DateTime.UtcNow
-                };
-
-                var voiceNote = new VoiceNote
-                {
-                    Id = Guid.NewGuid(),
-                    MessageId = message.Id,
-                    Message = message,
-                    FileId = uploadedFile.Id,
-                    File = uploadedFile,
-                    DurationSeconds = 0,
-                    Waveform = "[]",
-                    CreatedAt = DateTime.UtcNow
-                };
+                voiceNote.FileId = uploadedFile.Id;
+                voiceNote.File = uploadedFile;
 
                 message.VoiceNote = voiceNote;
+
                 await _unitOfWork.Messages.AddAsync(message);
-                await _unitOfWork.VoiceNotes.AddAsync(voiceNote);
+
+                var createdEvent = new MessageCreatedEvent( message.Id, message.ConversationId, message.SenderId,
+                    message.Content, message.MessageType,
+                    message.ReplyToMessageId, message.SendAt);
+
+                await _unitOfWork.OutboxMessages.AddAsync(
+                    _outboxMessageFactory.Create(createdEvent));
+
+                if (uploadedFile.ProcessingStatus == FileProcessingStatus.Pending)
+                {
+                    var processingEvent = new VoiceNoteProcessingRequestedEvent(voiceNote.Id, message.Id);
+
+                    await _unitOfWork.OutboxMessages.AddAsync(
+                        _outboxMessageFactory.Create(processingEvent));
+                }
+
                 await _unitOfWork.SaveChangesAsync();
-                _jobDispatcher.EnqueueVoiceNoteProcessing(voiceNote.Id);
-                var result = _mapper.Map<MessageDto>(message);
-
-                await _dtoEnricher.EnrichAsync(message, result, cancellationToken);
-
-                await _realtimeService.MessageSentAsync(message.ConversationId, result, cancellationToken);
-
-                return result;
             }
             catch
             {
-                if (uploadedFile != null)
+                if (uploadedFile is not null)
                 {
                     try
                     {
-                        await _mediaStorage.DeleteAsync(uploadedFile, CancellationToken.None);
+                        await _storageService.DeleteAsync(uploadedFile,CancellationToken.None);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Failed to compensate voice file {FileId}.", uploadedFile.Id);
+                        _logger.LogError(ex,"Failed to compensate voice file {FileId}.", uploadedFile.Id);
                     }
                 }
 
                 throw;
             }
+
+            var result = _mapper.Map<MessageDto>(message);
+
+            await _dtoEnricher.EnrichAsync( message,result,cancellationToken);
+
+            return result;
         }
 
 
