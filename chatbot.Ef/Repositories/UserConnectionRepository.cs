@@ -24,19 +24,19 @@ namespace chatbot.Ef.Repositories
 
         public Task<int> GetActiveConnectionCountAsync(Guid userId)
         {
-            return context.UserConnections.CountAsync(x => x.UserId == userId && x.IsOnline);
+            return context.UserConnections.CountAsync(x => x.UserId == userId && x.IsOnline && x.DisconnectedAt == null);
         }
 
         public async Task<IEnumerable<UserConnection>> GetActiveConnectionsAsync(Guid userId)
         {
-            return await context.UserConnections.Where(x => x.UserId == userId && x.IsOnline)
+            return await context.UserConnections.Where(x => x.UserId == userId && x.IsOnline && x.DisconnectedAt == null)
                 .OrderByDescending(x => x.ConnectedAt)
                 .ToListAsync();
         }
 
         public async Task<UserConnection?> GetByConnectionIdAsync(string connectionId)
         {
-            return await context.UserConnections.FirstOrDefaultAsync(x => x.ConnectionId == connectionId);
+            return await context.UserConnections.FirstOrDefaultAsync(x => x.ConnectionId == connectionId && x.IsOnline && x.DisconnectedAt == null);
         }
 
         public async Task<UserConnection?> GetByIdAsync(Guid id)
@@ -53,7 +53,7 @@ namespace chatbot.Ef.Repositories
 
         public async Task<bool> HasActiveConnectionAsync(Guid userId)
         {
-            return await context.UserConnections.AnyAsync(x => x.UserId == userId && x.IsOnline);
+            return await context.UserConnections.AnyAsync(x => x.UserId == userId && x.IsOnline && x.DisconnectedAt == null);
         }
 
         public async Task RemoveAsync(string connectionId)
@@ -63,7 +63,8 @@ namespace chatbot.Ef.Repositories
             if (connection == null)
                 return;
 
-            context.UserConnections.Remove(connection);
+            connection.IsOnline = false;
+            connection.DisconnectedAt = DateTime.UtcNow;
         }
 
         public void Update(UserConnection entity)

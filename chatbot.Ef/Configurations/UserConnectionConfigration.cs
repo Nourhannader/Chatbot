@@ -14,8 +14,18 @@ namespace chatbot.Ef.Configurations
         public void Configure(EntityTypeBuilder<UserConnection> builder)
         {
             builder.Property(x => x.ConnectionId)
-           .IsRequired()
-           .HasMaxLength(200);
+            .IsRequired()
+            .HasMaxLength(200);
+
+            builder.HasIndex(x => x.ConnectionId)
+                .IsUnique();
+
+            builder.HasIndex(x => new
+            {
+                x.UserId,
+                x.IsOnline,
+                x.DisconnectedAt
+            });
 
 
             // Relationships
@@ -29,17 +39,10 @@ namespace chatbot.Ef.Configurations
            .HasForeignKey(x => x.UserDeviceId)
            .OnDelete(DeleteBehavior.SetNull);
 
-            // Indexes
-            builder.HasIndex(x => x.UserId);
-            
-            builder.HasIndex(x => x.ConnectionId) 
-                .IsUnique();
-
-            builder.HasIndex(x => new
-            {
-                x.UserId,
-                x.IsOnline
-            });
+            builder.HasOne(x => x.DeviceSession)
+            .WithMany()
+            .HasForeignKey(x => x.DeviceSessionId)
+            .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

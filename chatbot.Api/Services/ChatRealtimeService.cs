@@ -12,79 +12,59 @@ namespace chatbot.Api.Services
 {
     public sealed class ChatRealtimeService : IChatRealtimeService
     {
-        private readonly IHubContext<ChatHub, IChatClient> hubContext;
-        private readonly IUserConnectionManager connectionManager;
+        private readonly IHubContext<ChatHub> _hubContext;
 
-        public ChatRealtimeService(IHubContext<ChatHub, IChatClient> hubContext, IUserConnectionManager connectionManager)
+        public ChatRealtimeService(IHubContext<ChatHub> hubContext)
         {
-            this.hubContext = hubContext;
-            this.connectionManager = connectionManager;
+            _hubContext = hubContext;
         }
 
-        public Task MediaProcessedAsync(Guid conversationId, Guid messageId, CancellationToken cancellationToken)
+        public Task SendToConversationAsync(Guid conversationId, string method,object payload, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
-        }
+            var groupName =ChatHubConstants.GetConversationGroup(conversationId);
 
-        public Task MessageDeletedForUserAsync(Guid userId, MessageDeletedForUserDto dto)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task SendToConversationAsync(Guid conversationId, string method, object payload, CancellationToken cancellationToken = default)
-        {
-            return hubContext.Clients
-                .Group($"conversation:{conversationId}")
+            return _hubContext.Clients
+                .Group(groupName)
                 .SendAsync(method, payload, cancellationToken);
         }
 
-        public Task SendToUserAsync(Guid userId, string method, object payload, CancellationToken cancellationToken = default)
+        public Task SendToUserAsync(Guid userId,string method,object payload,CancellationToken cancellationToken = default)
         {
-            return hubContext.Clients
+            return _hubContext.Clients
                 .User(userId.ToString())
                 .SendAsync(method, payload, cancellationToken);
         }
 
-        public Task VoiceNoteProcessedAsync(Guid conversationId, Guid messageId, CancellationToken cancellationToken)
+        public Task MediaProcessedAsync(Guid conversationId,Guid messageId,CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return SendToConversationAsync(
+                conversationId,
+                nameof(IChatClient.MediaProcessed),
+                new
+                {
+                    ConversationId = conversationId,
+                    MessageId = messageId
+                },
+                cancellationToken);
+        }
+
+        public Task VoiceNoteProcessedAsync( Guid conversationId,Guid messageId, CancellationToken cancellationToken)
+        {
+            return SendToConversationAsync(
+                conversationId,
+                nameof(IChatClient.VoiceNoteProcessed),
+                new
+                {
+                    ConversationId = conversationId,
+                    MessageId = messageId
+                },
+                cancellationToken);
+        }
+
+        public Task MessageDeletedForUserAsync(Guid userId, MessageDeletedForUserDto dto)
+        {
+            return SendToUserAsync(userId, nameof(IChatClient.MessageDeletedForUser),dto);
         }
     }
-    public sealed class ChatHub : Hub<IChatClient>
-    {
-        private const string ConversationGroupPrefix = "conversation:";
 
-        public override Task OnConnectedAsync()
-        {
-            // Implementation here
-            return base.OnConnectedAsync();
-        }
-
-        public override Task OnDisconnectedAsync(Exception? exception)
-        {
-            // Implementation here
-            return base.OnDisconnectedAsync(exception);
-        }
-
-        public Task JoinConversation(Guid conversationId)
-        {
-            return Groups.AddToGroupAsync(Context.ConnectionId, GetConversationGroup(conversationId));
-        }
-
-        public Task LeaveConversation(Guid conversationId)
-        {
-            return Groups.RemoveFromGroupAsync(Context.ConnectionId, GetConversationGroup(conversationId));
-        }
-
-        private Guid GetCurrentUserId()
-        {
-            // Implementation to retrieve current user ID
-            throw new NotImplementedException();
-        }
-
-        private static string GetConversationGroup(Guid conversationId)
-        {
-            return $"{ConversationGroupPrefix}{conversationId}";
-        }
-    }
 }

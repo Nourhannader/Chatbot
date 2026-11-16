@@ -10,10 +10,12 @@ namespace chatbot.Core.Interfaces.Services
     public interface IPresenceService
     {
 
-        Task UserDisconnectedAsync(Guid userId);
+        Task<int> GetConnectionCountAsync(Guid userId);
 
         Task<UserPresenceDto> GetPresenceAsync(Guid userId);
 
-        Task<int> GetConnectionCountAsync(Guid userId);
+        Task UserConnectedAsync(Guid userId);
+
+        Task UserDisconnectedAsync(Guid userId);
     }
 }

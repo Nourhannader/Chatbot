@@ -7,8 +7,10 @@ namespace chatbot.Api.Hubs
     {
         public string? GetUserId(HubConnectionContext connection)
         {
-            return connection.User?
-                .FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = connection.User?.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? connection.User?.FindFirstValue("sub");
+
+            return Guid.TryParse(userId, out var id) ? id.ToString() : null;
         }
     }
 }

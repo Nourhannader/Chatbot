@@ -26,23 +26,44 @@ namespace chatbot.Ef.Services
         {
 
             var user = await unitOfWork.Auth.GetByIdAsync(userId);
-            
 
-            var connectionCount = await unitOfWork.UserConnections.GetActiveConnectionCountAsync(userId);
+            if (user is null)
+                throw new KeyNotFoundException("User not found.");
+
+            var connectionCount = await GetConnectionCountAsync(userId);
 
             return new UserPresenceDto
             {
                 UserId = userId,
                 IsOnline = connectionCount > 0,
                 ConnectionCount = connectionCount,
-                LastSeenAt = user?.LastSeenAt
+                LastSeenAt = user.LastSeenAt
             };
+        }
+
+        public async Task UserConnectedAsync(Guid userId)
+        {
+            var connectionCount = await GetConnectionCountAsync(userId);
+
+            if (connectionCount == 0)
+                return;
+
+            var user = await unitOfWork.Auth.GetByIdAsync(userId);
+
+            if (user is null || user.IsOnline)
+                return;
+
+            user.IsOnline = true;
+
+            await unitOfWork.Auth.updateState(user);
+            await unitOfWork.SaveChangesAsync();
         }
 
         public  async Task UserDisconnectedAsync(Guid userId)
         {
 
-            var connectionCount = await unitOfWork.UserConnections.GetActiveConnectionCountAsync(userId);
+            var connectionCount = await GetConnectionCountAsync(userId);
+
             // Another tab/device is still connected.
             if (connectionCount > 0)
                 return;
@@ -50,10 +71,11 @@ namespace chatbot.Ef.Services
 
             var user = await unitOfWork.Auth.GetByIdAsync(userId);
 
-            if (user is null)
+            if (user is null || !user.IsOnline)
                 return;
 
-            user.LastSeenAt =DateTime.UtcNow;
+            user.IsOnline = false;
+            user.LastSeenAt = DateTime.UtcNow;
 
             await unitOfWork.Auth.updateState(user);
             await unitOfWork.SaveChangesAsync();

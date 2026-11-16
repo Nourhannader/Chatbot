@@ -107,7 +107,7 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<ITokenHashService,TokenHashService>();
             Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
             Services.AddScoped<IRealtimeNotificationService, SignalRNotificationService>();
-            Services.AddSingleton<TypingRepository>();
+            Services.AddSingleton<ITypingRepository,TypingRepository>();
             Services.AddScoped<IUserConnectionService, UserConnectionService>();
             Services.AddScoped<IFfmpegService,FfmpegService>();
             Services.AddScoped< ITemporaryFileService, TemporaryFileService>();
@@ -117,6 +117,7 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<IFileProcessorFactory,FileProcessorFactory>();
             Services.AddScoped< IMessageSearchIndex,SqlMessageSearchIndex>();
             Services.AddScoped<ICurrentUser, CurrentUser>();
+            Services.AddSingleton<IUserIdProvider, ChatUserIdProvider>();
 
 
             //jobSchedular

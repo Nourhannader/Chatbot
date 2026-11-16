@@ -11,7 +11,7 @@ namespace chatbot.Core.Interfaces.Repositories
     public interface ISessionRepository
     {
         Task<DeviceSession?> GetById(Guid sessionId);
-
+        Task<DeviceSession?> GetActiveSessionAsync(Guid sessionId, Guid userId);
         Task<List<DeviceSession>> GetAllActiveSession();
         Task<List<DeviceSession>> GetAllActiveSession(Guid userId);
         Task<List<DeviceSession>> GetAllRevokedSessionOlder(DateTime? cutoff);
