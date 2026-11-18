@@ -5,6 +5,7 @@ using chatbot.Core.DTOs.Auth;
 using chatbot.Core.Exceptions;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Models;
+using chatbot.Ef.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -14,12 +15,12 @@ namespace chatbot.Api.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class UserController(IUserService userService) : ControllerBase
+    public class UserController(IUserService userService,ISearchService searchService,ICurrentUser currentUser) : ControllerBase
     {
         
 
-        [HttpGet("profile")]
-        public async Task<IActionResult> GetProfile()
+        [HttpGet("me")]
+        public async Task<ActionResult<ApiResponse<UserProfileDto>>> GetProfile()
         {
             var userId = User.GetUserId();
 
@@ -30,8 +31,8 @@ namespace chatbot.Api.Controllers
                     .Ok(result,"Profile retrieved successfully."));
         }
 
-        [HttpPut("profile")]
-        public async Task<IActionResult> UpdateProfile([FromForm] UpdateUserDto dto)
+        [HttpPut("me")]
+        public async Task<ActionResult<ApiResponse<UserProfileDto>>> UpdateProfile([FromForm] UpdateUserDto dto)
         {
             var userId = User.GetUserId();
 

@@ -14,12 +14,9 @@ namespace chatbot.Api.Controllers
     {
         [HttpPost]
         [Consumes("multipart/form-data")]
-        public async Task<ActionResult<ConversationDetailsDto>>
-         Create(
-             [FromForm] CreateGroupDto dto)
+        public async Task<ActionResult<ConversationDetailsDto>>Create([FromForm] CreateGroupDto dto)
         {
-            var result =
-                await groupService.CreateAsync(User, dto);
+            var result = await groupService.CreateAsync(User, dto);
 
             return Ok(result);
         }
@@ -27,8 +24,7 @@ namespace chatbot.Api.Controllers
         [HttpPatch("{groupId:guid}")]
         public async Task<ActionResult<ConversationDetailsDto>> Update(Guid groupId, [FromBody] UpdateGroupDto dto)
         {
-            var result =
-                await groupService.UpdateAsync(User, groupId, dto);
+            var result = await groupService.UpdateAsync(User, groupId, dto);
 
             return Ok(result);
         }

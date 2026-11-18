@@ -35,16 +35,6 @@ namespace chatbot.Api.Controllers
             return Ok(result);
         }
 
-        [HttpPost("reply")]
-        public async Task<ActionResult<MessageDto>> Reply([FromBody] ReplyMessageDto dto)
-        {
-            var userId = currentUser.UserId;
-
-            var result = await messageService.ReplyAsync(userId, dto);
-
-            return Ok(result);
-        }
-
         [HttpPost("forward")]
         public async Task<ActionResult<List<MessageDto>>> Forward([FromBody] ForwardMessageDto dto)
         {

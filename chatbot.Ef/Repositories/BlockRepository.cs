@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.DTOs;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Models;
 using chatbot.Ef.Data;
@@ -35,11 +36,18 @@ namespace chatbot.Ef.Repositories
                 );
         }
 
-        public async Task<List<Guid>> GetBlockedUsersAsync(Guid blockerId)
+        public async Task<List<UserDto>> GetBlockedUsersAsync(Guid blockerId)
         {
             return await context.BlockLists
                 .Where(b => b.BlockerId == blockerId)
-                .Select(b => b.BlockedUserId)
+                .Select(b => new UserDto
+                {
+                    Id = b.BlockedUserId,
+                    FullName = b.BlockedUser.FirstName + " " + b.BlockedUser.LastName,
+                    ImageProfileUrl = b.BlockedUser.ProfileImageId.ToString(),
+                    IsOnline = b.BlockedUser.IsOnline,
+                    LastSeen = b.BlockedUser.LastSeenAt
+                })
                 .ToListAsync();
         }
 

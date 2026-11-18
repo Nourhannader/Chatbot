@@ -13,27 +13,21 @@ namespace chatbot.Api.Controllers
     public sealed class ConversationsController(IConversationService conversationService) : ControllerBase
     {
         [HttpPost("private")]
-        public async Task<ActionResult<ConversationDetailsDto>> CreatePrivate([FromBody] CreatePrivateConversationDto dto)
+        public async Task<ActionResult<ApiResponse<ConversationDetailsDto>>> CreatePrivate([FromBody] CreatePrivateConversationDto dto)
         {
             var userId = User.GetUserId();
-            var secondUserId=Guid.Parse(dto.UserId);
+            var secondUserId=dto.UserId;
             var result = await conversationService.CreatePrivateAsync(User, dto);
             return Ok(ApiResponse<ConversationDetailsDto>.Ok(result, "Conversation created successfully."));
         }
 
-        [HttpGet("/GetMyConversations")]
-        public async Task<IActionResult> GetMyConversations()
-        {
-            var result=await conversationService.GetMyConversationsAsync(User);
-            return Ok(ApiResponse<List<ConversationDto>>.Ok(result, "Conversations retrieved successfully."));
-        }
 
-        [HttpGet]
+        [HttpGet("/GetMyConversations")]
         public async Task<ActionResult<List<ConversationDto>>> GetMine()
         {
             var result = await conversationService.GetMineAsync(User);
 
-            return Ok(result);
+            return Ok(ApiResponse<List<ConversationDto>>.Ok(result, "Conversations retrieved successfully."));
         }
 
         [HttpGet("{conversationId:guid}")]

@@ -23,5 +23,6 @@ namespace chatbot.Core.Interfaces.Services
         Task<StoredFile> UpdateConversationImageAsync(Guid conversationId, ClaimsPrincipal currentUser, IFormFile image, CancellationToken cancellationToken = default);
 
         Task RemoveImageAsync(ClaimsPrincipal user, Guid conversationId);
+
     }
 }

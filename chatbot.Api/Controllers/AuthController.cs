@@ -17,15 +17,17 @@ namespace chatbot.Api.Controllers
     {
         readonly IAuthService _authService;
         readonly IMailService _mailService;
-        public AuthController(IAuthService authService, IMailService mailService)
+        readonly ICurrentUser _currentUser;
+        public AuthController(IAuthService authService, IMailService mailService, ICurrentUser currentUser)
         {
             this._authService = authService;
             _mailService = mailService;
+            _currentUser = currentUser;
         }
 
         [HttpPost("register")]
         [AllowAnonymous]
-        public async Task<IActionResult> Register([FromForm] RegisterDto model)
+        public async Task<ActionResult<ApiResponse<AuthResponseDto>>> Register([FromForm] RegisterDto model)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -50,7 +52,7 @@ namespace chatbot.Api.Controllers
                          result.DeviceSessionId
 
                      },
-                 "Registration successful."));
+                 "Account created successfully."));
         }
 
         
@@ -64,7 +66,7 @@ namespace chatbot.Api.Controllers
 
         [HttpPost("login")]
         [AllowAnonymous]
-        public async Task<IActionResult> Login([FromForm] LoginDto model)
+        public async Task<ActionResult<ApiResponse<AuthResponseDto>>> Login([FromForm] LoginDto model)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -107,6 +109,7 @@ namespace chatbot.Api.Controllers
                 },
                 "Token refreshed successfully."));
         }
+        
         [HttpPost("Logout")]
         [AllowAnonymous]
         public async Task<IActionResult> RevokeToken([FromBody] LogoutDto dto)
@@ -128,7 +131,7 @@ namespace chatbot.Api.Controllers
         [Authorize]
         public async Task<IActionResult> LogoutAll()
         {
-            var userId = GetCurrentUserId();
+            var userId = _currentUser.UserId;
             await _authService.LogoutAllAsync(userId, GetIpAddress());
 
             Response.Cookies.Delete("refreshToken");
@@ -138,29 +141,6 @@ namespace chatbot.Api.Controllers
                     "Logged out from all devices successfully."));
         }
 
-        //Me
-        [HttpGet("me")]
-        [Authorize]
-        public IActionResult Me()
-        {
-            var userId = GetCurrentUserId();
-
-            var email = User.FindFirstValue(
-                ClaimTypes.Email);
-
-            var username = User.FindFirstValue(
-                ClaimTypes.Name);
-
-            return Ok(
-                ApiResponse<object>.Ok(
-                    new
-                    {
-                        UserId = userId,
-                        Email = email,
-                        Username = username
-                    },
-                    "Current user retrieved successfully."));
-        }
 
         private void setRefreshTokenInCookie(string refreshToken,DateTime expireOn)
         {
@@ -179,23 +159,6 @@ namespace chatbot.Api.Controllers
         private string? GetIpAddress()
         {
             return HttpContext.Connection.RemoteIpAddress?.ToString();
-        }
-        private Guid GetCurrentUserId()
-        {
-            var userIdClaim = User.FindFirstValue(
-                ClaimTypes.NameIdentifier);
-
-            if (string.IsNullOrEmpty(userIdClaim))
-            {
-                throw new UnauthorizedException("User is not authenticated.");
-            }
-
-            if (!Guid.TryParse(userIdClaim, out var userId))
-            {
-                throw new UnauthorizedException( "Invalid user identity.");
-            }
-
-            return userId;
         }
         private async Task SendWelcomeEmailAsync(EmailDto user)
         {

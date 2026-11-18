@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.DTOs;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Interfaces.UnitOFWork;
 using chatbot.Core.Models;
@@ -29,7 +30,7 @@ namespace chatbot.Ef.Services
 
         }
 
-        public async Task<List<Guid>> GetBlockedUsersAsync(Guid userId)
+        public async Task<List<UserDto>> GetBlockedUsersAsync(Guid userId)
         {
             return await unitOfWork.Blocks.GetBlockedUsersAsync(userId);
         }

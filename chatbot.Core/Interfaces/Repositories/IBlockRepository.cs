@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.DTOs;
 using chatbot.Core.Models;
 
 namespace chatbot.Core.Interfaces.Repositories
@@ -12,7 +13,7 @@ namespace chatbot.Core.Interfaces.Repositories
         Task<BlockList?> GetAsync(Guid blockerId, Guid blockedUserId);
         Task<bool> IsBlockedAsync(Guid userId, Guid otherUserId);
         Task<bool> CheckFoundOrNot(Guid userId, Guid blockedUserId);    
-        Task<List<Guid>> GetBlockedUsersAsync(Guid blockerId);
+        Task<List<UserDto>> GetBlockedUsersAsync(Guid blockerId);
         Task RemoveAsync(BlockList block);
     }
 }

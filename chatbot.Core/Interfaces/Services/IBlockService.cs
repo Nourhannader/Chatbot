@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.DTOs;
 using chatbot.Core.Models;
 
 namespace chatbot.Core.Interfaces.Services
@@ -15,6 +16,6 @@ namespace chatbot.Core.Interfaces.Services
 
         Task<bool> IsBlockedAsync(Guid userId, Guid otherUserId);
 
-        Task<List<Guid>> GetBlockedUsersAsync(Guid userId);
+        Task<List<UserDto>> GetBlockedUsersAsync(Guid userId);
     }
 }
