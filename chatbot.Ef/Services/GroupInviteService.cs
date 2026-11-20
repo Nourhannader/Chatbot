@@ -20,13 +20,13 @@ using chatbot.Core.Models;
 using chatbot.Ef.Outbox;
 using chatbot.Ef.Services.Helper;
 using chatbot.Ef.UnitOfWork;
+using Microsoft.Extensions.Logging;
 
 namespace chatbot.Ef.Services
 {
     public sealed class GroupInviteService(IUnitOfWork unitOfWork,CurrentUser currentUser,
-    IConversationAuthorizationService authorizationService,
-    IMapper mapper,OutboxMessageFactory outboxMessageFactory,
-    TimeProvider timeProvider) : IGroupInviteService
+    IConversationAuthorizationService authorizationService,ILogger<GroupInviteService> logger,
+    IMapper mapper,OutboxMessageFactory outboxMessageFactory,TimeProvider timeProvider) : IGroupInviteService
     {
         public async Task<GroupInviteDto> GenerateAsync(ClaimsPrincipal user, Guid conversationId, CreateGroupInviteDto dto)
         {
@@ -240,6 +240,40 @@ namespace chatbot.Ef.Services
             await unitOfWork.SaveChangesAsync();
         }
 
+        public async Task ExpireIfNeededAsync(Guid inviteId)
+        {
+            var invite = await unitOfWork.GroupInvite .GetByIdAsync(inviteId);
+
+            if (invite is null)
+                return;
+
+            if (!invite.IsActive)
+                return;
+
+            if (invite.ExpiresAt is null)
+                return;
+
+            if (invite.ExpiresAt.Value > DateTime.UtcNow)
+                return;
+
+            invite.IsActive = false;
+
+            await unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task ExpireAllDueInvitesAsync()
+        {
+            var now = DateTime.UtcNow;
+
+            var affectedRows = await unitOfWork
+                .GroupInvite
+                .ExpireDueInvitesAsync(now);
+
+            if (affectedRows > 0)
+            {
+                logger.LogInformation( "{Count} group invites expired",affectedRows);
+            }
+        }
         private static string GenerateSecureCode()
         {
             return Convert.ToHexString(

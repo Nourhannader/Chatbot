@@ -9,67 +9,64 @@ namespace chatbot.Core.Authorization.Conversation
 {
     public static class ConversationRolePermissions
     {
-        private static readonly HashSet<string>
-        MemberPermissions =
-    [
-        ConversationPermissions.View,
-        ConversationPermissions.SendMessage,
-        ConversationPermissions.Reply,
-        ConversationPermissions.React,
-        ConversationPermissions.UploadFile,
-        ConversationPermissions.DeleteOwnMessage
-    ];
+        private static readonly HashSet<string> MemberPermissions =
+        [
+            ConversationPermissions.View,
+            ConversationPermissions.SendMessage,
+            ConversationPermissions.Reply,
+            ConversationPermissions.ForwardMessage,
+            ConversationPermissions.React,
+            ConversationPermissions.EditMessage,
+            ConversationPermissions.UploadFile,
+            ConversationPermissions.DeleteOwnMessage
+        ];
 
 
-        private static readonly HashSet<string>
-            AdminPermissions =
+        private static readonly HashSet<string> AdminPermissions =
         [
             .. MemberPermissions,
 
-        ConversationPermissions.ManageMessages,
+            ConversationPermissions.ManageMessages,
 
-        ConversationPermissions.AddMember,
-        ConversationPermissions.RemoveMember,
+            ConversationPermissions.AddMember,
+            ConversationPermissions.RemoveMember,
 
-        ConversationPermissions.MuteMember,
-        ConversationPermissions.UnmuteMember,
+            ConversationPermissions.MuteMember,
+            ConversationPermissions.UnmuteMember,
 
-        ConversationPermissions.BanMember,
-        ConversationPermissions.UnbanMember,
+           ConversationPermissions.BanMember,
+           ConversationPermissions.UnbanMember,
 
-        ConversationPermissions.ManageGroup,
-        ConversationPermissions.ManageInvites
+           ConversationPermissions.ManageGroup,
+           ConversationPermissions.ManageInvites,
+
+           ConversationPermissions.UpdateImage,
+           ConversationPermissions.RemoveImage
         ];
 
 
-        private static readonly HashSet<string>
-            OwnerPermissions =
+        private static readonly HashSet<string> OwnerPermissions =
         [
             .. AdminPermissions,
 
-        ConversationPermissions.PromoteMember,
-        ConversationPermissions.DemoteMember,
+            ConversationPermissions.PromoteMember,
+            ConversationPermissions.DemoteMember,
 
-        ConversationPermissions.TransferOwnership,
+            ConversationPermissions.TransferOwnership,
 
-        ConversationPermissions.DeleteGroup
+           ConversationPermissions.DeleteGroup
         ];
 
 
-        public static IReadOnlySet<string>
-            GetPermissions(
-                ConversationRole role)
+        public static IReadOnlySet<string>  GetPermissions( ConversationRole role)
         {
             return role switch
             {
-                ConversationRole.Member =>
-                    MemberPermissions,
+                ConversationRole.Member => MemberPermissions,
 
-                ConversationRole.Admin =>
-                    AdminPermissions,
+                ConversationRole.Admin => AdminPermissions,
 
-                ConversationRole.Owner =>
-                    OwnerPermissions,
+                ConversationRole.Owner => OwnerPermissions,
 
                 _ => new HashSet<string>()
             };

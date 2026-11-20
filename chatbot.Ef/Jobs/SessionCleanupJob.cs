@@ -3,26 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Core.Interfaces.BackgroundJobs;
+using chatbot.Core.Interfaces.Services.CleanUp;
 using chatbot.Core.Interfaces.UnitOFWork;
 using Microsoft.Extensions.Logging;
+using ServiceStack;
 
 namespace chatbot.Ef.Jobs
 {
-    public class SessionCleanupJob(IUnitOfWork unitOfWork,ILogger<SessionCleanupJob> logger)
+    public class SessionCleanupJob(ISessionCleanupService sessionCleanup) : ISessionCleanupJob
     {
-        public async Task ExecuteAsync()
+        public Task CleanupAsync()
         {
-            logger.LogInformation("Session CleanUp Started.");
-            var cutoff = DateTime.UtcNow.AddDays(-30);
-            var sessions = await unitOfWork.Sessions.GetAllRevokedSessionOlder(cutoff);
-            if (!sessions.Any())
-            {
-                logger.LogInformation("No old Session Found.");
-                return;
-            }
-            unitOfWork.Sessions.RemoveRange(sessions);
-            await unitOfWork.SaveChangesAsync();
-            logger.LogInformation("Deleted {Count} old Sessions.", sessions.Count);
+            var cutoffDate = DateTime.UtcNow.AddDays(-30);
+
+            return sessionCleanup.CleanupExpiredSessionsAsync( cutoffDate);
         }
     }
 }

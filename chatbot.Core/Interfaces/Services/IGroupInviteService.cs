@@ -20,5 +20,8 @@ namespace chatbot.Core.Interfaces.Services
         Task<GroupInvitePreviewDto> GetPreviewAsync(ClaimsPrincipal user, string code);
 
         Task<ConversationDetailsDto> JoinAsync(ClaimsPrincipal user, string code);
+
+        Task ExpireIfNeededAsync(Guid inviteId);
+        Task ExpireAllDueInvitesAsync();
     }
 }

@@ -107,5 +107,13 @@ namespace chatbot.Ef.Repositories
             context.Notifications.Update(entity);
         }
 
+        public async Task<int> DeleteReadOlderThanAsync(DateTime cutoffDate)
+        {
+            return await context.Notifications
+             .Where(x =>
+             x.IsRead &&
+             x.CreatedAt < cutoffDate)
+            .ExecuteDeleteAsync();
+        }
     }
 }

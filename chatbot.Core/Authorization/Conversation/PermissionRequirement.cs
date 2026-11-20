@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace chatbot.Core.Authorization.Conversation
 {
-    public class PermissionRequirement:IAuthorizationRequirement
+    public sealed class PermissionRequirement:IAuthorizationRequirement
     {
         public string Permission { get; }
         public PermissionRequirement(string permission)

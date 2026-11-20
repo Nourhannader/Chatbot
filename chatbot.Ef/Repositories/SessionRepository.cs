@@ -13,6 +13,18 @@ namespace chatbot.Ef.Repositories
 {
     public class SessionRepository(ApplicationDbContext context) : ISessionRepository
     {
+        public async Task<int> DeleteExpiredSessionsAsync(DateTime cutoffDate)
+        {
+            return await context.Sessions
+             .Where(x =>
+                 (
+                     x.ExpiresAt < cutoffDate ||
+                     (x.RevokedAt != null &&
+                      x.RevokedAt < cutoffDate)
+                 ))
+             .ExecuteDeleteAsync();
+        }
+
         public async Task<DeviceSession?> GetActiveSessionAsync(Guid sessionId, Guid userId)
         {
             var now = DateTime.UtcNow;

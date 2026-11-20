@@ -11,13 +11,14 @@ using chatbot.Core.Models;
 
 namespace chatbot.Ef.Authorization
 {
-    public sealed class RolePermissionService(IUnitOfWork unitOfWork) : IRolePermissionService
+    public sealed class RolePermissionService : IRolePermissionService
     {
         
         private static bool IsMessagingPermission(string permission)
         {
             return permission is ConversationPermissions.SendMessage
                    or  ConversationPermissions.Reply
+                   or  ConversationPermissions.ForwardMessage
                    or  ConversationPermissions.UploadFile;
         }
 
@@ -33,25 +34,26 @@ namespace chatbot.Ef.Authorization
             return member.MutedUntil.Value >
                    DateTime.UtcNow;
         }
-        public async Task<bool> HasPermissionAsync(ConversationMember member, string permission)
+        public  Task<bool> HasPermissionAsync(ConversationMember member, string permission)
         {
 
             if (member == null)
-                return false;
+                return Task.FromResult(false);
             if (member.LeftAt != null || member.IsBanned)
             {
-                return false;
+                return Task.FromResult(false);
             }
 
             // Admin muted user
             if (IsMessagingPermission(permission) &&
                 IsAdminMuted(member))
             {
-                return false;
+                return Task.FromResult(false);
             }
 
-            return ConversationRolePermissions
-            .GetPermissions(member.Role).Contains(permission);
+            var permissions = ConversationRolePermissions.GetPermissions(member.Role);
+
+            return Task.FromResult(permissions.Contains(permission));
         }
     }
 }

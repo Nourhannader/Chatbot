@@ -53,5 +53,15 @@ namespace chatbot.Ef.Repositories
                 .Take(take)
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task<int> DeleteProcessedOlderThanAsync(DateTime cutoffDate)
+        {
+            return await context.OutboxMessages
+            .Where(x =>
+                x.Status == OutboxStatus.Processed &&
+                x.ProcessedAt.HasValue &&
+                x.ProcessedAt.Value < cutoffDate)
+            .ExecuteDeleteAsync();
+        }
     }
 }

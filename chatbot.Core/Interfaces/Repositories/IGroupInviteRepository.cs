@@ -11,5 +11,6 @@ namespace chatbot.Core.Interfaces.Repositories
     {
         Task<GroupInvite?> GetByCodeAsync(string code);
         Task<List<GroupInvite>> GetActiveInviteAsync(Guid conversationId,DateTime now);
+        Task<int> ExpireDueInvitesAsync(DateTime utcNow);
     }
 }

@@ -21,7 +21,7 @@ namespace chatbot.Core.Authorization.Conversation
 
         public const string ForwardMessage = "conversation.message.forward";
 
-        public const string EditMessage = "conversation.message.Edit";
+        public const string EditMessage = "conversation.message.edit";
 
         public const string React = "conversation.message.react";
 

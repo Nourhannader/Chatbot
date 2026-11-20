@@ -1,6 +1,7 @@
 
 using System.Text;
 using System.Threading.Tasks;
+using chatbot.Api.BackgroundJobs;
 using chatbot.Api.Extensions;
 using chatbot.Api.Hubs;
 using chatbot.Api.Services;
@@ -49,13 +50,9 @@ namespace chatbot.Api
               options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
                 b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
-            builder.Services.AddHangfire(config =>
-            {
-                config.UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection"));
-            });
-            builder.Services.AddHangfireServer();
+            builder.Services.AddHangfireConfig(builder.Configuration);
 
-            
+
 
             //add jwtAuthentication
             builder.Services.AddJWTConfiguration(builder.Configuration);
@@ -94,6 +91,16 @@ namespace chatbot.Api
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+
+            app.UseHangfireDashboard("/hangfire", new DashboardOptions
+            {
+                Authorization = [new HangfireDashboardAuthorizationFilter()]
+            });
+
+            var recurringJobManager = app.Services.GetRequiredService<IRecurringJobManager>();
+
+            ChatAppRecurringJobs.Register(recurringJobManager);
+
             app.UseGlobalExceptionHandler();
 
             app.UseHttpsRedirection();
@@ -111,10 +118,6 @@ namespace chatbot.Api
             app.UseStaticFiles();
 
             app.MapHub<Hubs.ChatHub>("/chathub");
-
-            app.UseHangfireDashboard("/hangfire");
-
-            JobScheduler.Register();
 
             app.MapControllers();
 

@@ -49,16 +49,14 @@ namespace chatbot.Ef.Authorization
         public async Task AuthorizeImageManagementAsync(ClaimsPrincipal user, Guid conversationId)
         {
             var userId=user.GetUserId();
-            var conversation =await unitOfWork.Conversations
-                .GetByIdAsync(conversationId)
+            var conversation =await unitOfWork.Conversations.GetByIdAsync(conversationId)
             ?? throw new NotFoundException("Conversation not found.");
 
             var member = await unitOfWork.ConversationMember
                     .GetActiveAsync(conversationId,userId)
              ?? throw new ForbiddenException("You are not a member of this conversation.");
 
-            if (conversation.Type ==
-            ConversationType.Private)
+            if (conversation.Type == ConversationType.Private)
             {
                 
                 return;

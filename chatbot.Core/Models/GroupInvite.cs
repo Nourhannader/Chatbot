@@ -34,7 +34,7 @@ namespace chatbot.Core.Models
             = null!;
 
 
-        public DateTime ExpiresAt { get; set; }
+        public DateTime? ExpiresAt { get; set; }
 
         public int MaxUses { get; set; }
             = 100;

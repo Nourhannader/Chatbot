@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using chatbot.Core.Enums;
+using chatbot.Core.Interfaces.BackgroundJobs;
 using chatbot.Core.Interfaces.Services;
 using chatbot.Core.Models;
 using Hangfire;
@@ -11,21 +12,17 @@ using Microsoft.Extensions.Logging;
 
 namespace chatbot.Ef.Jobs
 {
-    public class PushNotificationJob
+    [Queue("notifications")]
+    [AutomaticRetry(Attempts = 5)]
+    public sealed class PushNotificationJob(INotificationService notificationService, ILogger<PushNotificationJob> logger) : IPushNotificationJob
     {
-        private readonly INotificationService notificationService;
-        private readonly ILogger<PushNotificationJob> logger;
-        public PushNotificationJob(INotificationService notificationService,ILogger<PushNotificationJob> logger)
+        public async Task SendAsync(Guid userId, NotificationType type, string title, string body, NotificationOptions? options = null)
         {
-            this.notificationService = notificationService;
-            this.logger = this.logger;
-        }
-        [AutomaticRetry(Attempts = 3)]
-        public async Task SendAsync(Guid userId,NotificationType type,string title,string body,NotificationOptions? options = null)
-        {
-            logger.LogInformation("Push notification job started for user {UserId}", userId);
+            logger.LogInformation("Sending notification {title}", title);
+
             await notificationService.SendAsync(userId, type, title, body, options);
-            logger.LogInformation("Push notification Sent to user {UserId}", userId);
+
+            logger.LogInformation("Notification {title} sent", title);
         }
     }
 }

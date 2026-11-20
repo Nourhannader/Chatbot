@@ -15,7 +15,7 @@ namespace chatbot.Core.Interfaces.Repositories
         Task<List<DeviceSession>> GetAllActiveSession();
         Task<List<DeviceSession>> GetAllActiveSession(Guid userId);
         Task<List<DeviceSession>> GetAllRevokedSessionOlder(DateTime? cutoff);
-
         void RemoveRange(List<DeviceSession> sessions);
+        Task<int> DeleteExpiredSessionsAsync(DateTime cutoffDate);
     }
 }

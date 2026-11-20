@@ -11,7 +11,7 @@ namespace chatbot.Core.Interfaces.Repositories
     {
         Task AddRangeAsync(IEnumerable<MessageAttachment> attachments);
 
-        Task<MessageAttachment?> GetByIdAsync(Guid attachmentId);
+        //Task<MessageAttachment?> GetByIdAsync(Guid attachmentId);
 
         Task<List<MessageAttachment>> GetByMessageIdAsync( Guid messageId);
 

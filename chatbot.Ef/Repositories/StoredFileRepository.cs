@@ -34,12 +34,17 @@ namespace chatbot.Ef.Repositories
         {
             return context.StoredFiles.FirstOrDefaultAsync(x => x.Id == id);
         }
-        public async Task<List<StoredFile>> GetFilesForCleanupAsync(DateTime olderThan)
+        public async Task<List<StoredFile>> GetFilesForCleanupAsync(DateTime deletedBefore, int batchSize)
         {
             return await context.StoredFiles
-                            .Where(f => f.IsDeleted && f.DeletedAt < olderThan
-                            && f.DeletedAt !=null && !f.IsPhysicallyDeleted)
-                            .ToListAsync();
+            .Where(x =>
+                x.IsDeleted &&
+                !x.IsPhysicallyDeleted &&
+                x.DeletedAt.HasValue &&
+                x.DeletedAt.Value <= deletedBefore)
+            .OrderBy(x => x.DeletedAt)
+            .Take(batchSize)
+            .ToListAsync();
         }
 
         public async Task<StoredFile?> GetForProcessingAsync( Guid fileId)

@@ -162,5 +162,17 @@ namespace chatbot.Ef.Repositories
               .Include(m => m.Sender)
               .FirstOrDefaultAsync( m => m.Id == messageId);
         }
+
+        public async Task<int> DeleteExpiredMessagesAsync(DateTime cutoffDate)
+        {
+            return await context.Messages
+             .Where(x =>
+             x.IsDeletedForEveryone &&
+             x.DeletedForEveryoneAt.HasValue &&
+             x.DeletedForEveryoneAt.Value < cutoffDate)
+             .Where(x =>
+             !context.Messages.Any(reply => reply.ReplyToMessageId == x.Id))
+             .ExecuteDeleteAsync();
+        }
     }
 }

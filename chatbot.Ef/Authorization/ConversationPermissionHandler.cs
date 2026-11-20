@@ -16,15 +16,21 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace chatbot.Ef.Authorization
 {
-    public class ConversationPermissionHandler(IRolePermissionService rolePermissionService,IUnitOfWork unitOfWork)
+    public sealed class ConversationPermissionHandler(IRolePermissionService rolePermissionService,IUnitOfWork unitOfWork)
      : AuthorizationHandler<PermissionRequirement,ConversationResource>
     {
         protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement, ConversationResource resource)
         {
             if (context.User.Identity?.IsAuthenticated != true)
                 return;
+
             var actorUserId = context.User.GetUserId();
+
+            if (actorUserId == Guid.Empty)
+                return;
+
             var actor = await unitOfWork.ConversationMember.GetActiveAsync(resource.ConversationId, actorUserId);
+
             if(actor is null)
             {
                 return;
@@ -34,12 +40,14 @@ namespace chatbot.Ef.Authorization
             if (!hasPermission)
                 return;
 
+
             if (IsMemberTargetPermission(requirement.Permission))
             {
                 var authorized = await AuthorizeMemberOperationAsync(actor, requirement.Permission, resource);
                 if (!authorized)
                     return;
             }
+
             if (IsMessagePermission(requirement.Permission) && resource.MessageId.HasValue)
             {
                 var authorized = await AuthorizeMessageOPerationAsync(actor, requirement.Permission, resource);
@@ -59,11 +67,12 @@ namespace chatbot.Ef.Authorization
 
             if (actor.UserId == targetUserId)
                 return false;
+
             var target = await unitOfWork.ConversationMember.GetAsync(resource.ConversationId, targetUserId);
 
             if(permission == ConversationPermissions.AddMember)
             {
-                return target is null || (target.LeftAt != null && !target.IsBanned);
+                return target is null || (target.LeftAt.HasValue && !target.IsBanned);
             }
             if (target is null)
                 return false;
@@ -103,37 +112,39 @@ namespace chatbot.Ef.Authorization
 
         private static bool CanUnbanMember(ConversationMember actor,ConversationMember target)
         {
-            if (!target.IsBanned)
-            {
-                return false;
-            }
-            return ConversationRoleHierarchy.IsHigherThan(actor.Role, target.Role);
+            return target.IsBanned
+            && ConversationRoleHierarchy.IsHigherThan(actor.Role, target.Role);
         }
         
         private static bool CanbanMember(ConversationMember actor, ConversationMember target)
         {
-            return target.LeftAt ==null && !target.IsBanned
-                && ConversationRoleHierarchy.IsHigherThan(actor.Role, target.Role);
+            return IsActiveTarget(target)
+            && ConversationRoleHierarchy.IsHigherThan(actor.Role, target.Role );
         }
 
         private static bool CanMuteMember(ConversationMember actor, ConversationMember target)
         {
-            
-            return target.LeftAt == null && !target.IsBanned && !target.IsMutedByAdmin
-                && ConversationRoleHierarchy.IsHigherThan(actor.Role, target.Role);
+
+            return IsActiveTarget(target)
+            && !target.IsMutedByAdmin
+            && ConversationRoleHierarchy.IsHigherThan(actor.Role,target.Role );
         }
        
         private static bool CanUnMuteMember(ConversationMember actor, ConversationMember target)
         {
 
-            return target.LeftAt == null && !target.IsBanned && target.IsMutedByAdmin
-                && ConversationRoleHierarchy.IsHigherThan(actor.Role, target.Role);
+            return IsActiveTarget(target)
+             && target.IsMutedByAdmin
+             && ConversationRoleHierarchy.IsHigherThan(actor.Role,target.Role );
         }
-
         private static bool CanRemoveMember(ConversationMember actor, ConversationMember target)
         {
-            return target.LeftAt == null && !target.IsBanned
-                && ConversationRoleHierarchy.IsHigherThan(actor.Role, target.Role);
+            return IsActiveTarget(target)
+             && ConversationRoleHierarchy.IsHigherThan( actor.Role, target.Role);
+        }
+        private static bool IsActiveTarget(ConversationMember target)
+        {
+            return target.LeftAt == null && !target.IsBanned;
         }
 
         private async Task<bool> AuthorizeMessageOPerationAsync(ConversationMember actor, string permission, ConversationResource resource)
@@ -141,15 +152,23 @@ namespace chatbot.Ef.Authorization
             if (!resource.MessageId.HasValue)
                 return false;
             var message = await unitOfWork.Messages.GetByIdAsync(resource.MessageId.Value);
+
             if (message is null || message.ConversationId != resource.ConversationId)
                 return false;
+
+            bool isOwner =  message.SenderId == actor.UserId;
+
+            bool isAdminOrOwner = actor.Role is ConversationRole.Admin or ConversationRole.Owner;
 
 
             return permission switch
             {
-                ConversationPermissions.DeleteOwnMessage =>  message.SenderId == actor.UserId,
-                ConversationPermissions.ManageMessages => actor.Role is
-                         ConversationRole.Admin or ConversationRole.Owner,
+                ConversationPermissions.DeleteOwnMessage => isOwner,
+
+                ConversationPermissions.EditMessage => isOwner || isAdminOrOwner,
+
+                ConversationPermissions.ManageMessages => isAdminOrOwner,
+
                 _ => false
             };
         }
@@ -172,13 +191,9 @@ namespace chatbot.Ef.Authorization
         {
             return permission is
                 ConversationPermissions.DeleteOwnMessage
+                or ConversationPermissions.EditMessage
                 or ConversationPermissions.ManageMessages;
         }
 
-        private static bool TryGetUserId(ClaimsPrincipal user, out Guid userId)
-        {
-            var value = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            return Guid.TryParse(value, out userId);
-        }
     }
 }

@@ -13,7 +13,7 @@ namespace chatbot.Core.DTOs.InviteGroup
         public string? Description { get; set; }
         public ConversationImageDto? Image { get; set; }
         public int MemberCount { get; set; }
-        public DateTime ExpiresAt { get; set; }
+        public DateTime? ExpiresAt { get; set; }
         public bool IsExpired { get; set; }
         public bool CanJoin{ get; set; }
 

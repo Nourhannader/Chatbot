@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace chatbot.Core.Authorization.Conversation
 {
-    public class ConversationResource
+    public sealed class ConversationResource
     {
         public Guid ConversationId { get; }
         public Guid? MessageId {  get; }

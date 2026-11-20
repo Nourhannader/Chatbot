@@ -1,4 +1,4 @@
-﻿using chatbot.Api.BackgroundServices;
+﻿
 using chatbot.Api.Hubs;
 using chatbot.Api.Middlewares;
 using chatbot.Api.Services;
@@ -13,6 +13,7 @@ using chatbot.Core.Interfaces.Outbox;
 using chatbot.Core.Interfaces.Repositories;
 using chatbot.Core.Interfaces.Search;
 using chatbot.Core.Interfaces.Services;
+using chatbot.Core.Interfaces.Services.CleanUp;
 using chatbot.Core.Interfaces.Services.Helper;
 using chatbot.Core.Interfaces.Services.Media;
 using chatbot.Core.Interfaces.UnitOFWork;
@@ -119,14 +120,19 @@ namespace chatbot.Api.Extensions
             Services.AddScoped<ICurrentUser, CurrentUser>();
             Services.AddSingleton<IUserIdProvider, ChatUserIdProvider>();
 
+            //cleanUp
+            Services.AddScoped<IOrphanFileCleanupService,OrphanFileCleanupService>();
 
-            //jobSchedular
-            Services.AddScoped<FileCleanupJob>();
-            Services.AddScoped<NotificationCleanupJob>();
-            Services.AddScoped<SessionCleanupJob>();
-            Services.AddScoped<MessageCleanupJob>();
+            Services.AddScoped<IOutboxCleanupService, OutboxCleanupService>();
 
-            
+            Services.AddScoped< ISessionCleanupService, SessionCleanupService>();
+
+
+            Services.AddScoped< INotificationCleanupService, NotificationCleanupService>();
+
+            Services.AddScoped< IMessageCleanupService, MessageCleanupService>();
+
+
             //rate limiting
             Services.AddRateLimiter( options =>
             {

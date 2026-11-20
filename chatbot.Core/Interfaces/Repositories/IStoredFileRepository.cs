@@ -15,7 +15,7 @@ namespace chatbot.Core.Interfaces.Repositories
 
         Task<StoredFile?> GetByIdAsync(Guid id);
 
-        Task<List<StoredFile>> GetFilesForCleanupAsync(DateTime olderThan);
+        Task<List<StoredFile>> GetFilesForCleanupAsync(DateTime deletedBefore, int batchSize);
 
         Task<StoredFile?> GetByStorageKeyAsync(string storageKey);
 

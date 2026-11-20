@@ -16,5 +16,7 @@ namespace chatbot.Core.Interfaces.Repositories
         Task<OutboxMessage?> GetByIdAsync( Guid id, CancellationToken cancellationToken = default);
 
         Task<List<OutboxMessage>> GetDeadLettersAsync( int take = 100,CancellationToken cancellationToken = default);
+
+        Task<int> DeleteProcessedOlderThanAsync( DateTime cutoffDate);
     }
 }

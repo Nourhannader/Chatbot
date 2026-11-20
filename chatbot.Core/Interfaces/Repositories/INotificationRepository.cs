@@ -20,6 +20,7 @@ namespace chatbot.Core.Interfaces.Repositories
 
         Task MarkAllAsReadAsync( Guid userId);
         Task<List<Notification>> GetReadNotificationsBeforeAsync(DateTime? cutoff);
+        Task<int> DeleteReadOlderThanAsync(DateTime cutoffDate);
         void RemoveRange(IEnumerable<Notification> notifications);
     }
 }

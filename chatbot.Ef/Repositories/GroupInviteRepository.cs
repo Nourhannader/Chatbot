@@ -17,6 +17,21 @@ namespace chatbot.Ef.Repositories
             await context.GroupInvites.AddAsync(entity);
         }
 
+        public async Task<int> ExpireDueInvitesAsync(DateTime utcNow)
+        {
+            return await context.GroupInvites
+            .Where(x =>
+                x.IsActive &&
+                (
+                    (x.ExpiresAt.HasValue &&
+                     x.ExpiresAt.Value <= utcNow)
+                    ||
+                    x.UsedCount >= x.MaxUses
+                ))
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(x => x.IsActive, false));
+        }
+
         public async Task<List<GroupInvite>> GetActiveInviteAsync(Guid conversationId,DateTime now)
         {
             return await context.GroupInvites
